@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Fiche détaillée d’un projet">
+    <title>Fiche projet</title>
+    <link rel="stylesheet" href="../commun/theme.css">
+    <link rel="stylesheet" href="../commun/components.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
+    <script src="demo-data.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell project-sheet">
+      <div class="interface-state" id="interface-state" role="status" aria-live="polite">
+        <span class="loader" aria-hidden="true"></span>
+        <div><strong>Chargement de la fiche projet</strong><p>Lecture des données Grist en cours…</p></div>
+      </div>
+
+      <div id="project-content" hidden>
+        <header class="project-hero card">
+          <div class="project-hero__main">
+            <p class="project-code" id="project-code"></p>
+            <h1 id="project-name"></h1>
+            <div class="badge-list" id="project-badges"></div>
+          </div>
+          <dl class="hero-people" id="hero-people"></dl>
+        </header>
+
+        <section class="top-grid">
+          <article class="political-objective card" id="objective-card"></article>
+          <article class="card progress-card" id="progress-card"></article>
+        </section>
+
+        <section class="vigilance-panel" id="vigilance-panel" hidden></section>
+
+        <div class="content-grid">
+          <section class="sheet-section span-full" aria-labelledby="updates-title">
+            <div class="section-header"><div><p class="section-kicker">Suivi</p><h2 class="section-header__title" id="updates-title">Derniers avancements</h2></div></div>
+            <div class="stack-list" id="updates-list"></div>
+          </section>
+
+          <section class="sheet-section" aria-labelledby="instructions-title">
+            <div class="section-header"><div><p class="section-kicker">Cadre politique</p><h2 class="section-header__title" id="instructions-title">Consignes politiques</h2></div></div>
+            <div class="stack-list" id="instructions-list"></div>
+            <button class="button button--secondary section-action" type="button" aria-disabled="true">Voir toutes les consignes</button>
+          </section>
+
+          <section class="sheet-section" aria-labelledby="meetings-title">
+            <div class="section-header"><div><p class="section-kicker">Échanges</p><h2 class="section-header__title" id="meetings-title">Réunions récentes</h2></div></div>
+            <div class="stack-list" id="meetings-list"></div>
+          </section>
+
+          <section class="sheet-section" aria-labelledby="actions-title">
+            <div class="section-header"><div><p class="section-kicker">À faire</p><h2 class="section-header__title" id="actions-title">Actions ouvertes</h2></div></div>
+            <div class="stack-list" id="actions-list"></div>
+          </section>
+
+          <section class="sheet-section arbitration-section" aria-labelledby="arbitrations-title">
+            <div class="section-header"><div><p class="section-kicker">Décisions</p><h2 class="section-header__title" id="arbitrations-title">Arbitrages et décisions</h2></div></div>
+            <div class="stack-list" id="arbitrations-list"></div>
+          </section>
+
+          <section class="sheet-section" aria-labelledby="timeline-title">
+            <div class="section-header"><div><p class="section-kicker">Historique</p><h2 class="section-header__title" id="timeline-title">Chronologie</h2></div></div>
+            <ol class="timeline" id="timeline-list"></ol>
+          </section>
+
+          <section class="sheet-section" aria-labelledby="contacts-title">
+            <div class="section-header"><div><p class="section-kicker">Équipe</p><h2 class="section-header__title" id="contacts-title">Interlocuteurs</h2></div></div>
+            <div class="contacts-grid" id="contacts-list"></div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
