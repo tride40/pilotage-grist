@@ -9,13 +9,17 @@
     <link rel="stylesheet" href="../commun/components.css">
     <link rel="stylesheet" href="styles.css">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
-    <script src="demo-data.js?v=3" defer></script>
-    <script src="app.js?v=3" defer></script>
+    <script src="demo-data.js?v=4" defer></script>
+    <script src="app.js?v=4" defer></script>
   </head>
   <body>
     <header class="meetings-header">
       <div class="meetings-header__content">
-        <div><p class="section-kicker">Suivi du projet</p><h1>Réunions</h1><p class="meetings-header__project" id="project-name">Projet sélectionné</p></div>
+        <div>
+          <p class="section-kicker">Suivi du projet</p><h1>Réunions</h1>
+          <label class="project-selector"><span>Projet</span><select id="project-selector" aria-label="Choisir un projet"></select></label>
+          <p class="meetings-header__project" id="project-name" hidden></p>
+        </div>
         <span class="badge badge--info" id="meeting-count">0 réunion</span>
       </div>
     </header>
