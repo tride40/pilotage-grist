@@ -11,6 +11,8 @@
 /* Sur deux colonnes, chaque zone commence au même niveau malgré les textes variables. */
 @media(min-width:80rem){
   .action-card--history{grid-template-rows:5rem 12rem 1fr}
+  .action-card--history .action-card__header{display:grid;grid-template-rows:3rem auto;align-content:start}
+  .action-card--history .action-card__title{display:-webkit-box;height:3rem;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
   .action-card--history .action-card__notes{grid-template-rows:repeat(2,minmax(5.25rem,auto));align-self:stretch}
 }
 @media(min-width:48rem){.actions-header__content,.actions-shell{padding:var(--space-6)}.summary{grid-template-columns:repeat(5,minmax(0,1fr))}.action-card__meta{grid-template-columns:repeat(4,minmax(0,1fr))}.inline-fields,.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}dialog form{padding:var(--space-6)}}
