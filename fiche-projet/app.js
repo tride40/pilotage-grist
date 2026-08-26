@@ -5,7 +5,14 @@ const RELATED_TABLES = [
   "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
 
-const appState = { selectedProject: null, tables: null, writable: null, demo: false, busy: false };
+const PROJECT_CHOICE_FIELDS = ["Categorie", "Statut", "Priorite"];
+const PROJECT_CHOICE_FALLBACKS = {
+  Categorie: ["Urbanisme", "Aménagement", "Habitat", "Mobilités", "Bâtiments", "Environnement", "Littoral", "Foncier", "Autre"],
+  Statut: ["À lancer", "En cours", "En attente", "Bloqué", "Terminé", "Abandonné"],
+  Priorite: ["Faible", "Normale", "Haute", "Prioritaire"],
+};
+const JOURNAL_TYPES = ["Avancement", "Information", "Étape franchie", "Vigilance", "Blocage", "Décision attendue"];
+const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, deletingJournalId: null };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -21,11 +28,11 @@ const ui = {
   meetings: document.querySelector("#meetings-list"),
   actions: document.querySelector("#actions-list"),
   arbitrations: document.querySelector("#arbitrations-list"),
-  timeline: document.querySelector("#timeline-list"),
   contacts: document.querySelector("#contacts-list"),
   selector: document.querySelector("#project-selector"), editButton: document.querySelector("#edit-project"), trackingButton: document.querySelector("#update-tracking"),
   editDialog: document.querySelector("#edit-dialog"), editForm: document.querySelector("#edit-form"), editFields: document.querySelector("#edit-fields"),
   trackingDialog: document.querySelector("#tracking-dialog"), trackingForm: document.querySelector("#tracking-form"), trackingFields: document.querySelector("#tracking-fields"), feedback: document.querySelector("#feedback"),
+  deleteDialog: document.querySelector("#delete-dialog"), deleteForm: document.querySelector("#delete-form"),
 };
 
 /* ---------- Connexion et lecture Grist ---------- */
@@ -49,7 +56,7 @@ async function initialize() {
       renderWhenReady();
     });
     appState.tables = await fetchRelatedTables();
-    appState.writable = await fetchWritableColumns();
+    appState.metadata = await fetchMetadata();
     selectInitialProject();
     renderWhenReady();
   } catch (error) {
@@ -74,7 +81,31 @@ function columnarToRecords(columns) {
     Object.fromEntries(names.map((name) => [name, columns[name][index]])),
   );
 }
-async function fetchWritableColumns(){const [tm,cm]=await Promise.all([window.grist.docApi.fetchTable("_grist_Tables"),window.grist.docApi.fetchTable("_grist_Tables_column")]);const ids=new Map(columnarToRecords(tm).map(r=>[String(r.id),r.tableId])),cols=columnarToRecords(cm);return Object.fromEntries(["PROJETS","AVANCEMENTS"].map(table=>[table,new Set(cols.filter(c=>ids.get(String(c.parentId))===table&&!hasValue(c.formula)&&!isTrue(c.isFormula)).map(c=>c.colId))]));}
+async function fetchMetadata() {
+  try {
+    const [tableMeta, columnMeta] = await Promise.all([window.grist.docApi.fetchTable("_grist_Tables"), window.grist.docApi.fetchTable("_grist_Tables_column")]);
+    const tableIds = new Map(columnarToRecords(tableMeta).map((row) => [String(row.id), row.tableId]));
+    const columns = columnarToRecords(columnMeta);
+    const byTable = (table) => columns.filter((column) => tableIds.get(String(column.parentId)) === table);
+    const details = Object.fromEntries(["PROJETS", "AVANCEMENTS"].map((table) => [table, new Map(byTable(table).map((column) => [column.colId, column]))]));
+    const writable = Object.fromEntries(Object.entries(details).map(([table, map]) => [table, new Set([...map.values()].filter(isWritableColumn).map((column) => column.colId))]));
+    const choices = Object.fromEntries(PROJECT_CHOICE_FIELDS.map((field) => [field, extractChoiceValues(details.PROJETS.get(field))]));
+    return { details, writable, choices };
+  } catch (error) {
+    console.warn("Métadonnées Grist indisponibles : fallbacks sûrs activés.", error);
+    return { details: {}, writable: { PROJETS: new Set(Object.keys(appState.tables.PROJETS?.[0] || {})), AVANCEMENTS: new Set(Object.keys(appState.tables.AVANCEMENTS?.[0] || {})) }, choices: Object.fromEntries(PROJECT_CHOICE_FIELDS.map((field) => [field, []])), warning: exactError(error) };
+  }
+}
+function isWritableColumn(column) { return column && !hasValue(column.formula) && !isTrue(column.isFormula); }
+function extractChoiceValues(column) {
+  if (!column || !["Choice", "ChoiceList"].includes(String(column.type || "").split(":")[0])) return [];
+  for (const raw of [column.widgetOptions, column.options]) {
+    const options = decodeMetadataOptions(raw); const values = options?.choices ?? options?.choiceValues ?? options?.values;
+    if (Array.isArray(values)) return values.filter((value) => value !== "L" && hasValue(value)).map(displayValue);
+  }
+  return [];
+}
+function decodeMetadataOptions(value) { if (!hasValue(value)) return null; if (typeof value === "object") return value; try { const decoded = JSON.parse(value); return typeof decoded === "string" ? decodeMetadataOptions(decoded) : decoded; } catch (_) { return null; } }
 
 function isLocalDemoMode() {
   return ["localhost", "127.0.0.1"].includes(window.location.hostname)
@@ -95,12 +126,11 @@ function buildProjectView(project, tables) {
 
   return {
     project,
-    updates: updates.slice(0, 5),
+    updates,
     instructions: instructions.slice(0, 5),
     meetings: meetings.slice(0, 3),
     actions,
     arbitrations,
-    timeline: buildTimeline(updates, meetings, instructions, arbitrations).slice(0, 6),
     contacts: collectContacts(project, { instructions, meetings, actions }, tables.INTERLOCUTEURS),
   };
 }
@@ -209,7 +239,6 @@ function renderProject(view) {
   renderMeetings(view.meetings);
   renderActions(view.actions);
   renderArbitrations(view.arbitrations);
-  renderTimeline(view.timeline);
   renderContacts(view.contacts);
   ui.state.hidden = true;
   ui.content.hidden = false;
@@ -266,17 +295,29 @@ function renderVigilance(value, status) {
 
 /* ---------- Rendu des sections liées ---------- */
 function renderUpdates(rows) {
-  renderCollection(ui.updates, rows, "Aucun avancement renseigné.", (row) => {
-    const card = makeItemCard(row.Travail_realise || "Point d’avancement", row.Date_MAJ);
+  renderCollection(ui.updates, rows, "Le journal est vide. Ajoutez le premier changement de ce projet.", (row) => {
+    const content = journalContent(row);
+    const card = makeItemCard(content || "Entrée du journal", row.Date_MAJ || row.Date);
+    card.root.classList.add("journal-card");
+    appendBadges(card.meta, [[journalType(row), journalKind(journalType(row))]]);
     appendFields(card.body, [
       ["Saisi par", personValue(row.Saisi_par)], ["Avancement", formatProgress(row.Avancement)],
-      ["Travail réalisé", row.Travail_realise], ["Prochaine étape", row.Prochaine_etape],
-      ["Difficulté ou blocage", row.Difficulte_blocage],
+      ["Prochaine étape", row.Prochaine_etape], ["Difficulté ou blocage", row.Difficulte_blocage],
+      ["Point de vigilance", row.Point_vigilance], ["Commentaire", row.Commentaire],
     ]);
     if (hasValue(row.Decision_attendue)) card.body.append(makeCallout("Décision attendue", row.Decision_attendue));
+    const actions = element("div", "journal-card__actions");
+    const edit = textElement("button", "Modifier", "button button--secondary"); edit.type = "button"; edit.addEventListener("click", () => openJournalForm(row));
+    const remove = textElement("button", "Supprimer", "button button--ghost-danger"); remove.type = "button"; remove.addEventListener("click", () => confirmDeleteJournal(row.id));
+    actions.append(edit, remove); card.body.append(actions);
     return card.root;
   });
 }
+
+function journalType(row) { return textOr(row.Type_entree || row.Type, inferJournalType(row)); }
+function inferJournalType(row) { if (hasValue(row.Decision_attendue)) return "Décision attendue"; if (hasValue(row.Difficulte_blocage)) return "Blocage"; if (hasValue(row.Point_vigilance)) return "Vigilance"; if (hasValue(row.Avancement)) return "Avancement"; return "Information"; }
+function journalContent(row) { return firstField(row, ["Contenu", "Fait_marquant", "Travail_realise", "Commentaire", "Prochaine_etape", "Difficulte_blocage", "Decision_attendue", "Point_vigilance"]); }
+function journalKind(type) { const value = normalizeText(type); if (value.includes("blocage")) return "danger"; if (value.includes("vigilance")) return "warning"; if (value.includes("decision")) return "arbitration"; if (value.includes("etape")) return "success"; return "info"; }
 
 function renderInstructions(rows) {
   renderCollection(ui.instructions, rows, "Aucune consigne liée à ce projet.", (row) => {
@@ -411,15 +452,15 @@ function makeProgress(percentage) {
 /* ---------- Sélection autonome et édition ---------- */
 const PROJECT_FIELDS = [
   ["Nom_projet", "Nom du projet", "text"], ["Description", "Description", "textarea"], ["Objectif_politique", "Objectif politique", "textarea"],
-  ["Categorie", "Catégorie", "text"], ["Statut", "Statut", "text"], ["Priorite", "Priorité", "text"], ["Responsable", "Agent pilote", "agent"], ["Elu_pilote", "Élu pilote", "elu"],
+  ["Categorie", "Catégorie", "choice"], ["Statut", "Statut", "choice"], ["Priorite", "Priorité", "choice"], ["Responsable", "Agent pilote", "agent"], ["Elu_pilote", "Élu pilote", "elu"],
   ["Echeance", "Échéance", "date"], ["Date_debut", "Date de début", "date"], ["Prochaine_etape", "Prochaine étape", "textarea"], ["Date_prochaine_etape", "Date prochaine étape", "date"], ["Point_vigilance", "Point de vigilance", "textarea"],
 ];
-const TRACKING_FIELDS = [["Avancement", "Avancement (%)", "number"], ["Prochaine_etape", "Prochaine étape", "textarea"], ["Date_prochaine_etape", "Date prochaine étape", "date"], ["Point_vigilance", "Point de vigilance", "textarea"], ["Travail_realise", "Travail réalisé", "textarea"], ["Difficulte_blocage", "Difficulté / blocage", "textarea"], ["Decision_attendue", "Décision attendue", "textarea"], ["Commentaire", "Commentaire", "textarea"]];
 
 function bindEditing() {
-  ui.selector.addEventListener("change", () => selectProject(ui.selector.value, true)); ui.editButton.addEventListener("click", () => openDataForm("edit")); ui.trackingButton.addEventListener("click", () => openDataForm("tracking"));
+  ui.selector.addEventListener("change", () => selectProject(ui.selector.value, true)); ui.editButton.addEventListener("click", openProjectForm); ui.trackingButton.addEventListener("click", () => openJournalForm());
+  document.querySelector("#add-journal-inline").addEventListener("click", () => openJournalForm());
   document.querySelectorAll("dialog [data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
-  ui.editForm.addEventListener("submit", (event) => saveProject(event)); ui.trackingForm.addEventListener("submit", (event) => saveTracking(event));
+  ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.deleteForm.addEventListener("submit", deleteJournal);
   try { const channel = new BroadcastChannel("pilotage-grist"); channel.addEventListener("message", (event) => { if (event.data?.type === "select-project") selectProject(event.data.id, true); }); } catch (_) { /* facultatif */ }
 }
 function selectInitialProject(fallback) {
@@ -437,18 +478,43 @@ function renderProjectSelector() {
   const selected = String(appState.selectedProject?.id || ""); ui.selector.replaceChildren(...(appState.tables.PROJETS || []).map((project) => option(project.id, textOr(project.Nom_projet, `Projet ${project.id}`)))); ui.selector.value = selected;
 }
 function option(value,label){const item=document.createElement("option");item.value=value;item.textContent=label;return item;}
-function openDataForm(kind) {
-  const fields = kind === "edit" ? PROJECT_FIELDS : TRACKING_FIELDS, container = kind === "edit" ? ui.editFields : ui.trackingFields, dialog = kind === "edit" ? ui.editDialog : ui.trackingDialog;
-  container.replaceChildren(...fields.filter(([name]) => kind === "tracking" || projectHasColumn(name)).map(([name,label,type]) => formField(name,label,type, appState.selectedProject[name]))); dialog.querySelector(".form-message").textContent=""; dialog.showModal();
+function openProjectForm() {
+  ui.editFields.replaceChildren(...PROJECT_FIELDS.filter(([name]) => projectHasColumn(name)).map(([name, label, type]) => formField(name, label, type, appState.selectedProject[name])));
+  const fallback = PROJECT_CHOICE_FIELDS.filter((field) => !(appState.metadata?.choices?.[field] || []).length);
+  ui.editDialog.querySelector(".form-message").textContent = fallback.length ? `Choix Grist indisponibles pour ${fallback.join(", ")} : valeurs existantes et valeurs sûres proposées.` : "";
+  ui.editDialog.showModal();
 }
-function projectHasColumn(name){return appState.demo?(appState.tables.PROJETS || []).some((row)=>Object.prototype.hasOwnProperty.call(row,name)):Boolean(appState.writable?.PROJETS?.has(name));}
-function formField(name,label,type,value){const wrapper=element("label",`form-field${type==="textarea"?" form-field--wide":""}`);wrapper.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=document.createElement("textarea");control.rows=3;}else if(["agent","elu"].includes(type)){control=document.createElement("select");const flag=type==="agent"?"Est_agent_Sanguinet":"Est_elu_Sanguinet";const people=(appState.tables.INTERLOCUTEURS||[]).filter((person)=>isTrue(person[flag]));control.append(option("","Non renseigné"),...people.map((p)=>option(p.id,textOr(p.Nom_complet,`Interlocuteur ${p.id}`))));}else{control=document.createElement("input");control.type=type; if(type==="number"){control.min=0;control.max=100;}}control.className="form-field__control";control.name=name;control.value=type==="date"?dateInputValue(value):displayValue(value);wrapper.append(control);return wrapper;}
+function projectHasColumn(name){return appState.demo?(appState.tables.PROJETS || []).some((row)=>Object.prototype.hasOwnProperty.call(row,name)):Boolean(appState.metadata?.writable?.PROJETS?.has(name));}
+function projectChoiceValues(field) { const metadata = appState.metadata?.choices?.[field] || []; const existing = (appState.tables.PROJETS || []).map((row) => displayValue(row[field])).filter(Boolean); return [...new Set([...(metadata.length ? metadata : (PROJECT_CHOICE_FALLBACKS[field] || [])), ...existing])]; }
+function formField(name,label,type,value){const wrapper=element("label",`form-field${type==="textarea"?" form-field--wide":""}`);wrapper.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=document.createElement("textarea");control.rows=3;}else if(type==="choice"){control=document.createElement("select");const values=projectChoiceValues(name);control.append(option("","Non renseigné"),...values.map((item)=>option(item,item)));}else if(["agent","elu"].includes(type)){control=document.createElement("select");const flag=type==="agent"?"Est_agent_Sanguinet":"Est_elu_Sanguinet";const people=(appState.tables.INTERLOCUTEURS||[]).filter((person)=>isTrue(person[flag]));control.append(option("","Non renseigné"),...people.map((p)=>option(p.id,textOr(p.Nom_complet,`Interlocuteur ${p.id}`))));}else{control=document.createElement("input");control.type=type; if(type==="number"){control.min=0;control.max=100;}}control.className="form-field__control";control.name=name;control.value=type==="date"?dateInputValue(value):displayValue(value);wrapper.append(control);return wrapper;}
 function dateInputValue(value){if(!hasValue(value))return "";const d=new Date(typeof value==="number"?value*1000:value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
-function valuesFromForm(form, allowed){const values={};for(const [name,raw] of new FormData(form).entries()){if(!allowed.includes(name)||!hasValue(raw))continue;if(["Responsable","Elu_pilote"].includes(name))values[name]=Number(raw);else if(name==="Avancement")values[name]=Number(raw);else if(name.startsWith("Date_")||name==="Echeance")values[name]=new Date(`${raw}T00:00:00`).getTime()/1000;else values[name]=String(raw).trim();}return values;}
+function valuesFromForm(form, allowed){const values={};for(const [name,raw] of new FormData(form).entries()){if(!allowed.includes(name))continue;if(["Responsable","Elu_pilote"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else if(name==="Avancement")values[name]=hasValue(raw)?Number(raw):null;else if(name.startsWith("Date_")||name==="Echeance")values[name]=hasValue(raw)?new Date(`${raw}T00:00:00`).getTime()/1000:null;else values[name]=String(raw).trim();}return values;}
 async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn);await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,valuesFromForm(ui.editForm,allowed)]],"Projet mis à jour.");}
-async function saveTracking(event){event.preventDefault();const projectAllowed=["Avancement","Prochaine_etape","Date_prochaine_etape","Point_vigilance"].filter(projectHasColumn);const entered=valuesFromForm(ui.trackingForm,TRACKING_FIELDS.map(([name])=>name));const projectValues=Object.fromEntries(Object.entries(entered).filter(([name])=>projectAllowed.includes(name)));const historyColumns=appState.demo?new Set(Object.keys(appState.tables.AVANCEMENTS?.[0]||{})):appState.writable?.AVANCEMENTS;if(!historyColumns)throw new Error("Impossible de vérifier les colonnes éditables d’AVANCEMENTS.");const history={Projet:appState.selectedProject.id,Date_MAJ:Math.floor(Date.now()/1000),...entered};const historyValues=Object.fromEntries(Object.entries(history).filter(([name])=>name!=="id"&&historyColumns.has(name)));const actions=[["UpdateRecord","PROJETS",appState.selectedProject.id,projectValues]];if(Object.keys(historyValues).length>2)actions.push(["AddRecord","AVANCEMENTS",null,historyValues]);await writeChanges(ui.trackingDialog,actions,"Suivi mis à jour et historisé.");}
-async function writeChanges(dialog,actions,message){if(appState.busy)return;appState.busy=true;dialog.querySelectorAll("input,textarea,select,button").forEach(c=>c.disabled=true);try{if(appState.demo)applyDemoActions(actions);else await window.grist.docApi.applyUserActions(actions);if(!appState.demo)appState.tables=await fetchRelatedTables();selectProject(appState.selectedProject.id,false);dialog.close();showFeedback(message);}catch(error){dialog.querySelector(".form-message").textContent=`Écriture impossible — ${exactError(error)}`;}finally{appState.busy=false;dialog.querySelectorAll("input,textarea,select,button").forEach(c=>c.disabled=false);}}
-function applyDemoActions(actions){for(const [type,table,id,fields] of actions){if(type==="UpdateRecord")Object.assign(appState.tables[table].find(r=>String(r.id)===String(id)),fields);else appState.tables[table].push({id:Math.max(0,...appState.tables[table].map(r=>Number(r.id)||0))+1,...fields});}}
+
+function openJournalForm(row = null) {
+  appState.editingJournalId = row?.id ?? null; ui.trackingForm.reset();
+  ui.trackingDialog.querySelector("#tracking-title").textContent = row ? "Modifier l’entrée du journal" : "Ajouter au journal";
+  ui.trackingDialog.querySelector("[type=submit]").textContent = row ? "Enregistrer la modification" : "Ajouter l’entrée";
+  ui.trackingFields.replaceChildren();
+  const type = journalType(row || {}); const typeField = formField("Type_entree", "Type d’entrée", "choice", type); const typeSelect = typeField.querySelector("select"); typeSelect.replaceChildren(...JOURNAL_TYPES.map((item)=>option(item,item)));
+  const contentField = formField("Contenu", "Qu’est-ce qui a changé ?", "textarea", row ? journalContent(row) : ""); contentField.classList.add("form-field--wide"); contentField.querySelector("textarea").required=true;
+  const dateField=formField("Date_MAJ","Date","date",row?.Date_MAJ||row?.Date||new Date());
+  const dynamic=element("div","journal-dynamic form-grid form-field--wide");
+  const switchWrap=element("label","switch-field form-field--wide"); const toggle=document.createElement("input");toggle.type="checkbox";toggle.name="update_project"; const switchText=textElement("span","Mettre également à jour l’état actuel du projet");switchWrap.append(toggle,switchText);
+  const synthesis=element("div","synthesis-fields form-grid form-field--wide");synthesis.hidden=true;
+  ui.trackingFields.append(typeField,contentField,dateField,dynamic); if(!row)ui.trackingFields.append(switchWrap,synthesis);
+  const refresh=()=>renderJournalDynamic(dynamic,typeSelect.value,row);typeSelect.addEventListener("change",refresh);refresh();
+  if(!row){toggle.addEventListener("change",()=>{synthesis.hidden=!toggle.checked;if(toggle.checked)renderSynthesisFields(synthesis,typeSelect.value);});typeSelect.addEventListener("change",()=>{if(toggle.checked)renderSynthesisFields(synthesis,typeSelect.value);});}
+  ui.trackingDialog.querySelector(".form-message").textContent="";ui.trackingDialog.showModal();contentField.querySelector("textarea").focus();
+}
+function renderJournalDynamic(container,type,row){container.replaceChildren();if(type==="Avancement")container.append(formField("Avancement","Nouvel avancement (%)","number",row?.Avancement));else if(type==="Vigilance")container.append(formField("Point_vigilance","Détail de la vigilance","textarea",row?.Point_vigilance));else if(type==="Blocage")container.append(formField("Difficulte_blocage","Détail du blocage","textarea",row?.Difficulte_blocage));else if(type==="Décision attendue")container.append(formField("Decision_attendue","Décision attendue","textarea",row?.Decision_attendue));else if(type==="Étape franchie")container.append(formField("Travail_realise","Étape franchie","textarea",row?.Travail_realise));}
+function renderSynthesisFields(container,type){container.replaceChildren();if(type==="Avancement")container.append(formField("current_Avancement","Avancement actuel (%)","number",appState.selectedProject.Avancement));if(type==="Vigilance")container.append(formField("current_Point_vigilance","Point de vigilance actuel","textarea",appState.selectedProject.Point_vigilance));container.append(formField("current_Prochaine_etape","Prochaine étape actuelle","textarea",appState.selectedProject.Prochaine_etape),formField("current_Date_prochaine_etape","Date de la prochaine étape","date",appState.selectedProject.Date_prochaine_etape));if(projectHasColumn("Statut")){const status=formField("current_Statut","Statut actuel","choice",appState.selectedProject.Statut);const select=status.querySelector("select");select.replaceChildren(option("","Ne pas modifier"),...projectChoiceValues("Statut").map((item)=>option(item,item)));select.value="";container.append(status);}}
+function journalSchema() { const writable=appState.demo?new Set(Object.keys(appState.tables.AVANCEMENTS?.[0]||{})):appState.metadata?.writable?.AVANCEMENTS; if(!writable)throw new Error("Métadonnées d’AVANCEMENTS indisponibles : écriture annulée par sécurité.");const pick=(...names)=>names.find((name)=>writable.has(name));const schema={writable,project:pick("Projet","PROJET","Projet_ref","Projet_ID","Project"),date:pick("Date_MAJ","Date"),type:pick("Type_entree","Type"),content:pick("Contenu","Fait_marquant","Travail_realise","Commentaire")};if(!schema.project)throw new Error("AVANCEMENTS : aucune colonne de référence projet éditable reconnue (attendu : Projet).");if(!schema.date)throw new Error("AVANCEMENTS : aucune colonne de date éditable reconnue (attendu : Date_MAJ).");if(!schema.content)throw new Error("AVANCEMENTS : aucune colonne de contenu éditable reconnue. Créez Contenu (Texte).");return schema;}
+async function saveJournal(event){event.preventDefault();const schema=journalSchema();const data=new FormData(ui.trackingForm);const content=String(data.get("Contenu")||"").trim();if(!content){ui.trackingDialog.querySelector(".form-message").textContent="Décrivez ce qui a changé.";return;}const values={[schema.project]:appState.selectedProject.id,[schema.date]:new Date(`${data.get("Date_MAJ")}T12:00:00`).getTime()/1000,[schema.content]:content};if(schema.type)values[schema.type]=data.get("Type_entree");for(const field of ["Avancement","Point_vigilance","Difficulte_blocage","Decision_attendue","Travail_realise"]){if(schema.writable.has(field)&&hasValue(data.get(field)))values[field]=field==="Avancement"?Number(data.get(field)):String(data.get(field)).trim();}const journalAction=appState.editingJournalId?["UpdateRecord","AVANCEMENTS",appState.editingJournalId,values]:["AddRecord","AVANCEMENTS",null,values];const actions=[journalAction];if(!appState.editingJournalId&&data.get("update_project")){const map={current_Avancement:"Avancement",current_Point_vigilance:"Point_vigilance",current_Prochaine_etape:"Prochaine_etape",current_Date_prochaine_etape:"Date_prochaine_etape",current_Statut:"Statut"};const project={};for(const [source,target] of Object.entries(map)){const raw=data.get(source);if(!projectHasColumn(target)||!hasValue(raw))continue;project[target]=target==="Avancement"?Number(raw):target.startsWith("Date_")?new Date(`${raw}T00:00:00`).getTime()/1000:String(raw).trim();}if(Object.keys(project).length)actions.push(["UpdateRecord","PROJETS",appState.selectedProject.id,project]);}await writeChanges(ui.trackingDialog,actions,appState.editingJournalId?"Entrée du journal modifiée.":"Nouvelle entrée ajoutée au journal.");}
+function confirmDeleteJournal(id){appState.deletingJournalId=id;ui.deleteDialog.querySelector(".form-message").textContent="";ui.deleteDialog.showModal();}
+async function deleteJournal(event){event.preventDefault();await writeChanges(ui.deleteDialog,[["RemoveRecord","AVANCEMENTS",appState.deletingJournalId]],"Entrée du journal supprimée.");appState.deletingJournalId=null;}
+async function writeChanges(dialog,actions,message){if(appState.busy)return;appState.busy=true;dialog.querySelectorAll("input,textarea,select,button").forEach(c=>c.disabled=true);try{if(appState.demo)applyDemoActions(actions);else await window.grist.docApi.applyUserActions(actions);if(!appState.demo)appState.tables=await fetchRelatedTables();selectProject(appState.selectedProject.id,false);dialog.close();showFeedback(message);}catch(error){console.error("Écriture Grist impossible",error);dialog.querySelector(".form-message").textContent=`Écriture impossible — ${exactError(error)}`;}finally{appState.busy=false;dialog.querySelectorAll("input,textarea,select,button").forEach(c=>c.disabled=false);}}
+function applyDemoActions(actions){for(const [type,table,id,fields] of actions){if(type==="UpdateRecord")Object.assign(appState.tables[table].find(r=>String(r.id)===String(id)),fields);else if(type==="AddRecord")appState.tables[table].push({id:Math.max(0,...appState.tables[table].map(r=>Number(r.id)||0))+1,...fields});else if(type==="RemoveRecord")appState.tables[table]=appState.tables[table].filter(r=>String(r.id)!==String(id));}}
 function showFeedback(message){ui.feedback.textContent=message;ui.feedback.hidden=false;setTimeout(()=>ui.feedback.hidden=true,4000);}
 
 function makeEmpty(message) { return textElement("p", message, "empty-section"); }

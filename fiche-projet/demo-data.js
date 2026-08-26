@@ -28,7 +28,7 @@ window.PROJECT_SHEET_DEMO = {
       { id: 12, Nom_complet: "Alex Dubois", Organisme: "Agence Territoires", Fonction: "Paysagiste", Type_interlocuteur: "Partenaire", Actif: true, Est_agent_Sanguinet: false, Est_elu_Sanguinet: false },
     ],
     AVANCEMENTS: [
-      { id: 101, Projet: 1, Date_MAJ: "2026-08-24", Saisi_par: 10, Avancement: 70, Travail_realise: "Finalisation de l’étude de capacité et partage du scénario préférentiel.", Prochaine_etape: "Arbitrer le traitement du stationnement.", Difficulte_blocage: "Insertion paysagère à consolider.", Decision_attendue: "Choix entre stationnement mutualisé et poches réparties." },
+      { id: 101, Projet: 1, Date_MAJ: "2026-08-24", Type_entree: "Avancement", Contenu: "Finalisation de l’étude de capacité et partage du scénario préférentiel.", Saisi_par: 10, Avancement: 70, Travail_realise: "Finalisation de l’étude de capacité et partage du scénario préférentiel.", Prochaine_etape: "Arbitrer le traitement du stationnement.", Difficulte_blocage: "Insertion paysagère à consolider.", Decision_attendue: "Choix entre stationnement mutualisé et poches réparties." },
       { id: 102, Projet: 1, Date_MAJ: "2026-07-28", Saisi_par: 10, Avancement: 62, Travail_realise: "Atelier avec les services techniques et les partenaires mobilité.", Prochaine_etape: "Mettre à jour le plan-guide." },
     ],
     CONSIGNES_POLITIQUES: [
