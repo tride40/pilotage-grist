@@ -509,7 +509,33 @@ function openJournalForm(row = null) {
 }
 function renderJournalDynamic(container,type,row){container.replaceChildren();if(type==="Avancement")container.append(formField("Avancement","Nouvel avancement (%)","number",row?.Avancement));else if(type==="Vigilance")container.append(formField("Point_vigilance","Détail de la vigilance","textarea",row?.Point_vigilance));else if(type==="Blocage")container.append(formField("Difficulte_blocage","Détail du blocage","textarea",row?.Difficulte_blocage));else if(type==="Décision attendue")container.append(formField("Decision_attendue","Décision attendue","textarea",row?.Decision_attendue));else if(type==="Étape franchie")container.append(formField("Travail_realise","Étape franchie","textarea",row?.Travail_realise));}
 function renderSynthesisFields(container,type){container.replaceChildren();if(type==="Avancement")container.append(formField("current_Avancement","Avancement actuel (%)","number",appState.selectedProject.Avancement));if(type==="Vigilance")container.append(formField("current_Point_vigilance","Point de vigilance actuel","textarea",appState.selectedProject.Point_vigilance));container.append(formField("current_Prochaine_etape","Prochaine étape actuelle","textarea",appState.selectedProject.Prochaine_etape),formField("current_Date_prochaine_etape","Date de la prochaine étape","date",appState.selectedProject.Date_prochaine_etape));if(projectHasColumn("Statut")){const status=formField("current_Statut","Statut actuel","choice",appState.selectedProject.Statut);const select=status.querySelector("select");select.replaceChildren(option("","Ne pas modifier"),...projectChoiceValues("Statut").map((item)=>option(item,item)));select.value="";container.append(status);}}
-function journalSchema() { const writable=appState.demo?new Set(Object.keys(appState.tables.AVANCEMENTS?.[0]||{})):appState.metadata?.writable?.AVANCEMENTS; if(!writable)throw new Error("Métadonnées d’AVANCEMENTS indisponibles : écriture annulée par sécurité.");const pick=(...names)=>names.find((name)=>writable.has(name));const schema={writable,project:pick("Projet","PROJET","Projet_ref","Projet_ID","Project"),date:pick("Date_MAJ","Date"),type:pick("Type_entree","Type"),content:pick("Contenu","Fait_marquant","Travail_realise","Commentaire")};if(!schema.project)throw new Error("AVANCEMENTS : aucune colonne de référence projet éditable reconnue (attendu : Projet).");if(!schema.date)throw new Error("AVANCEMENTS : aucune colonne de date éditable reconnue (attendu : Date_MAJ).");if(!schema.content)throw new Error("AVANCEMENTS : aucune colonne de contenu éditable reconnue. Créez Contenu (Texte).");return schema;}
+function journalSchema() {
+  const writable = appState.demo ? new Set(Object.keys(appState.tables.AVANCEMENTS?.[0] || {})) : appState.metadata?.writable?.AVANCEMENTS;
+  if (!writable) throw new Error("Métadonnées d’AVANCEMENTS indisponibles : écriture annulée par sécurité.");
+  const details = appState.metadata?.details?.AVANCEMENTS;
+  const pick = (...names) => names.find((name) => writable.has(name));
+  const columnsOfType = (predicate) => details ? [...details.values()].filter((column) => writable.has(column.colId) && predicate(String(column.type || ""))) : [];
+  const projectRefs = columnsOfType((type) => type === "Ref:PROJETS");
+  const dateColumns = columnsOfType((type) => ["Date", "DateTime"].includes(type.split(":")[0]));
+  const namedProjectCandidate = pick("Projet", "PROJET", "Projet_ref", "Projet_ID", "Project");
+  const namedDateCandidate = pick("Date_MAJ", "Date");
+  const namedProject = namedProjectCandidate && (!details || String(details.get(namedProjectCandidate)?.type || "") === "Ref:PROJETS") ? namedProjectCandidate : null;
+  const namedDate = namedDateCandidate && (!details || ["Date", "DateTime"].includes(String(details.get(namedDateCandidate)?.type || "").split(":")[0])) ? namedDateCandidate : null;
+  const schema = {
+    writable,
+    project: namedProject || (projectRefs.length === 1 ? projectRefs[0].colId : null),
+    date: namedDate || (dateColumns.length === 1 ? dateColumns[0].colId : null),
+    type: pick("Type_entree", "Type"),
+    content: pick("Contenu", "Fait_marquant", "Travail_realise", "Commentaire"),
+  };
+  if (!schema.project) {
+    const refs = details ? [...details.values()].filter((column) => String(column.type || "").startsWith("Ref")).map((column) => `${column.colId} (${column.type}${isWritableColumn(column) ? ", éditable" : ", calculée"})`) : [];
+    throw new Error(`AVANCEMENTS : aucune référence éditable unique vers PROJETS détectée${refs.length ? `. Références trouvées : ${refs.join(", ")}` : ". Aucune colonne Ref trouvée dans les métadonnées"}.`);
+  }
+  if (!schema.date) throw new Error(`AVANCEMENTS : aucune date éditable reconnue${dateColumns.length > 1 ? `. Dates trouvées : ${dateColumns.map((column) => column.colId).join(", ")}` : " (attendu : Date_MAJ)"}.`);
+  if (!schema.content) throw new Error("AVANCEMENTS : aucune colonne de contenu éditable reconnue. Créez Contenu (Texte).");
+  return schema;
+}
 async function saveJournal(event) {
   event.preventDefault();
   const message = ui.trackingDialog.querySelector(".form-message");
