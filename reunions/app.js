@@ -1,10 +1,10 @@
 "use strict";
 
-const REQUIRED_TABLES = ["REUNIONS", "INTERLOCUTEURS"];
-const state = { project: null, meetings: [], people: [], filter: "all", search: "" };
+const REQUIRED_TABLES = ["PROJETS", "REUNIONS", "INTERLOCUTEURS"];
+const state = { project: null, projects: [], meetings: [], people: [], filter: "all", search: "" };
 const ui = {
   state: document.querySelector("#interface-state"), content: document.querySelector("#meetings-content"),
-  projectName: document.querySelector("#project-name"), total: document.querySelector("#meeting-count"),
+  projectName: document.querySelector("#project-name"), projectSelector: document.querySelector("#project-selector"), total: document.querySelector("#meeting-count"),
   kpis: document.querySelector("#meeting-kpis"), filters: document.querySelector("#filter-list"),
   search: document.querySelector("#meeting-search"), results: document.querySelector("#results-count"),
   list: document.querySelector("#meeting-list"), template: document.querySelector("#meeting-template"),
@@ -24,10 +24,15 @@ async function initialize() {
     if (missing.length) throw new Error(`Tables Grist introuvables : ${missing.join(", ")}.`);
     setLoadingMessage("Lecture des réunions et des interlocuteurs…");
     const tables = await fetchTables(REQUIRED_TABLES);
+    state.projects = tables.PROJETS;
     state.meetings = tables.REUNIONS;
     state.people = tables.INTERLOCUTEURS;
-    window.grist.onRecord((record) => { state.project = record || null; render(); });
-    /* Grist peut ne pas envoyer de ligne si la table source est vide ou mal configurée. */
+    populateProjectSelector();
+    state.project = firstActiveProject();
+    window.grist.onRecord((record) => {
+      const matchingProject = record && state.projects.find((project) => String(project.id) === String(record.id));
+      if (matchingProject) { state.project = matchingProject; ui.projectSelector.value = String(matchingProject.id); render(); }
+    });
     render();
   } catch (error) {
     console.error("Erreur de chargement du widget Réunions :", error);
@@ -45,7 +50,7 @@ function withTimeout(promise, label, delay = 10000) {
     new Promise((_, reject) => window.setTimeout(() => reject(new Error(`Délai dépassé pendant : ${label}.`)), delay)),
   ]);
 }
-function applyData(project, tables) { state.project = project; state.meetings = tables.REUNIONS || []; state.people = tables.INTERLOCUTEURS || []; render(); }
+function applyData(project, tables) { state.projects = tables.PROJETS || [project]; state.project = project; state.meetings = tables.REUNIONS || []; state.people = tables.INTERLOCUTEURS || []; populateProjectSelector(); render(); }
 function normalizeTableNames(value) { const rows = Array.isArray(value) ? value : Array.isArray(value?.tables) ? value.tables : []; return rows.map((row) => typeof row === "string" ? row : row?.id ?? row?.tableId ?? row?.name ?? "").filter(Boolean); }
 function columnarToRecords(columns) { if (!columns || typeof columns !== "object") return []; const names = Object.keys(columns).filter((name) => Array.isArray(columns[name])); const length = Math.max(0, ...names.map((name) => columns[name].length)); return Array.from({ length }, (_, index) => Object.fromEntries(names.map((name) => [name, columns[name][index]]))); }
 function isLocalDemoMode() { return ["localhost", "127.0.0.1"].includes(window.location.hostname) && window.self === window.top && new URLSearchParams(window.location.search).get("demo") === "1" && Boolean(window.MEETINGS_DEMO_DATA); }
@@ -72,11 +77,22 @@ function calculateKpis(meetings) {
   const today = startOfToday();
   return [["Total", meetings.length], ["À venir", meetings.filter((row) => dateValue(row.Date_reunion ?? row.Date) >= today).length], ["Décisions", meetings.filter((row) => hasValue(row.Decisions_prises)).length], ["Arbitrages", meetings.filter((row) => hasValue(row.Arbitrage_attendu)).length]];
 }
+function populateProjectSelector() {
+  const projects = [...state.projects].sort((left, right) => textOr(left.Nom_projet, "").localeCompare(textOr(right.Nom_projet, ""), "fr"));
+  ui.projectSelector.replaceChildren(...projects.map((project) => {
+    const option = element("option"); option.value = String(project.id); option.textContent = textOr(project.Nom_projet, "Projet sans nom"); return option;
+  }));
+  ui.projectSelector.disabled = projects.length === 0;
+}
+function firstActiveProject() {
+  return state.projects.find((project) => !isTrue(project.Archive) && !["termine", "abandonne"].includes(normalizeText(project.Statut))) || state.projects[0] || null;
+}
 
 /* Rendu de l'interface. */
 function render() {
   if (!state.project) { showInterfaceState("Aucun projet sélectionné", "Sélectionnez une ligne dans la table PROJETS pour afficher ses réunions."); return; }
   const meetings = projectMeetings();
+  ui.projectSelector.value = String(state.project.id);
   ui.projectName.textContent = textOr(state.project.Nom_projet, "Projet sans nom");
   ui.total.textContent = `${meetings.length} ${meetings.length > 1 ? "réunions" : "réunion"}`;
   renderKpis(calculateKpis(meetings)); renderMeetingList(filteredMeetings(meetings));
@@ -113,6 +129,7 @@ function showInterfaceState(title, message) { ui.content.hidden = true; const bo
 
 /* Contrôles locaux sans rechargement. */
 function bindControls() {
+  ui.projectSelector.addEventListener("change", () => { state.project = state.projects.find((project) => String(project.id) === ui.projectSelector.value) || null; render(); });
   ui.filters.addEventListener("click", (event) => { const button = event.target.closest("[data-filter]"); if (!button) return; state.filter = button.dataset.filter; ui.filters.querySelectorAll("[data-filter]").forEach((item) => item.setAttribute("aria-pressed", String(item === button))); render(); });
   ui.search.addEventListener("input", () => { state.search = ui.search.value; render(); });
 }
@@ -128,6 +145,7 @@ function hasValue(value) { return value !== null && value !== undefined && Strin
 function displayValue(value) { if (Array.isArray(value)) return value.filter((item) => item !== "L").map(displayValue).join(", "); return hasValue(value) ? String(value).trim() : ""; }
 function textOr(value, fallback) { return hasValue(value) ? displayValue(value) : fallback; }
 function normalizeText(value) { return displayValue(value).toLocaleLowerCase("fr-FR").normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+function isTrue(value) { return value === true || value === 1 || ["true", "vrai", "oui", "1"].includes(normalizeText(value)); }
 function exactError(error) { return error instanceof Error ? `${error.name} : ${error.message}` : String(error); }
 function element(tag, className) { const node = document.createElement(tag); if (className) node.className = className; return node; }
 function textElement(tag, value, className) { const node = element(tag, className); node.textContent = displayValue(value); return node; }
