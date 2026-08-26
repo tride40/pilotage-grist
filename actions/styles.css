@@ -5,7 +5,14 @@
 
 .button--success{background:var(--color-success);color:#fff}
 .button--danger{background:var(--color-danger);color:#fff}
+.action-card--cancelled{border-inline-start-color:var(--color-danger)}
 @media(hover:hover) and (pointer:fine){.button--success:hover,.button--danger:hover{filter:brightness(.92)}}
+
+/* Sur deux colonnes, chaque zone commence au même niveau malgré les textes variables. */
+@media(min-width:80rem){
+  .action-card--history{grid-template-rows:5rem 12rem 1fr}
+  .action-card--history .action-card__notes{grid-template-rows:repeat(2,minmax(5.25rem,auto));align-self:stretch}
+}
 @media(min-width:48rem){.actions-header__content,.actions-shell{padding:var(--space-6)}.summary{grid-template-columns:repeat(5,minmax(0,1fr))}.action-card__meta{grid-template-columns:repeat(4,minmax(0,1fr))}.inline-fields,.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}dialog form{padding:var(--space-6)}}
 @media(min-width:80rem){.action-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:30rem){.actions-header__content>*,.actions-header .button,.project-selector,.dialog-actions .button,.action-card__actions .button{width:100%}.action-card__meta{grid-template-columns:minmax(0,1fr)}}
