@@ -5,6 +5,10 @@
 .meetings-header h1 { margin: 0; font-size: clamp(1.65rem, 5vw, 2.35rem); }
 .meetings-header .section-kicker { color: #c9c6ff; }
 .meetings-header__project { margin: var(--space-2) 0 0; color: #d9deec; }
+.project-selector { display: grid; gap: var(--space-1); margin-top: var(--space-3); color: #d9deec; font-size: .8rem; font-weight: 700; }
+.project-selector select { min-width: min(24rem, calc(100vw - 2rem)); min-height: 44px; padding: 0 var(--space-4); border: 1px solid rgb(255 255 255 / 28%); border-radius: var(--radius-md); color: #fff; background: rgb(255 255 255 / 12%); font: inherit; font-size: 1rem; }
+.project-selector select:focus { outline: 3px solid rgb(255 255 255 / 24%); outline-offset: 2px; }
+.project-selector option { color: var(--color-text); background: var(--color-surface); }
 .meetings-shell { padding: var(--space-5) 0 var(--space-8); }
 #meetings-content[hidden], .interface-state[hidden] { display: none; }
 
