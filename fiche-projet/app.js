@@ -98,9 +98,9 @@ async function fetchMetadata() {
 }
 function isWritableColumn(column) {
   if (!column) return false;
-  // Grist peut conserver une formule déclencheur sur une colonne de données :
-  // seul isFormula=true désigne une vraie colonne calculée non éditable.
-  if (Object.prototype.hasOwnProperty.call(column, "isFormula")) return !isTrue(column.isFormula);
+  // Grist peut renvoyer isFormula=true pour une colonne de données encore vide.
+  // Une vraie colonne calculée cumule isFormula=true et une formule non vide.
+  if (Object.prototype.hasOwnProperty.call(column, "isFormula")) return !(isTrue(column.isFormula) && hasValue(column.formula));
   return !hasValue(column.formula);
 }
 function extractChoiceValues(column) {
