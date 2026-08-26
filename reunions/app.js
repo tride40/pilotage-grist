@@ -16,10 +16,13 @@ async function initialize() {
   try {
     if (isLocalDemoMode()) { applyData(window.MEETINGS_DEMO_DATA.project, window.MEETINGS_DEMO_DATA.tables); return; }
     if (!window.grist?.docApi) throw new Error("L’API Grist n’est pas disponible.");
-    await Promise.resolve(window.grist.ready({ requiredAccess: "full" }));
-    const tableNames = normalizeTableNames(await window.grist.docApi.listTables());
+    setLoadingMessage("Initialisation de l’API Grist…");
+    await withTimeout(Promise.resolve(window.grist.ready({ requiredAccess: "full" })), "initialisation de l’API Grist");
+    setLoadingMessage("Détection des tables du document…");
+    const tableNames = normalizeTableNames(await withTimeout(window.grist.docApi.listTables(), "détection des tables"));
     const missing = REQUIRED_TABLES.filter((name) => !tableNames.includes(name));
     if (missing.length) throw new Error(`Tables Grist introuvables : ${missing.join(", ")}.`);
+    setLoadingMessage("Lecture des réunions et des interlocuteurs…");
     const tables = await fetchTables(REQUIRED_TABLES);
     state.meetings = tables.REUNIONS;
     state.people = tables.INTERLOCUTEURS;
@@ -33,8 +36,14 @@ async function initialize() {
 }
 
 async function fetchTables(names) {
-  const entries = await Promise.all(names.map(async (name) => [name, columnarToRecords(await window.grist.docApi.fetchTable(name))]));
+  const entries = await Promise.all(names.map(async (name) => [name, columnarToRecords(await withTimeout(window.grist.docApi.fetchTable(name), `lecture de la table ${name}`))]));
   return Object.fromEntries(entries);
+}
+function withTimeout(promise, label, delay = 10000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => window.setTimeout(() => reject(new Error(`Délai dépassé pendant : ${label}.`)), delay)),
+  ]);
 }
 function applyData(project, tables) { state.project = project; state.meetings = tables.REUNIONS || []; state.people = tables.INTERLOCUTEURS || []; render(); }
 function normalizeTableNames(value) { const rows = Array.isArray(value) ? value : Array.isArray(value?.tables) ? value.tables : []; return rows.map((row) => typeof row === "string" ? row : row?.id ?? row?.tableId ?? row?.name ?? "").filter(Boolean); }
@@ -99,6 +108,7 @@ function renderMeetingCard(meeting) {
 function appendDefinition(container, label, value) { if (!hasValue(value)) return; const wrapper = element("div"); wrapper.append(textElement("dt", label), textElement("dd", displayValue(value))); container.append(wrapper); }
 function appendNote(container, label, value, kind) { if (!hasValue(value)) return; const note = element("section", `meeting-note meeting-note--${kind}`); note.append(textElement("strong", label), textElement("p", displayValue(value))); container.append(note); }
 function makeBadge(value, kind) { return textElement("span", displayValue(value), `badge badge--${kind}`); }
+function setLoadingMessage(message) { const text = ui.state.querySelector("p"); if (text) text.textContent = message; }
 function showInterfaceState(title, message) { ui.content.hidden = true; const box = element("div"); box.append(textElement("strong", title), textElement("p", message)); ui.state.replaceChildren(box); ui.state.hidden = false; }
 
 /* Contrôles locaux sans rechargement. */
