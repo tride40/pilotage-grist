@@ -101,19 +101,19 @@ function renderEditor(row, group) {
 }
 
 async function createInstruction(formData) {
-  const fields = writableFields({ Projet: Number(state.project.id), Consigne: formData.get("Consigne").trim(), Priorite: formData.get("Priorite"), Echeance: gristDate(formData.get("Echeance")), Responsable: optionalNumber(formData.get("Responsable")), Statut: "En cours", A_controler: false, Validee: false, Date_MAJ: nowGrist() });
+  const fields = writableFields({ Projet: Number(state.project.id), Consigne: formData.get("Consigne").trim(), Priorite: formData.get("Priorite"), Echeance: gristDate(formData.get("Echeance")), Responsable: optionalNumber(formData.get("Responsable")), Statut: "En cours", Date_MAJ: nowGrist() });
   requireFields(fields, ["Projet", "Consigne"]); await writeAction(["AddRecord", TABLE, null, fields], "Consigne créée."); ui.form.reset(); ui.dialog.close();
 }
 
 async function saveServiceReturn(row, value) {
   if (!value.trim()) { showFeedback("Le retour du service ne peut pas être vide.", true); return; }
-  const fields = writableFields({ Retour_service: value.trim(), Statut: "À contrôler", A_controler: true, Validee: false, Date_MAJ: nowGrist() });
+  const fields = writableFields({ Retour_service: value.trim(), Statut: "À contrôler", Date_MAJ: nowGrist() });
   requireFields(fields, ["Retour_service"]); await writeAction(["UpdateRecord", TABLE, row.id, fields], "Retour enregistré : la consigne attend le contrôle de l’élu.");
 }
 
 async function controlInstruction(row, validated, comment) {
   if (comment.trim() && !state.columns.has("Controle_elu")) throw new Error("La colonne Controle_elu est nécessaire pour enregistrer ce commentaire.");
-  const fields = writableFields({ Controle_elu: comment.trim(), Statut: validated ? "Validée" : "À reprendre", A_controler: false, Validee: validated, Date_MAJ: nowGrist() });
+  const fields = writableFields({ Controle_elu: comment.trim(), Statut: validated ? "Validée" : "À reprendre", Date_MAJ: nowGrist() });
   requireFields(fields, ["Statut"]); await writeAction(["UpdateRecord", TABLE, row.id, fields], validated ? "Consigne validée." : "Consigne renvoyée au service.");
 }
 
