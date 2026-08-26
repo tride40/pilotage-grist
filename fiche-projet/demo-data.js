@@ -23,9 +23,9 @@ window.PROJECT_SHEET_DEMO = {
   tables: {
     PROJETS: [],
     INTERLOCUTEURS: [
-      { id: 10, Nom_complet: "Camille Martin", Organisme: "Direction de l’aménagement", Fonction: "Cheffe de projet", Type_interlocuteur: "Service" },
-      { id: 11, Nom_complet: "Sophie Bernard", Organisme: "Ville", Fonction: "Adjointe à l’urbanisme", Type_interlocuteur: "Élue" },
-      { id: 12, Nom_complet: "Alex Dubois", Organisme: "Agence Territoires", Fonction: "Paysagiste", Type_interlocuteur: "Partenaire" },
+      { id: 10, Nom_complet: "Camille Martin", Organisme: "Mairie de Sanguinet", Fonction: "Cheffe de projet", Type_interlocuteur: "Agent collectivité", Actif: true, Est_agent_Sanguinet: true, Est_elu_Sanguinet: false },
+      { id: 11, Nom_complet: "Sophie Bernard", Organisme: "Mairie de Sanguinet", Fonction: "Adjointe à l’urbanisme", Type_interlocuteur: "Élu", Actif: true, Est_agent_Sanguinet: false, Est_elu_Sanguinet: true },
+      { id: 12, Nom_complet: "Alex Dubois", Organisme: "Agence Territoires", Fonction: "Paysagiste", Type_interlocuteur: "Partenaire", Actif: true, Est_agent_Sanguinet: false, Est_elu_Sanguinet: false },
     ],
     AVANCEMENTS: [
       { id: 101, Projet: 1, Date_MAJ: "2026-08-24", Saisi_par: 10, Avancement: 70, Travail_realise: "Finalisation de l’étude de capacité et partage du scénario préférentiel.", Prochaine_etape: "Arbitrer le traitement du stationnement.", Difficulte_blocage: "Insertion paysagère à consolider.", Decision_attendue: "Choix entre stationnement mutualisé et poches réparties." },

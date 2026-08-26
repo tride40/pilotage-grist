@@ -222,7 +222,7 @@ function renderProjectBadges(project) {
 
 function renderHeroPeople(project) {
   ui.people.replaceChildren();
-  appendDefinition(ui.people, "Responsable", personValue(project.Responsable));
+  appendDefinition(ui.people, "Agent pilote", personValue(project.Responsable));
   appendDefinition(ui.people, "Élu pilote", personValue(project.Elu_pilote));
   if (!ui.people.children.length) ui.people.hidden = true;
   else ui.people.hidden = false;
@@ -407,7 +407,7 @@ function makeProgress(percentage) {
 /* ---------- Sélection autonome et édition ---------- */
 const PROJECT_FIELDS = [
   ["Nom_projet", "Nom du projet", "text"], ["Description", "Description", "textarea"], ["Objectif_politique", "Objectif politique", "textarea"],
-  ["Categorie", "Catégorie", "text"], ["Statut", "Statut", "text"], ["Priorite", "Priorité", "text"], ["Responsable", "Responsable", "person"], ["Elu_pilote", "Élu pilote", "person"],
+  ["Categorie", "Catégorie", "text"], ["Statut", "Statut", "text"], ["Priorite", "Priorité", "text"], ["Responsable", "Agent pilote", "agent"], ["Elu_pilote", "Élu pilote", "elu"],
   ["Echeance", "Échéance", "date"], ["Date_debut", "Date de début", "date"], ["Prochaine_etape", "Prochaine étape", "textarea"], ["Date_prochaine_etape", "Date prochaine étape", "date"], ["Point_vigilance", "Point de vigilance", "textarea"],
 ];
 const TRACKING_FIELDS = [["Avancement", "Avancement (%)", "number"], ["Prochaine_etape", "Prochaine étape", "textarea"], ["Date_prochaine_etape", "Date prochaine étape", "date"], ["Point_vigilance", "Point de vigilance", "textarea"], ["Travail_realise", "Travail réalisé", "textarea"], ["Difficulte_blocage", "Difficulté / blocage", "textarea"], ["Decision_attendue", "Décision attendue", "textarea"], ["Commentaire", "Commentaire", "textarea"]];
@@ -438,7 +438,7 @@ function openDataForm(kind) {
   container.replaceChildren(...fields.filter(([name]) => kind === "tracking" || projectHasColumn(name)).map(([name,label,type]) => formField(name,label,type, appState.selectedProject[name]))); dialog.querySelector(".form-message").textContent=""; dialog.showModal();
 }
 function projectHasColumn(name){return appState.demo?(appState.tables.PROJETS || []).some((row)=>Object.prototype.hasOwnProperty.call(row,name)):Boolean(appState.writable?.PROJETS?.has(name));}
-function formField(name,label,type,value){const wrapper=element("label",`form-field${type==="textarea"?" form-field--wide":""}`);wrapper.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=document.createElement("textarea");control.rows=3;}else if(type==="person"){control=document.createElement("select");control.append(option("","Non renseigné"),...(appState.tables.INTERLOCUTEURS||[]).map((p)=>option(p.id,textOr(p.Nom_complet,`Interlocuteur ${p.id}`))));}else{control=document.createElement("input");control.type=type; if(type==="number"){control.min=0;control.max=100;}}control.className="form-field__control";control.name=name;control.value=type==="date"?dateInputValue(value):displayValue(value);wrapper.append(control);return wrapper;}
+function formField(name,label,type,value){const wrapper=element("label",`form-field${type==="textarea"?" form-field--wide":""}`);wrapper.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=document.createElement("textarea");control.rows=3;}else if(["agent","elu"].includes(type)){control=document.createElement("select");const flag=type==="agent"?"Est_agent_Sanguinet":"Est_elu_Sanguinet";const people=(appState.tables.INTERLOCUTEURS||[]).filter((person)=>isTrue(person[flag]));control.append(option("","Non renseigné"),...people.map((p)=>option(p.id,textOr(p.Nom_complet,`Interlocuteur ${p.id}`))));}else{control=document.createElement("input");control.type=type; if(type==="number"){control.min=0;control.max=100;}}control.className="form-field__control";control.name=name;control.value=type==="date"?dateInputValue(value):displayValue(value);wrapper.append(control);return wrapper;}
 function dateInputValue(value){if(!hasValue(value))return "";const d=new Date(typeof value==="number"?value*1000:value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
 function valuesFromForm(form, allowed){const values={};for(const [name,raw] of new FormData(form).entries()){if(!allowed.includes(name)||!hasValue(raw))continue;if(["Responsable","Elu_pilote"].includes(name))values[name]=Number(raw);else if(name==="Avancement")values[name]=Number(raw);else if(name.startsWith("Date_")||name==="Echeance")values[name]=new Date(`${raw}T00:00:00`).getTime()/1000;else values[name]=String(raw).trim();}return values;}
 async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn);await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,valuesFromForm(ui.editForm,allowed)]],"Projet mis à jour.");}
