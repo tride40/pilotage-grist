@@ -6,7 +6,19 @@ const TABLE_NAMES = [
   "CONSIGNES_POLITIQUES", "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
 
-const state = { projects: [], activeFilter: "all", search: "", tables: null, writable: null, demo: false, busy: false };
+const PROJECT_CHOICE_FIELDS = ["Categorie", "Statut", "Priorite"];
+const PROJECT_FORM_FIELDS = [
+  "Nom_projet", "Description", "Objectif_politique", "Categorie", "Statut", "Priorite",
+  "Responsable", "Elu_pilote", "Date_debut", "Echeance", "Avancement",
+  "Prochaine_etape", "Date_prochaine_etape", "Point_vigilance",
+];
+const PROJECT_CHOICE_FALLBACKS = {
+  Categorie: ["Urbanisme", "Aménagement", "Habitat", "Mobilités", "Bâtiments", "Environnement", "Littoral", "Foncier", "Autre"],
+  Statut: ["À lancer", "En cours", "En attente", "Bloqué", "Terminé", "Abandonné"],
+  Priorite: ["Faible", "Normale", "Haute", "Prioritaire"],
+};
+
+const state = { projects: [], activeFilter: "all", search: "", tables: null, writable: null, projectChoices: null, demo: false, busy: false };
 const elements = {
   date: document.querySelector("#current-date"),
   filters: document.querySelector("#filter-list"),
@@ -81,10 +93,37 @@ function columnarToRecords(columns) {
     Object.fromEntries(names.map((name) => [name, columns[name][index]])),
   );
 }
-async function fetchWritableColumns() {
+async function fetchProjectMetadata() {
   const [tableMeta, columnMeta] = await Promise.all([window.grist.docApi.fetchTable("_grist_Tables"), window.grist.docApi.fetchTable("_grist_Tables_column")]);
   const tables = columnarToRecords(tableMeta), columns = columnarToRecords(columnMeta), ids = new Map(tables.map(row=>[String(row.id),row.tableId]));
-  return Object.fromEntries(TABLE_NAMES.map(name=>[name,new Set(columns.filter(col=>ids.get(String(col.parentId))===name&&!hasValue(col.formula)&&!isTrue(col.isFormula)).map(col=>col.colId))]));
+  const columnsByTable = (name) => columns.filter((column) => ids.get(String(column.parentId)) === name);
+  const writable = Object.fromEntries(TABLE_NAMES.map((name) => [name, new Set(columnsByTable(name).filter((column) => !hasValue(column.formula) && !isTrue(column.isFormula)).map((column) => column.colId))]));
+  const projectChoices = Object.fromEntries(PROJECT_CHOICE_FIELDS.map((field) => {
+    const column = columnsByTable("PROJETS").find((candidate) => candidate.colId === field);
+    return [field, extractChoiceValues(column)];
+  }));
+  return { writable, projectChoices };
+}
+
+function extractChoiceValues(column) {
+  if (!column || !["Choice", "ChoiceList"].includes(String(column.type || "").split(":")[0])) return [];
+  for (const rawOptions of [column.widgetOptions, column.options]) {
+    const options = decodeMetadataOptions(rawOptions);
+    const choices = options?.choices ?? options?.choiceValues ?? options?.values;
+    if (Array.isArray(choices)) return choices.filter((value) => value !== "L" && hasValue(value)).map(displayValue);
+  }
+  return [];
+}
+
+function decodeMetadataOptions(value) {
+  if (!hasValue(value)) return null;
+  if (typeof value === "object") return value;
+  try {
+    const decoded = JSON.parse(value);
+    return typeof decoded === "string" ? decodeMetadataOptions(decoded) : decoded;
+  } catch (_) {
+    return null;
+  }
 }
 
 /* ---------- Calculs des indicateurs et liens entre tables ---------- */
@@ -423,13 +462,30 @@ function distinctValues(field) {
   return [...new Set((state.tables?.PROJETS || []).map((row) => displayValue(row[field])).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
 }
 
+function projectChoiceValues(field) {
+  const metadata = state.projectChoices?.[field] || [];
+  const existing = distinctValues(field);
+  const base = metadata.length ? metadata : PROJECT_CHOICE_FALLBACKS[field];
+  return [...new Set([...base, ...existing])];
+}
+
 function option(value, label) { const item = document.createElement("option"); item.value = value; item.textContent = label; return item; }
 
-function fillList(id, values) { document.querySelector(id).replaceChildren(...values.map((value) => option(value, value))); }
+function fillSelect(field, placeholder) {
+  const control = elements.form.elements[field];
+  const values = projectChoiceValues(field);
+  control.replaceChildren(option("", placeholder), ...values.map((value) => option(value, value)));
+  return Boolean(state.projectChoices?.[field]?.length);
+}
 
 function openProjectForm() {
-  elements.form.reset(); elements.form.elements.Statut.value = "En cours"; elements.form.elements.Avancement.value = "0"; elements.formMessage.textContent = "";
-  fillList("#project-categories", distinctValues("Categorie")); fillList("#project-statuses", distinctValues("Statut")); fillList("#project-priorities", distinctValues("Priorite"));
+  elements.form.reset(); elements.form.elements.Avancement.value = "0"; elements.formMessage.classList.remove("is-error"); elements.formMessage.textContent = "";
+  const metadataFields = PROJECT_CHOICE_FIELDS.filter((field) => fillSelect(field, "Sélectionner…"));
+  elements.form.elements.Statut.value = "En cours";
+  if (!state.demo && metadataFields.length < PROJECT_CHOICE_FIELDS.length) {
+    const fallbackFields = PROJECT_CHOICE_FIELDS.filter((field) => !metadataFields.includes(field));
+    elements.formMessage.textContent = `Choix Grist indisponibles pour ${fallbackFields.join(", ")} : les valeurs par défaut et existantes sont proposées.`;
+  }
   const people = state.tables?.INTERLOCUTEURS || [];
   const choices = [option("", "Non renseigné"), ...people.map((person) => option(String(person.id), textOr(person.Nom_complet || [person.Prenom, person.Nom].filter(Boolean).join(" "), `Interlocuteur ${person.id}`)))];
   elements.form.elements.Responsable.replaceChildren(...choices.map((item) => item.cloneNode(true)));
@@ -510,7 +566,15 @@ async function initializeDashboard() {
     } else {
       const tableNames = await initializeGristConnection();
       tables = await fetchDocumentData(tableNames);
-      state.writable = await fetchWritableColumns();
+      try {
+        const metadata = await fetchProjectMetadata();
+        state.writable = metadata.writable;
+        state.projectChoices = metadata.projectChoices;
+      } catch (metadataError) {
+        console.warn("Métadonnées Grist indisponibles : utilisation des choix par défaut.", metadataError);
+        state.writable = { PROJETS: new Set(PROJECT_FORM_FIELDS) };
+        state.projectChoices = Object.fromEntries(PROJECT_CHOICE_FIELDS.map((field) => [field, []]));
+      }
     }
     state.tables = tables;
     state.projects = prepareDashboardData(tables);
