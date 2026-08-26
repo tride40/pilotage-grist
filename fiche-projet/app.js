@@ -510,7 +510,39 @@ function openJournalForm(row = null) {
 function renderJournalDynamic(container,type,row){container.replaceChildren();if(type==="Avancement")container.append(formField("Avancement","Nouvel avancement (%)","number",row?.Avancement));else if(type==="Vigilance")container.append(formField("Point_vigilance","Détail de la vigilance","textarea",row?.Point_vigilance));else if(type==="Blocage")container.append(formField("Difficulte_blocage","Détail du blocage","textarea",row?.Difficulte_blocage));else if(type==="Décision attendue")container.append(formField("Decision_attendue","Décision attendue","textarea",row?.Decision_attendue));else if(type==="Étape franchie")container.append(formField("Travail_realise","Étape franchie","textarea",row?.Travail_realise));}
 function renderSynthesisFields(container,type){container.replaceChildren();if(type==="Avancement")container.append(formField("current_Avancement","Avancement actuel (%)","number",appState.selectedProject.Avancement));if(type==="Vigilance")container.append(formField("current_Point_vigilance","Point de vigilance actuel","textarea",appState.selectedProject.Point_vigilance));container.append(formField("current_Prochaine_etape","Prochaine étape actuelle","textarea",appState.selectedProject.Prochaine_etape),formField("current_Date_prochaine_etape","Date de la prochaine étape","date",appState.selectedProject.Date_prochaine_etape));if(projectHasColumn("Statut")){const status=formField("current_Statut","Statut actuel","choice",appState.selectedProject.Statut);const select=status.querySelector("select");select.replaceChildren(option("","Ne pas modifier"),...projectChoiceValues("Statut").map((item)=>option(item,item)));select.value="";container.append(status);}}
 function journalSchema() { const writable=appState.demo?new Set(Object.keys(appState.tables.AVANCEMENTS?.[0]||{})):appState.metadata?.writable?.AVANCEMENTS; if(!writable)throw new Error("Métadonnées d’AVANCEMENTS indisponibles : écriture annulée par sécurité.");const pick=(...names)=>names.find((name)=>writable.has(name));const schema={writable,project:pick("Projet","PROJET","Projet_ref","Projet_ID","Project"),date:pick("Date_MAJ","Date"),type:pick("Type_entree","Type"),content:pick("Contenu","Fait_marquant","Travail_realise","Commentaire")};if(!schema.project)throw new Error("AVANCEMENTS : aucune colonne de référence projet éditable reconnue (attendu : Projet).");if(!schema.date)throw new Error("AVANCEMENTS : aucune colonne de date éditable reconnue (attendu : Date_MAJ).");if(!schema.content)throw new Error("AVANCEMENTS : aucune colonne de contenu éditable reconnue. Créez Contenu (Texte).");return schema;}
-async function saveJournal(event){event.preventDefault();const schema=journalSchema();const data=new FormData(ui.trackingForm);const content=String(data.get("Contenu")||"").trim();if(!content){ui.trackingDialog.querySelector(".form-message").textContent="Décrivez ce qui a changé.";return;}const values={[schema.project]:appState.selectedProject.id,[schema.date]:new Date(`${data.get("Date_MAJ")}T12:00:00`).getTime()/1000,[schema.content]:content};if(schema.type)values[schema.type]=data.get("Type_entree");for(const field of ["Avancement","Point_vigilance","Difficulte_blocage","Decision_attendue","Travail_realise"]){if(schema.writable.has(field)&&hasValue(data.get(field)))values[field]=field==="Avancement"?Number(data.get(field)):String(data.get(field)).trim();}const journalAction=appState.editingJournalId?["UpdateRecord","AVANCEMENTS",appState.editingJournalId,values]:["AddRecord","AVANCEMENTS",null,values];const actions=[journalAction];if(!appState.editingJournalId&&data.get("update_project")){const map={current_Avancement:"Avancement",current_Point_vigilance:"Point_vigilance",current_Prochaine_etape:"Prochaine_etape",current_Date_prochaine_etape:"Date_prochaine_etape",current_Statut:"Statut"};const project={};for(const [source,target] of Object.entries(map)){const raw=data.get(source);if(!projectHasColumn(target)||!hasValue(raw))continue;project[target]=target==="Avancement"?Number(raw):target.startsWith("Date_")?new Date(`${raw}T00:00:00`).getTime()/1000:String(raw).trim();}if(Object.keys(project).length)actions.push(["UpdateRecord","PROJETS",appState.selectedProject.id,project]);}await writeChanges(ui.trackingDialog,actions,appState.editingJournalId?"Entrée du journal modifiée.":"Nouvelle entrée ajoutée au journal.");}
+async function saveJournal(event) {
+  event.preventDefault();
+  const message = ui.trackingDialog.querySelector(".form-message");
+  message.textContent = "Vérification des colonnes AVANCEMENTS…";
+  try {
+    const schema = journalSchema();
+    const data = new FormData(ui.trackingForm);
+    const content = String(data.get("Contenu") || "").trim();
+    if (!content) { message.textContent = "Décrivez ce qui a changé."; return; }
+    const rawDate = data.get("Date_MAJ");
+    if (!hasValue(rawDate)) { message.textContent = "Renseignez la date de l’entrée."; return; }
+    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: new Date(`${rawDate}T12:00:00`).getTime() / 1000, [schema.content]: content };
+    if (schema.type) values[schema.type] = data.get("Type_entree");
+    for (const field of ["Avancement", "Point_vigilance", "Difficulte_blocage", "Decision_attendue", "Travail_realise"]) {
+      if (schema.writable.has(field) && hasValue(data.get(field))) values[field] = field === "Avancement" ? Number(data.get(field)) : String(data.get(field)).trim();
+    }
+    const journalAction = appState.editingJournalId ? ["UpdateRecord", "AVANCEMENTS", appState.editingJournalId, values] : ["AddRecord", "AVANCEMENTS", null, values];
+    const actions = [journalAction];
+    if (!appState.editingJournalId && data.get("update_project")) {
+      const map = { current_Avancement: "Avancement", current_Point_vigilance: "Point_vigilance", current_Prochaine_etape: "Prochaine_etape", current_Date_prochaine_etape: "Date_prochaine_etape", current_Statut: "Statut" };
+      const project = {};
+      for (const [source, target] of Object.entries(map)) {
+        const raw = data.get(source); if (!projectHasColumn(target) || !hasValue(raw)) continue;
+        project[target] = target === "Avancement" ? Number(raw) : target.startsWith("Date_") ? new Date(`${raw}T00:00:00`).getTime() / 1000 : String(raw).trim();
+      }
+      if (Object.keys(project).length) actions.push(["UpdateRecord", "PROJETS", appState.selectedProject.id, project]);
+    }
+    await writeChanges(ui.trackingDialog, actions, appState.editingJournalId ? "Entrée du journal modifiée." : "Nouvelle entrée ajoutée au journal.");
+  } catch (error) {
+    console.error("Préparation de l’écriture AVANCEMENTS impossible", error);
+    message.textContent = `Ajout impossible — ${exactError(error)}`;
+  }
+}
 function confirmDeleteJournal(id){appState.deletingJournalId=id;ui.deleteDialog.querySelector(".form-message").textContent="";ui.deleteDialog.showModal();}
 async function deleteJournal(event){event.preventDefault();await writeChanges(ui.deleteDialog,[["RemoveRecord","AVANCEMENTS",appState.deletingJournalId]],"Entrée du journal supprimée.");appState.deletingJournalId=null;}
 async function writeChanges(dialog,actions,message){if(appState.busy)return;appState.busy=true;dialog.querySelectorAll("input,textarea,select,button").forEach(c=>c.disabled=true);try{if(appState.demo)applyDemoActions(actions);else await window.grist.docApi.applyUserActions(actions);if(!appState.demo)appState.tables=await fetchRelatedTables();selectProject(appState.selectedProject.id,false);dialog.close();showFeedback(message);}catch(error){console.error("Écriture Grist impossible",error);dialog.querySelector(".form-message").textContent=`Écriture impossible — ${exactError(error)}`;}finally{appState.busy=false;dialog.querySelectorAll("input,textarea,select,button").forEach(c=>c.disabled=false);}}
