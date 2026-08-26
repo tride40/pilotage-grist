@@ -1,1 +1,58 @@
-/* Styles propres au widget Réunions. */
+/* En-tête du widget. */
+.meetings-header { color: #fff; background: linear-gradient(135deg, var(--color-navigation), #27245d); }
+.meetings-header__content, .meetings-shell { width: min(72rem, calc(100% - 2rem)); margin: 0 auto; }
+.meetings-header__content { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); padding: var(--space-6) 0; }
+.meetings-header h1 { margin: 0; font-size: clamp(1.65rem, 5vw, 2.35rem); }
+.meetings-header .section-kicker { color: #c9c6ff; }
+.meetings-header__project { margin: var(--space-2) 0 0; color: #d9deec; }
+.meetings-shell { padding: var(--space-5) 0 var(--space-8); }
+#meetings-content[hidden], .interface-state[hidden] { display: none; }
+
+/* États de l'interface. */
+.interface-state { display: flex; align-items: center; gap: var(--space-4); min-height: 7rem; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.interface-state p { margin: var(--space-1) 0 0; color: var(--color-text-muted); }
+.loader { width: 1.5rem; height: 1.5rem; border: 3px solid var(--color-primary-soft); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 800ms linear infinite; }
+@keyframes spin { to { transform: rotate(1turn); } }
+
+/* Indicateurs et filtres. */
+.meeting-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: var(--space-5); }
+.meeting-kpi { padding: var(--space-4); }
+.meeting-kpi__value { display: block; margin-top: var(--space-2); font-size: 1.75rem; color: var(--color-primary); }
+.meeting-kpi__label { color: var(--color-text-muted); font-size: .875rem; }
+.meeting-toolbar { display: grid; gap: var(--space-4); margin-bottom: var(--space-7); }
+.filter-list { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: var(--space-1); }
+.filter-button { flex: 0 0 auto; }
+.filter-button[aria-pressed="true"] { color: #fff; border-color: var(--color-primary); background: var(--color-primary); }
+.search-field { margin: 0; }
+.meeting-list-header { align-items: end; }
+.meeting-list-header p { margin: 0; color: var(--color-text-muted); }
+
+/* Cartes de réunion. */
+.meeting-list { display: grid; gap: var(--space-4); }
+.meeting-card { padding: var(--space-5); }
+.meeting-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.meeting-card__date { margin: 0 0 var(--space-1); color: var(--color-primary); font-weight: 700; }
+.meeting-card__title { margin: 0; font-size: 1.15rem; }
+.meeting-card__badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.meeting-card__details { display: grid; gap: var(--space-3); margin: var(--space-4) 0 0; }
+.meeting-card__details dt { color: var(--color-text-muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.meeting-card__details dd { margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.meeting-card__sections { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
+.meeting-note { padding: var(--space-4); border-inline-start: 4px solid var(--color-info); border-radius: var(--radius-md); background: var(--color-info-soft); }
+.meeting-note--decision { border-inline-start-color: var(--color-success); background: var(--color-success-soft); }
+.meeting-note--arbitration { border-inline-start-color: var(--color-arbitration); background: var(--color-arbitration-soft); }
+.meeting-note strong { display: block; margin-bottom: var(--space-1); }
+.meeting-note p { margin: 0; white-space: pre-wrap; }
+.empty-results { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
+
+@media (min-width: 48rem) {
+  .meeting-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .meeting-toolbar { grid-template-columns: 1fr minmax(16rem, 24rem); align-items: end; }
+  .meeting-card__details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 32rem) {
+  .meetings-header__content { align-items: flex-start; flex-direction: column; }
+  .meeting-card__header { flex-direction: column; }
+  .meeting-card__badges { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { .loader { animation: none; } }
