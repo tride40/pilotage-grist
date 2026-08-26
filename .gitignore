@@ -1,0 +1,13 @@
+# Fichiers locaux et secrets éventuels
+.env
+.env.*
+!.env.example
+*.local
+
+# Dépendances et sorties temporaires
+node_modules/
+dist/
+coverage/
+.DS_Store
+Thumbs.db
+
