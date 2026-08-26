@@ -4,6 +4,10 @@
 window.MEETINGS_DEMO_DATA = {
   project: { id: 1, Nom_projet: "Nouveau quartier — secteur Nord" },
   tables: {
+    PROJETS: [
+      { id: 1, Nom_projet: "Nouveau quartier — secteur Nord", Statut: "En cours", Archive: false },
+      { id: 2, Nom_projet: "Rénovation du centre culturel", Statut: "En cours", Archive: false },
+    ],
     INTERLOCUTEURS: [
       { id: 10, Nom_complet: "Camille Martin" },
       { id: 11, Nom_complet: "Nicolas Robert" },
