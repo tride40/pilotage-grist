@@ -96,7 +96,13 @@ async function fetchMetadata() {
     return { details: {}, writable: { PROJETS: new Set(Object.keys(appState.tables.PROJETS?.[0] || {})), AVANCEMENTS: new Set(Object.keys(appState.tables.AVANCEMENTS?.[0] || {})) }, choices: Object.fromEntries(PROJECT_CHOICE_FIELDS.map((field) => [field, []])), warning: exactError(error) };
   }
 }
-function isWritableColumn(column) { return column && !hasValue(column.formula) && !isTrue(column.isFormula); }
+function isWritableColumn(column) {
+  if (!column) return false;
+  // Grist peut conserver une formule déclencheur sur une colonne de données :
+  // seul isFormula=true désigne une vraie colonne calculée non éditable.
+  if (Object.prototype.hasOwnProperty.call(column, "isFormula")) return !isTrue(column.isFormula);
+  return !hasValue(column.formula);
+}
 function extractChoiceValues(column) {
   if (!column || !["Choice", "ChoiceList"].includes(String(column.type || "").split(":")[0])) return [];
   for (const raw of [column.widgetOptions, column.options]) {
