@@ -7,13 +7,14 @@
     <title>Fiche projet</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
-    <script src="demo-data.js" defer></script>
-    <script src="app.js" defer></script>
+    <script src="demo-data.js?v=2" defer></script>
+    <script src="app.js?v=2" defer></script>
   </head>
   <body>
     <main class="app-shell project-sheet">
+      <div class="project-toolbar card"><label class="form-field"><span class="form-field__label">Projet</span><select class="form-field__control" id="project-selector" aria-label="Choisir un projet"></select></label><div class="project-toolbar__actions"><button class="button button--secondary" id="update-tracking" type="button">Mettre à jour le suivi</button><button class="button button--primary" id="edit-project" type="button">Modifier le projet</button></div></div>
       <div class="interface-state" id="interface-state" role="status" aria-live="polite">
         <span class="loader" aria-hidden="true"></span>
         <div><strong>Chargement de la fiche projet</strong><p>Lecture des données Grist en cours…</p></div>
@@ -75,5 +76,8 @@
         </div>
       </div>
     </main>
+    <div class="toast" id="feedback" role="status" aria-live="polite" hidden></div>
+    <dialog id="edit-dialog" aria-labelledby="edit-title"><form id="edit-form"><div class="dialog-header"><div><p class="section-kicker">Projet</p><h2 id="edit-title">Modifier le projet</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div><div class="form-grid" id="edit-fields"></div><p class="form-message" aria-live="polite"></p><div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Enregistrer</button></div></form></dialog>
+    <dialog id="tracking-dialog" aria-labelledby="tracking-title"><form id="tracking-form"><div class="dialog-header"><div><p class="section-kicker">Suivi quotidien</p><h2 id="tracking-title">Mettre à jour le suivi</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div><div class="form-grid" id="tracking-fields"></div><p class="form-message" aria-live="polite"></p><div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Enregistrer et historiser</button></div></form></dialog>
   </body>
 </html>

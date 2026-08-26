@@ -1,11 +1,11 @@
 "use strict";
 
 const RELATED_TABLES = [
-  "INTERLOCUTEURS", "REUNIONS", "ACTIONS", "CONSIGNES_POLITIQUES",
+  "PROJETS", "INTERLOCUTEURS", "REUNIONS", "ACTIONS", "CONSIGNES_POLITIQUES",
   "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
 
-const appState = { selectedProject: null, tables: null };
+const appState = { selectedProject: null, tables: null, writable: null, demo: false, busy: false };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -23,15 +23,21 @@ const ui = {
   arbitrations: document.querySelector("#arbitrations-list"),
   timeline: document.querySelector("#timeline-list"),
   contacts: document.querySelector("#contacts-list"),
+  selector: document.querySelector("#project-selector"), editButton: document.querySelector("#edit-project"), trackingButton: document.querySelector("#update-tracking"),
+  editDialog: document.querySelector("#edit-dialog"), editForm: document.querySelector("#edit-form"), editFields: document.querySelector("#edit-fields"),
+  trackingDialog: document.querySelector("#tracking-dialog"), trackingForm: document.querySelector("#tracking-form"), trackingFields: document.querySelector("#tracking-fields"), feedback: document.querySelector("#feedback"),
 };
 
 /* ---------- Connexion et lecture Grist ---------- */
 async function initialize() {
+  bindEditing();
   showInterfaceState("loading", "Chargement de la fiche projet", "Lecture des données Grist en cours…", true);
   try {
     if (isLocalDemoMode()) {
+      appState.demo = true;
       appState.tables = window.PROJECT_SHEET_DEMO.tables;
-      appState.selectedProject = window.PROJECT_SHEET_DEMO.project;
+      if (!appState.tables.PROJETS?.length) appState.tables.PROJETS = [window.PROJECT_SHEET_DEMO.project];
+      selectInitialProject(window.PROJECT_SHEET_DEMO.project);
       renderWhenReady();
       return;
     }
@@ -39,10 +45,12 @@ async function initialize() {
     if (!window.grist?.docApi) throw new Error("L’API Grist n’est pas disponible.");
     await Promise.resolve(window.grist.ready({ requiredAccess: "full" }));
     window.grist.onRecord((record) => {
-      appState.selectedProject = record || null;
+      if (record) selectProject(record.id, false);
       renderWhenReady();
     });
     appState.tables = await fetchRelatedTables();
+    appState.writable = await fetchWritableColumns();
+    selectInitialProject();
     renderWhenReady();
   } catch (error) {
     console.error("Erreur de connexion à Grist :", error);
@@ -66,6 +74,7 @@ function columnarToRecords(columns) {
     Object.fromEntries(names.map((name) => [name, columns[name][index]])),
   );
 }
+async function fetchWritableColumns(){const [tm,cm]=await Promise.all([window.grist.docApi.fetchTable("_grist_Tables"),window.grist.docApi.fetchTable("_grist_Tables_column")]);const ids=new Map(columnarToRecords(tm).map(r=>[String(r.id),r.tableId])),cols=columnarToRecords(cm);return Object.fromEntries(["PROJETS","AVANCEMENTS"].map(table=>[table,new Set(cols.filter(c=>ids.get(String(c.parentId))===table&&!hasValue(c.formula)&&!isTrue(c.isFormula)).map(c=>c.colId))]));}
 
 function isLocalDemoMode() {
   return ["localhost", "127.0.0.1"].includes(window.location.hostname)
@@ -174,8 +183,9 @@ function collectContacts(project, related, people) {
 /* ---------- Rendu principal ---------- */
 function renderWhenReady() {
   if (!appState.tables) return;
+  renderProjectSelector();
   if (!appState.selectedProject) {
-    showInterfaceState("empty", "Aucun projet sélectionné", "Sélectionnez une ligne dans la table PROJETS pour afficher sa fiche.");
+    showInterfaceState("empty", "Aucun projet sélectionné", "Choisissez un projet dans le sélecteur ci-dessus.");
     return;
   }
   renderProject(buildProjectView(appState.selectedProject, appState.tables));
@@ -239,6 +249,7 @@ function renderProgress(project) {
   appendDefinition(details, "Échéance", formatDate(project.Echeance));
   appendDefinition(details, "Dernière mise à jour", formatDate(project.Derniere_MAJ));
   if (details.children.length) ui.progress.append(details);
+  if (hasValue(project.Prochaine_etape)) ui.progress.classList.add("progress-card--next-step"); else ui.progress.classList.remove("progress-card--next-step");
 }
 
 function renderVigilance(value, status) {
@@ -387,10 +398,54 @@ function makeProgress(percentage) {
   progress.setAttribute("aria-valuemax", "100");
   progress.setAttribute("aria-valuenow", String(percentage));
   const bar = element("span", "progress__bar");
-  bar.style.setProperty("--progress", `${percentage}%`);
+  bar.style.width = `${percentage}%`;
+  bar.dataset.level = percentage >= 100 ? "complete" : percentage >= 60 ? "good" : percentage >= 30 ? "medium" : "start";
   progress.append(bar);
   return progress;
 }
+
+/* ---------- Sélection autonome et édition ---------- */
+const PROJECT_FIELDS = [
+  ["Nom_projet", "Nom du projet", "text"], ["Description", "Description", "textarea"], ["Objectif_politique", "Objectif politique", "textarea"],
+  ["Categorie", "Catégorie", "text"], ["Statut", "Statut", "text"], ["Priorite", "Priorité", "text"], ["Responsable", "Responsable", "person"], ["Elu_pilote", "Élu pilote", "person"],
+  ["Echeance", "Échéance", "date"], ["Date_debut", "Date de début", "date"], ["Prochaine_etape", "Prochaine étape", "textarea"], ["Date_prochaine_etape", "Date prochaine étape", "date"], ["Point_vigilance", "Point de vigilance", "textarea"],
+];
+const TRACKING_FIELDS = [["Avancement", "Avancement (%)", "number"], ["Prochaine_etape", "Prochaine étape", "textarea"], ["Date_prochaine_etape", "Date prochaine étape", "date"], ["Point_vigilance", "Point de vigilance", "textarea"], ["Travail_realise", "Travail réalisé", "textarea"], ["Difficulte_blocage", "Difficulté / blocage", "textarea"], ["Decision_attendue", "Décision attendue", "textarea"], ["Commentaire", "Commentaire", "textarea"]];
+
+function bindEditing() {
+  ui.selector.addEventListener("change", () => selectProject(ui.selector.value, true)); ui.editButton.addEventListener("click", () => openDataForm("edit")); ui.trackingButton.addEventListener("click", () => openDataForm("tracking"));
+  document.querySelectorAll("dialog [data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+  ui.editForm.addEventListener("submit", (event) => saveProject(event)); ui.trackingForm.addEventListener("submit", (event) => saveTracking(event));
+  try { const channel = new BroadcastChannel("pilotage-grist"); channel.addEventListener("message", (event) => { if (event.data?.type === "select-project") selectProject(event.data.id, true); }); } catch (_) { /* facultatif */ }
+}
+function selectInitialProject(fallback) {
+  const queryId = new URLSearchParams(location.search).get("project"); let stored;
+  try { stored = JSON.parse(localStorage.getItem("pilotage-grist:selected-project") || "null")?.id; } catch (_) { stored = null; }
+  selectProject(queryId || stored || fallback?.id || appState.tables.PROJETS?.[0]?.id, false);
+}
+function selectProject(id, sync) {
+  const project = appState.tables?.PROJETS?.find((row) => String(row.id) === String(id)); if (!project) return;
+  appState.selectedProject = project; try { localStorage.setItem("pilotage-grist:selected-project", JSON.stringify({id:project.id,name:project.Nom_projet,at:Date.now()})); } catch (_) {}
+  if (sync && !appState.demo && typeof window.grist?.setCursorPos === "function") window.grist.setCursorPos({rowId:project.id}).catch(()=>{});
+  renderWhenReady();
+}
+function renderProjectSelector() {
+  const selected = String(appState.selectedProject?.id || ""); ui.selector.replaceChildren(...(appState.tables.PROJETS || []).map((project) => option(project.id, textOr(project.Nom_projet, `Projet ${project.id}`)))); ui.selector.value = selected;
+}
+function option(value,label){const item=document.createElement("option");item.value=value;item.textContent=label;return item;}
+function openDataForm(kind) {
+  const fields = kind === "edit" ? PROJECT_FIELDS : TRACKING_FIELDS, container = kind === "edit" ? ui.editFields : ui.trackingFields, dialog = kind === "edit" ? ui.editDialog : ui.trackingDialog;
+  container.replaceChildren(...fields.filter(([name]) => kind === "tracking" || projectHasColumn(name)).map(([name,label,type]) => formField(name,label,type, appState.selectedProject[name]))); dialog.querySelector(".form-message").textContent=""; dialog.showModal();
+}
+function projectHasColumn(name){return appState.demo?(appState.tables.PROJETS || []).some((row)=>Object.prototype.hasOwnProperty.call(row,name)):Boolean(appState.writable?.PROJETS?.has(name));}
+function formField(name,label,type,value){const wrapper=element("label",`form-field${type==="textarea"?" form-field--wide":""}`);wrapper.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=document.createElement("textarea");control.rows=3;}else if(type==="person"){control=document.createElement("select");control.append(option("","Non renseigné"),...(appState.tables.INTERLOCUTEURS||[]).map((p)=>option(p.id,textOr(p.Nom_complet,`Interlocuteur ${p.id}`))));}else{control=document.createElement("input");control.type=type; if(type==="number"){control.min=0;control.max=100;}}control.className="form-field__control";control.name=name;control.value=type==="date"?dateInputValue(value):displayValue(value);wrapper.append(control);return wrapper;}
+function dateInputValue(value){if(!hasValue(value))return "";const d=new Date(typeof value==="number"?value*1000:value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
+function valuesFromForm(form, allowed){const values={};for(const [name,raw] of new FormData(form).entries()){if(!allowed.includes(name)||!hasValue(raw))continue;if(["Responsable","Elu_pilote"].includes(name))values[name]=Number(raw);else if(name==="Avancement")values[name]=Number(raw);else if(name.startsWith("Date_")||name==="Echeance")values[name]=new Date(`${raw}T00:00:00`).getTime()/1000;else values[name]=String(raw).trim();}return values;}
+async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn);await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,valuesFromForm(ui.editForm,allowed)]],"Projet mis à jour.");}
+async function saveTracking(event){event.preventDefault();const projectAllowed=["Avancement","Prochaine_etape","Date_prochaine_etape","Point_vigilance"].filter(projectHasColumn);const entered=valuesFromForm(ui.trackingForm,TRACKING_FIELDS.map(([name])=>name));const projectValues=Object.fromEntries(Object.entries(entered).filter(([name])=>projectAllowed.includes(name)));const historyColumns=appState.demo?new Set(Object.keys(appState.tables.AVANCEMENTS?.[0]||{})):appState.writable?.AVANCEMENTS;if(!historyColumns)throw new Error("Impossible de vérifier les colonnes éditables d’AVANCEMENTS.");const history={Projet:appState.selectedProject.id,Date_MAJ:Math.floor(Date.now()/1000),...entered};const historyValues=Object.fromEntries(Object.entries(history).filter(([name])=>name!=="id"&&historyColumns.has(name)));const actions=[["UpdateRecord","PROJETS",appState.selectedProject.id,projectValues]];if(Object.keys(historyValues).length>2)actions.push(["AddRecord","AVANCEMENTS",null,historyValues]);await writeChanges(ui.trackingDialog,actions,"Suivi mis à jour et historisé.");}
+async function writeChanges(dialog,actions,message){if(appState.busy)return;appState.busy=true;dialog.querySelectorAll("input,textarea,select,button").forEach(c=>c.disabled=true);try{if(appState.demo)applyDemoActions(actions);else await window.grist.docApi.applyUserActions(actions);if(!appState.demo)appState.tables=await fetchRelatedTables();selectProject(appState.selectedProject.id,false);dialog.close();showFeedback(message);}catch(error){dialog.querySelector(".form-message").textContent=`Écriture impossible — ${exactError(error)}`;}finally{appState.busy=false;dialog.querySelectorAll("input,textarea,select,button").forEach(c=>c.disabled=false);}}
+function applyDemoActions(actions){for(const [type,table,id,fields] of actions){if(type==="UpdateRecord")Object.assign(appState.tables[table].find(r=>String(r.id)===String(id)),fields);else appState.tables[table].push({id:Math.max(0,...appState.tables[table].map(r=>Number(r.id)||0))+1,...fields});}}
+function showFeedback(message){ui.feedback.textContent=message;ui.feedback.hidden=false;setTimeout(()=>ui.feedback.hidden=true,4000);}
 
 function makeEmpty(message) { return textElement("p", message, "empty-section"); }
 function element(tag, className) { const node = document.createElement(tag); if (className) node.className = className; return node; }

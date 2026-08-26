@@ -21,6 +21,7 @@ window.PROJECT_SHEET_DEMO = {
     Point_vigilance: "Intégration paysagère du stationnement et traitement des lisières.",
   },
   tables: {
+    PROJETS: [],
     INTERLOCUTEURS: [
       { id: 10, Nom_complet: "Camille Martin", Organisme: "Direction de l’aménagement", Fonction: "Cheffe de projet", Type_interlocuteur: "Service" },
       { id: 11, Nom_complet: "Sophie Bernard", Organisme: "Ville", Fonction: "Adjointe à l’urbanisme", Type_interlocuteur: "Élue" },
