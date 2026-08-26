@@ -2,6 +2,7 @@
 .meetings-header { color: #fff; background: linear-gradient(135deg, var(--color-navigation), #27245d); }
 .meetings-header__content, .meetings-shell { width: min(72rem, calc(100% - 2rem)); margin: 0 auto; }
 .meetings-header__content { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); padding: var(--space-6) 0; }
+.header-actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-3)}
 .meetings-header h1 { margin: 0; font-size: clamp(1.65rem, 5vw, 2.35rem); }
 .meetings-header .section-kicker { color: #c9c6ff; }
 .meetings-header__project { margin: var(--space-2) 0 0; color: #d9deec; }
@@ -34,6 +35,7 @@
 /* Cartes de réunion. */
 .meeting-list { display: grid; gap: var(--space-4); }
 .meeting-card { padding: var(--space-5); }
+.meeting-card__actions{display:flex;justify-content:flex-end;margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--color-border)}
 .meeting-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
 .meeting-card__date { margin: 0 0 var(--space-1); color: var(--color-primary); font-weight: 700; }
 .meeting-card__title { margin: 0; font-size: 1.15rem; }
@@ -48,11 +50,14 @@
 .meeting-note strong { display: block; margin-bottom: var(--space-1); }
 .meeting-note p { margin: 0; white-space: pre-wrap; }
 .empty-results { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
+.followup-panel{padding:var(--space-5);border:2px solid var(--color-arbitration);border-radius:var(--radius-lg);background:var(--color-arbitration-soft)}.followup-panel h3,.followup-panel p{margin-top:0}.followup-actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+dialog{width:min(48rem,calc(100% - 1.5rem));max-height:calc(100dvh - 1.5rem);padding:0;border:0;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)}dialog::backdrop{background:rgb(15 23 42 / 60%)}dialog form{padding:var(--space-5)}.dialog-header,.dialog-actions{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}.dialog-header h2{margin:0}.icon-button{width:var(--touch-target);height:var(--touch-target);border:0;border-radius:50%;background:var(--color-primary-soft);color:var(--color-primary);font-size:1.5rem}.form-grid{display:grid;gap:var(--space-4);margin-block:var(--space-5)}.form-field{display:grid;gap:var(--space-2)}.form-field__label{font-size:.82rem;font-weight:750;color:var(--color-text-muted)}.form-field__control{width:100%;min-height:var(--touch-target);padding:.7rem .8rem;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text);font:inherit}.form-field__control[multiple]{min-height:8rem}.dialog-actions{justify-content:flex-end}.form-message{min-height:1.5rem;color:var(--color-danger)}.toast{position:fixed;z-index:20;right:var(--space-4);bottom:var(--space-4);padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);background:var(--color-navigation);color:#fff}.toast[hidden]{display:none}
 
 @media (min-width: 48rem) {
   .meeting-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .meeting-toolbar { grid-template-columns: 1fr minmax(16rem, 24rem); align-items: end; }
   .meeting-card__details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.form-field--wide{grid-column:1/-1}
 }
 @media (max-width: 32rem) {
   .meetings-header__content { align-items: flex-start; flex-direction: column; }

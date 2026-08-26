@@ -17,5 +17,8 @@ window.MEETINGS_DEMO_DATA = {
       { id: 301, Projet: 1, Date_reunion: "2026-09-08", Objet: "Comité de pilotage du plan-guide", Type_reunion: "COPIL", Participants: ["L", 10, 11, 12], Lieu: "Hôtel de ville", Points_cles: "Paysage, stationnement et calendrier de concertation.", Arbitrage_attendu: "Organisation définitive du stationnement." },
       { id: 302, Projet: 1, Date_reunion: "2026-08-22", Objet: "Atelier technique", Type_reunion: "Atelier", Participants: ["L", 10, 12], Points_cles: "Étude des variantes d’insertion paysagère.", Decisions_prises: "Validation du principe de mail planté.", Prochaines_etapes: "Produire une variante chiffrée." },
     ],
+    ACTIONS: [{id:401,Projet:1,Reunion_origine:301,Action:"Préparer une note",Responsable:10,Echeance:"2026-09-10",Statut:"À faire",Commentaire:""}],
+    CONSIGNES_POLITIQUES: [{id:501,Projet:1,Reunion_origine:301,Consigne:"Préserver les arbres",Responsable:10,Echeance:"2026-09-10",Statut:"En cours",Commentaire:""}],
+    ARBITRAGES_DECISIONS: [{id:601,Projet:1,Reunion_origine:301,Sujet:"Stationnement",Responsable:12,Echeance:"2026-09-12",Statut:"À décider",Commentaire:""}],
   },
 };

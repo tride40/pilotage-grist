@@ -7,10 +7,10 @@
     <title>Réunions du projet</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=5">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
-    <script src="demo-data.js?v=4" defer></script>
-    <script src="app.js?v=4" defer></script>
+    <script src="demo-data.js?v=5" defer></script>
+    <script src="app.js?v=5" defer></script>
   </head>
   <body>
     <header class="meetings-header">
@@ -20,7 +20,7 @@
           <label class="project-selector"><span>Projet</span><select id="project-selector" aria-label="Choisir un projet"></select></label>
           <p class="meetings-header__project" id="project-name" hidden></p>
         </div>
-        <span class="badge badge--info" id="meeting-count">0 réunion</span>
+        <div class="header-actions"><span class="badge badge--info" id="meeting-count">0 réunion</span><button class="button button--primary" id="new-meeting" type="button">+ Nouvelle réunion</button></div>
       </div>
     </header>
     <main class="meetings-shell">
@@ -42,10 +42,13 @@
         <div class="meeting-list" id="meeting-list"></div>
       </div>
     </main>
+    <div class="toast" id="feedback" role="status" aria-live="polite" hidden></div>
+    <dialog id="meeting-dialog" aria-labelledby="meeting-form-title"><form id="meeting-form"><div class="dialog-header"><div><p class="section-kicker">Compte rendu</p><h2 id="meeting-form-title">Nouvelle réunion</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div><div class="form-grid" id="meeting-fields"></div><p class="form-message" aria-live="polite"></p><div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Enregistrer la réunion</button></div></form></dialog>
+    <dialog id="followup-dialog" aria-labelledby="followup-title"><form id="followup-form"><div class="dialog-header"><div><p class="section-kicker">Suites de la réunion</p><h2 id="followup-title">Créer une suite</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div><input name="TargetTable" type="hidden"><div class="form-grid" id="followup-fields"></div><p class="form-message" aria-live="polite"></p><div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Créer</button></div></form></dialog>
     <template id="meeting-template">
       <article class="card meeting-card">
         <header class="meeting-card__header"><div><p class="meeting-card__date"></p><h3 class="meeting-card__title"></h3></div><div class="meeting-card__badges"></div></header>
-        <dl class="meeting-card__details"></dl><div class="meeting-card__sections"></div>
+        <dl class="meeting-card__details"></dl><div class="meeting-card__sections"></div><div class="meeting-card__actions"><button class="button button--secondary" type="button" data-edit>Modifier</button></div>
       </article>
     </template>
   </body>
