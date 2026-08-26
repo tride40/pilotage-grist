@@ -1,0 +1,170 @@
+/* ==========================================================
+   Identité visuelle commune : couleurs, dimensions et effets
+   ========================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* Couleurs principales */
+  --color-background: #f4f7fc;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef2ff;
+  --color-navigation: #111c3d;
+  --color-primary: #5b4bdb;
+  --color-primary-hover: #4938c5;
+  --color-primary-soft: #eeecff;
+  --color-text: #182033;
+  --color-text-muted: #667085;
+  --color-border: #dce3ef;
+  --color-focus: #7c6ee6;
+
+  /* Couleurs fonctionnelles */
+  --color-success: #16845b;
+  --color-success-soft: #e8f7f0;
+  --color-warning: #c66a0a;
+  --color-warning-soft: #fff3df;
+  --color-danger: #c53b48;
+  --color-danger-soft: #ffeaed;
+  --color-arbitration: #7c3fb2;
+  --color-arbitration-soft: #f4eafd;
+  --color-info: #2563b9;
+  --color-info-soft: #e9f2ff;
+
+  /* Espacements cohérents */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Formes, ombres et mouvements */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-pill: 999px;
+  --shadow-sm: 0 2px 8px rgb(20 34 66 / 8%);
+  --shadow-md: 0 10px 24px rgb(20 34 66 / 14%);
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 250ms ease;
+
+  /* Typographie et tailles tactiles */
+  --font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --line-height: 1.5;
+  --touch-target: 44px;
+  --content-width: 1200px;
+  --progress: 0%;
+}
+
+/* Réglages de base partagés par tous les widgets */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-background);
+  font-family: var(--font-family);
+  line-height: var(--line-height);
+  text-size-adjust: 100%;
+}
+
+body {
+  min-width: 0;
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.15em;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Conteneur principal et navigation commune */
+.app-shell {
+  width: min(100%, var(--content-width));
+  margin-inline: auto;
+  padding: var(--space-4);
+}
+
+.app-navigation {
+  min-height: var(--touch-target);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-navigation);
+  color: #ffffff;
+}
+
+/* Le clavier reste clairement visible sur tous les contrôles */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+/* Mise en page plus aérée sur tablette et ordinateur */
+@media (min-width: 48rem) {
+  .app-shell {
+    padding: var(--space-6);
+  }
+}
+
+/* Mode sombre automatique, sans configuration JavaScript */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: #0f1525;
+    --color-surface: #182035;
+    --color-surface-muted: #222b45;
+    --color-navigation: #090e1d;
+    --color-primary: #a79cff;
+    --color-primary-hover: #bcb4ff;
+    --color-primary-soft: #302b59;
+    --color-text: #f0f3fa;
+    --color-text-muted: #aeb8ca;
+    --color-border: #35405a;
+    --color-focus: #b8afff;
+    --color-success: #63d6a7;
+    --color-success-soft: #173d34;
+    --color-warning: #ffb65c;
+    --color-warning-soft: #49351e;
+    --color-danger: #ff8791;
+    --color-danger-soft: #4c252d;
+    --color-arbitration: #d39af5;
+    --color-arbitration-soft: #422b55;
+    --color-info: #80b5ff;
+    --color-info-soft: #203c62;
+    --shadow-sm: 0 2px 8px rgb(0 0 0 / 22%);
+    --shadow-md: 0 12px 28px rgb(0 0 0 / 34%);
+  }
+}
+
+/* Respecte les utilisateurs qui limitent les animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
