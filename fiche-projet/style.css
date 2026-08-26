@@ -84,7 +84,7 @@
 .timeline__content p { margin: 0; color: var(--color-text-muted); font-size: .85rem; }
 
 /* Interlocuteurs et avatars */
-.contacts-grid { display: grid; gap: var(--space-3); }
+.contacts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--space-3); }
 .contact-card { padding: var(--space-3); }
 .contact-card .person { align-items: flex-start; }
 .person__details { min-width: 0; }
@@ -111,7 +111,6 @@ dialog{width:min(48rem,calc(100% - 1.5rem));max-height:calc(100dvh - 1.5rem);pad
   .top-grid { grid-template-columns: minmax(0, 1.4fr) minmax(17rem, .8fr); }
   .content-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); }
   .span-full { grid-column: 1 / -1; }
-  .contacts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section-action { width: auto; }
   .form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }.form-field--wide{grid-column:1/-1}
 }
@@ -119,5 +118,4 @@ dialog{width:min(48rem,calc(100% - 1.5rem));max-height:calc(100dvh - 1.5rem);pad
 /* Ordinateur : davantage d'air et trois interlocuteurs par ligne */
 @media (min-width: 70rem) {
   .project-hero { padding: var(--space-10); }
-  .contacts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

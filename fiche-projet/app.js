@@ -111,10 +111,14 @@ function isLinkedToProject(row, projectId) {
 }
 
 function referenceIds(value) {
-  if (!hasValue(value)) return [];
-  if (Array.isArray(value)) return value[0] === "L" ? value.slice(1) : value.flatMap(referenceIds);
-  if (typeof value === "object") return [value.id ?? value.rowId].filter(hasValue);
+  if (!hasReferenceValue(value)) return [];
+  if (Array.isArray(value)) return (value[0] === "L" ? value.slice(1) : value).flatMap(referenceIds);
+  if (typeof value === "object") return [value.id ?? value.rowId].filter(hasReferenceValue);
   return [value];
+}
+
+function hasReferenceValue(value) {
+  return hasValue(value) && Number(value) !== 0;
 }
 
 function compareInstructions(a, b) {
