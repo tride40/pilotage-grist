@@ -350,7 +350,7 @@ function renderProgress(container, rawValue) {
 
 function renderDetails(container, project) {
   const details = [
-    ["Responsable", project.Responsable_affiche],
+    ["Agent pilote", project.Responsable_affiche],
     ["Prochaine étape", project.Prochaine_etape],
     ["Échéance", formatDate(project.Echeance)],
   ].filter(([, value]) => hasValue(value));
@@ -487,10 +487,16 @@ function openProjectForm() {
     elements.formMessage.textContent = `Choix Grist indisponibles pour ${fallbackFields.join(", ")} : les valeurs par défaut et existantes sont proposées.`;
   }
   const people = state.tables?.INTERLOCUTEURS || [];
-  const choices = [option("", "Non renseigné"), ...people.map((person) => option(String(person.id), textOr(person.Nom_complet || [person.Prenom, person.Nom].filter(Boolean).join(" "), `Interlocuteur ${person.id}`)))];
-  elements.form.elements.Responsable.replaceChildren(...choices.map((item) => item.cloneNode(true)));
-  elements.form.elements.Elu_pilote.replaceChildren(...choices.map((item) => item.cloneNode(true)));
+  fillPersonSelect(elements.form.elements.Responsable, people.filter((person) => isTrue(person.Est_agent_Sanguinet)));
+  fillPersonSelect(elements.form.elements.Elu_pilote, people.filter((person) => isTrue(person.Est_elu_Sanguinet)));
   elements.dialog.showModal(); elements.form.elements.Nom_projet.focus();
+}
+
+function fillPersonSelect(control, people) {
+  control.replaceChildren(
+    option("", "Non renseigné"),
+    ...people.map((person) => option(String(person.id), textOr(person.Nom_complet || [person.Prenom, person.Nom].filter(Boolean).join(" "), `Interlocuteur ${person.id}`))),
+  );
 }
 
 function cleanFormValues(formData) {
