@@ -24,6 +24,8 @@ async function initialize() {
     state.meetings = tables.REUNIONS;
     state.people = tables.INTERLOCUTEURS;
     window.grist.onRecord((record) => { state.project = record || null; render(); });
+    /* Grist peut ne pas envoyer de ligne si la table source est vide ou mal configurée. */
+    render();
   } catch (error) {
     console.error("Erreur de chargement du widget Réunions :", error);
     showInterfaceState("Connexion à Grist impossible", exactError(error));
