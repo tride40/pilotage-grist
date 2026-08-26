@@ -6,7 +6,7 @@ const TABLE_NAMES = [
   "CONSIGNES_POLITIQUES", "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
 
-const state = { projects: [], activeFilter: "all", search: "" };
+const state = { projects: [], activeFilter: "all", search: "", tables: null, writable: null, demo: false, busy: false };
 const elements = {
   date: document.querySelector("#current-date"),
   filters: document.querySelector("#filter-list"),
@@ -15,6 +15,11 @@ const elements = {
   resultsCount: document.querySelector("#results-count"),
   search: document.querySelector("#project-search"),
   status: document.querySelector("#interface-state"),
+  newProject: document.querySelector("#new-project"),
+  dialog: document.querySelector("#project-dialog"),
+  form: document.querySelector("#project-form"),
+  formMessage: document.querySelector("#project-form-message"),
+  feedback: document.querySelector("#feedback"),
 };
 
 /* ---------- Lecture et normalisation des données Grist ---------- */
@@ -75,6 +80,11 @@ function columnarToRecords(columns) {
   return Array.from({ length: rowCount }, (_, index) =>
     Object.fromEntries(names.map((name) => [name, columns[name][index]])),
   );
+}
+async function fetchWritableColumns() {
+  const [tableMeta, columnMeta] = await Promise.all([window.grist.docApi.fetchTable("_grist_Tables"), window.grist.docApi.fetchTable("_grist_Tables_column")]);
+  const tables = columnarToRecords(tableMeta), columns = columnarToRecords(columnMeta), ids = new Map(tables.map(row=>[String(row.id),row.tableId]));
+  return Object.fromEntries(TABLE_NAMES.map(name=>[name,new Set(columns.filter(col=>ids.get(String(col.parentId))===name&&!hasValue(col.formula)&&!isTrue(col.isFormula)).map(col=>col.colId))]));
 }
 
 /* ---------- Calculs des indicateurs et liens entre tables ---------- */
@@ -200,6 +210,9 @@ function bindFilters() {
     state.search = event.target.value;
     renderProjects();
   });
+  elements.newProject.addEventListener("click", openProjectForm);
+  elements.dialog.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => elements.dialog.close()));
+  elements.form.addEventListener("submit", createProject);
 }
 
 /* ---------- Rendu de l'interface ---------- */
@@ -243,6 +256,11 @@ function createProjectCard(project) {
   const title = textOr(project.Nom_projet, "Projet sans nom");
   card.querySelector(".project-card__title").textContent = title;
   card.setAttribute("aria-label", title);
+  card.dataset.projectId = project.id;
+  card.addEventListener("click", () => openProject(project));
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openProject(project); }
+  });
   setOptionalText(card.querySelector(".project-card__category"), project.Categorie);
   renderBadges(card.querySelector(".project-card__badges"), project);
   renderProgress(card.querySelector(".project-card__progress"), project.Avancement);
@@ -255,7 +273,7 @@ function createProjectCard(project) {
 function renderBadges(container, project) {
   const badges = [
     { value: project.Statut, modifier: statusModifier(project.Statut), prefix: "" },
-    { value: project.Priorite, modifier: "priority", prefix: "Priorité " },
+    { value: project.Priorite, modifier: "priority", prefix: "" },
   ].filter((badge) => hasValue(badge.value));
   badges.forEach(({ value, modifier, prefix }) => {
     const badge = document.createElement("span");
@@ -285,7 +303,8 @@ function renderProgress(container, rawValue) {
   progress.setAttribute("aria-valuenow", String(percentage));
   const bar = document.createElement("span");
   bar.className = "progress__bar";
-  bar.style.setProperty("--progress", `${percentage}%`);
+  bar.style.width = `${percentage}%`;
+  bar.dataset.level = percentage >= 100 ? "complete" : percentage >= 60 ? "good" : percentage >= 30 ? "medium" : "start";
   progress.append(bar);
   container.append(heading, progress);
 }
@@ -399,6 +418,82 @@ function statusModifier(status) {
   return "info";
 }
 
+/* ---------- Création et transmission du contexte projet ---------- */
+function distinctValues(field) {
+  return [...new Set((state.tables?.PROJETS || []).map((row) => displayValue(row[field])).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+}
+
+function option(value, label) { const item = document.createElement("option"); item.value = value; item.textContent = label; return item; }
+
+function fillList(id, values) { document.querySelector(id).replaceChildren(...values.map((value) => option(value, value))); }
+
+function openProjectForm() {
+  elements.form.reset(); elements.form.elements.Statut.value = "En cours"; elements.form.elements.Avancement.value = "0"; elements.formMessage.textContent = "";
+  fillList("#project-categories", distinctValues("Categorie")); fillList("#project-statuses", distinctValues("Statut")); fillList("#project-priorities", distinctValues("Priorite"));
+  const people = state.tables?.INTERLOCUTEURS || [];
+  const choices = [option("", "Non renseigné"), ...people.map((person) => option(String(person.id), textOr(person.Nom_complet || [person.Prenom, person.Nom].filter(Boolean).join(" "), `Interlocuteur ${person.id}`)))];
+  elements.form.elements.Responsable.replaceChildren(...choices.map((item) => item.cloneNode(true)));
+  elements.form.elements.Elu_pilote.replaceChildren(...choices.map((item) => item.cloneNode(true)));
+  elements.dialog.showModal(); elements.form.elements.Nom_projet.focus();
+}
+
+function cleanFormValues(formData) {
+  const values = {};
+  for (const [name, raw] of formData.entries()) {
+    if (!hasValue(raw)) continue;
+    if (["Responsable", "Elu_pilote"].includes(name)) values[name] = Number(raw);
+    else if (name === "Avancement") values[name] = Number(raw);
+    else if (["Date_debut", "Echeance", "Date_prochaine_etape"].includes(name)) values[name] = new Date(`${raw}T00:00:00`).getTime() / 1000;
+    else values[name] = String(raw).trim();
+  }
+  const available = state.demo ? new Set(Object.keys(state.tables?.PROJETS?.[0] || values)) : state.writable?.PROJETS;
+  if (!available) throw new Error("Impossible de vérifier les colonnes éditables de PROJETS.");
+  return Object.fromEntries(Object.entries(values).filter(([name]) => available.has(name)));
+}
+
+async function createProject(event) {
+  event.preventDefault(); if (state.busy) return;
+  const fields = cleanFormValues(new FormData(elements.form));
+  if (!fields.Nom_projet) return;
+  state.busy = true; setFormBusy(true); elements.formMessage.textContent = "Enregistrement en cours…";
+  try {
+    let createdId;
+    if (state.demo) {
+      createdId = Math.max(0, ...state.tables.PROJETS.map((row) => Number(row.id) || 0)) + 1;
+      state.tables.PROJETS.push({ id: createdId, ...fields });
+    } else {
+      const result = await window.grist.docApi.applyUserActions([["AddRecord", "PROJETS", null, fields]]);
+      createdId = result?.retValues?.[0] ?? result?.[0]?.rowId ?? null;
+      state.tables = await fetchDocumentData(TABLE_NAMES);
+    }
+    state.projects = prepareDashboardData(state.tables); renderKpis(calculateKpis(state.tables, state.projects)); renderProjects();
+    elements.dialog.close(); showFeedback("Projet créé et relu depuis PROJETS.");
+    const created = state.projects.find((row) => String(row.id) === String(createdId)) || state.projects.find((row) => row.Nom_projet === fields.Nom_projet);
+    if (created) created._justCreated = true;
+  } catch (error) {
+    console.error(error); elements.formMessage.textContent = `Création impossible — ${exactError(error)}`; elements.formMessage.classList.add("is-error");
+  } finally { state.busy = false; setFormBusy(false); }
+}
+
+function setFormBusy(busy) { elements.form.querySelectorAll("input, textarea, select, button").forEach((control) => { control.disabled = busy; }); }
+function exactError(error) { return error instanceof Error ? error.message : String(error); }
+function showFeedback(message) { elements.feedback.textContent = message; elements.feedback.hidden = false; window.setTimeout(() => { elements.feedback.hidden = true; }, 4500); }
+
+async function openProject(project) {
+  const context = { id: project.id, name: textOr(project.Nom_projet, "Projet"), at: Date.now() };
+  try { localStorage.setItem("pilotage-grist:selected-project", JSON.stringify(context)); } catch (_) { /* stockage facultatif */ }
+  try { new BroadcastChannel("pilotage-grist").postMessage({ type: "select-project", ...context }); } catch (_) { /* canal facultatif */ }
+  if (!state.demo && typeof window.grist?.setCursorPos === "function") {
+    try { await window.grist.setCursorPos({ rowId: project.id }); } catch (error) { console.warn("Synchronisation Grist impossible", error); }
+  }
+  const configured = new URLSearchParams(window.location.search).get("ficheProjetUrl");
+  if (configured) {
+    const target = new URL(configured, window.location.href); target.searchParams.set("project", project.id); window.open(target.href, "_top");
+  } else {
+    showFeedback(`${context.name} sélectionné. Ouvrez la page « Fiche projet » dans Grist.`);
+  }
+}
+
 /* ---------- Démarrage du widget ---------- */
 async function initializeDashboard() {
   const today = new Date();
@@ -411,10 +506,13 @@ async function initializeDashboard() {
     let tables;
     if (isLocalDemoMode()) {
       tables = window.DASHBOARD_DEMO_DATA;
+      state.demo = true;
     } else {
       const tableNames = await initializeGristConnection();
       tables = await fetchDocumentData(tableNames);
+      state.writable = await fetchWritableColumns();
     }
+    state.tables = tables;
     state.projects = prepareDashboardData(tables);
     renderKpis(calculateKpis(tables, state.projects));
     renderProjects();
