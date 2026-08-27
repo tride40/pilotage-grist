@@ -154,7 +154,7 @@ function referenceIds(value) {
 function calculateKpis(tables, projects) {
   return [
     { key: "active", label: "Projets actifs", value: projects.length },
-    { key: "arbitration", label: "Arbitrages à décider", value: tables.ARBITRAGES_DECISIONS.filter((row) => isTrue(row.A_decider)).length },
+    { key: "arbitration", label: "Décisions à prendre", value: tables.ARBITRAGES_DECISIONS.filter((row) => ["a preparer", "a decider", "reportee"].includes(normalizeText(row.Statut))).length },
     { key: "late", label: "Actions en retard", value: tables.ACTIONS.filter((row) => isTrue(row.En_retard)).length },
     { key: "check", label: "Consignes à contrôler", value: tables.CONSIGNES_POLITIQUES.filter((row) => isTrue(row.A_controler)).length },
     { key: "watch", label: "Projets à surveiller", value: tables.PROJETS.filter(isProjectToWatch).length },
@@ -171,7 +171,7 @@ function buildProjectMetrics(tables) {
   });
   tables.ARBITRAGES_DECISIONS.forEach((row) => {
     const item = getMetricForLinkedProject(metrics, row);
-    if (item && isTrue(row.A_decider)) item.arbitrations += 1;
+    if (item && ["a preparer", "a decider", "reportee"].includes(normalizeText(row.Statut))) item.arbitrations += 1;
   });
   tables.CONSIGNES_POLITIQUES.forEach((row) => {
     const item = getMetricForLinkedProject(metrics, row);
@@ -380,7 +380,7 @@ function renderMetrics(container, metrics) {
   const items = [
     [metrics.openActions, "action ouverte", "actions ouvertes", "info"],
     [metrics.lateActions, "action en retard", "actions en retard", "danger"],
-    [metrics.arbitrations, "arbitrage", "arbitrages", "arbitration"],
+    [metrics.arbitrations, "décision à prendre", "décisions à prendre", "arbitration"],
     [metrics.instructions, "consigne à contrôler", "consignes à contrôler", "warning"],
   ].filter(([count]) => count > 0);
   items.forEach(([count, singular, plural, kind]) => {
