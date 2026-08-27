@@ -41,8 +41,7 @@ body { min-height: 100vh; background: linear-gradient(180deg, #eef2ff 0, var(--c
 .secondary-sections { display: grid; gap: 2.2rem; margin-top: 2.2rem; }.secondary-sections .tool-section { margin: 0; }
 .no-script { margin: 1rem; padding: 1rem; border-radius: var(--radius-md); background: var(--color-warning-soft); color: var(--color-warning); }
 
-/* Hub applicatif : les groupes restent présents pour les lecteurs d’écran,
-   tandis que les cartes composent une navigation unique à l’écran. */
+/* Hiérarchie des accès : le tableau de bord domine, sans masquer les groupes. */
 .tool-card:not(.is-unconfigured) .tool-card__footer { min-height: 0; padding-top: 0; border-top: 0; }
 .tool-card:not(.is-unconfigured) .tool-card__arrow { position: absolute; right: 1rem; bottom: 1rem; }
 .tool-card[data-page="dashboard"] { border: 1px solid rgb(124 110 230 / 42%); background: linear-gradient(150deg, var(--color-surface) 55%, var(--color-primary-soft)); box-shadow: 0 16px 42px rgb(45 38 110 / 18%); }
@@ -54,18 +53,12 @@ body { min-height: 100vh; background: linear-gradient(180deg, #eef2ff 0, var(--c
 @media (min-width: 42rem) { .hero__content { grid-template-columns: auto 1fr auto; align-items: start; padding-block: 2.7rem 3.7rem; }.hero__date { grid-column: 3; grid-row: 1; padding-top: .3rem; }.tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.tool-grid:not(.tool-grid--featured) .tool-card:last-child:nth-child(odd) { grid-column: span 2; }.secondary-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); }.secondary-sections .tool-grid { grid-template-columns: 1fr; }.tool-card { padding: 1.3rem; } }
 @media (min-width: 64rem) {
   .hero__content { padding-block: 3rem 4rem; }
-  .app-shell.home { display: grid; grid-template-columns: minmax(0, .9fr) minmax(19rem, 1.25fr) minmax(0, .9fr); grid-template-rows: repeat(3, minmax(10rem, auto)); gap: 1rem; padding-top: 2.5rem; }
-  .home > .tool-section, .home > .secondary-sections, .secondary-sections > .tool-section, .home .tool-grid { display: contents; }
-  .home .section-heading { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .tool-card { min-height: 10rem; padding: 1.1rem; }
-  .tool-card[data-page="dashboard"] { grid-column: 2; grid-row: 1 / 4; align-content: center; min-height: 100%; padding: clamp(1.5rem, 3vw, 2.3rem); }
-  .tool-card[data-page="dashboard"] .tool-card__body { justify-content: center; }
-  .tool-card[data-page="project"] { grid-column: 1; grid-row: 1; }
-  .tool-card[data-page="meetings"] { grid-column: 1; grid-row: 2; }
-  .tool-card[data-page="instructions"] { grid-column: 1; grid-row: 3; }
-  .tool-card[data-page="actions"] { grid-column: 3; grid-row: 1; }
-  .tool-card[data-page="contacts"] { grid-column: 3; grid-row: 2; }
-  .tool-card[data-page="weekly"] { grid-column: 3; grid-row: 3; }
+  .app-shell.home { padding-top: 2.5rem; }
+  .tool-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tool-grid--featured { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tool-grid--featured .tool-card[data-page="dashboard"] { grid-column: span 2; min-height: 14rem; padding: clamp(1.5rem, 3vw, 2rem); }
+  .tool-grid--featured .tool-card[data-page="project"] { grid-column: span 1; }
+  .tool-grid:not(.tool-grid--featured) .tool-card:last-child:nth-child(odd) { grid-column: auto; }
 }
 @media (hover: hover) and (pointer: fine) { .tool-card:not(.is-unconfigured):hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border)); box-shadow: 0 15px 34px rgb(20 34 66 / 15%); }.tool-card:not(.is-unconfigured):hover .tool-card__arrow { transform: translateX(3px); } }
 @media (prefers-reduced-motion: reduce) { .tool-card { animation: none; } }
