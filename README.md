@@ -4,6 +4,7 @@ Widgets personnalisés pour le document Grist « Pilotage des projets ». Le cod
 
 ## Widgets disponibles
 
+- `accueil/` : page d’entrée ergonomique vers tous les outils du document Grist.
 - `dashboard/` : tableau de bord général en lecture seule, avec KPI, filtres et recherche.
 - `fiche-projet/` : fiche détaillée du projet sélectionné dans la table `PROJETS`.
 - `reunions/` : agenda et historique des réunions du projet sélectionné.
@@ -16,6 +17,8 @@ Les fichiers `demo-data.js` ne sont activés que sur `localhost`, hors iframe, a
 - `dashboard/`, `fiche-projet/` et `reunions/` : widgets fonctionnels, séparés en HTML, CSS et JavaScript.
 - `interlocuteurs/`, `consignes/`, `actions/`, `point-hebdomadaire/` : emplacements réservés aux futurs widgets.
 - `index.html` : accueil technique des widgets publiés.
+
+La configuration des sept liens de l'accueil est expliquée dans [`accueil/README.md`](accueil/README.md).
 
 ## Utilisation dans Grist
 
