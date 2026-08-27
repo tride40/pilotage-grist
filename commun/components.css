@@ -87,9 +87,12 @@
 .home-button { flex: 0 0 auto; gap: var(--space-2); min-width: 7.5rem; min-height: var(--touch-target); white-space: nowrap; }
 .home-button__icon { font-size: 1.1rem; line-height: 1; }
 .header-actions, .dashboard-header__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.sanguinet-brand { display: inline-flex; flex: 0 0 auto; width: 7rem; min-height: var(--touch-target); align-items: center; justify-content: center; padding: .28rem .5rem; border: 1px solid rgb(255 255 255 / 32%); border-radius: var(--radius-md); background: rgb(255 255 255 / 94%); box-shadow: 0 2px 8px rgb(13 24 54 / 12%); }
+.sanguinet-brand img { display: block; width: 100%; height: auto; max-height: 2.65rem; object-fit: contain; }
 
 @media (max-width: 30rem) {
   .header-actions, .dashboard-header__actions { width: 100%; }
+  .sanguinet-brand { width: 6.5rem; margin-right: auto; }
   .home-button { width: 100%; }
 }
 
@@ -221,3 +224,4 @@ textarea.form-field__control { min-height: 7rem; resize: vertical; }
     gap: var(--space-5);
   }
 }
+
