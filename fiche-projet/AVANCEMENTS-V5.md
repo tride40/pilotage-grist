@@ -36,6 +36,8 @@ Les trois types de résolution sont créés par les actions contextuelles de la 
 
 Le journal est toujours trié par `Date_MAJ` décroissante, puis par `Cree_le` décroissante lorsque plusieurs entrées partagent la même date. L’identifiant Grist décroissant sert uniquement de repli pour les anciennes lignes sans horodatage. Les recherches et filtres ne changent jamais cet ordre.
 
+Depuis la V9, la première prochaine étape encore enregistrée dans `PROJETS` est automatiquement conservée dans `AVANCEMENTS` lors de l’ajout d’une autre étape. Cela assure la transition vers plusieurs jalons simultanés sans perdre l’ancienne valeur synthétique.
+
 ## Colonnes existantes utilisées si elles sont éditables
 
 - `Avancement` (Numérique)

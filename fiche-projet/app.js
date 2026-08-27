@@ -302,11 +302,23 @@ function renderProgress(project) {
     nextSteps.forEach((row) => { const item = element("li", "next-steps__item"); item.append(textElement("span", journalContent(row))); if (hasValue(row.Date_prochaine_etape)) item.append(textElement("time", formatDate(row.Date_prochaine_etape))); list.append(item); });
     section.append(list); ui.progress.append(section);
   }
+  const addStep = textElement("button", "+ Ajouter une prochaine étape", "button button--secondary next-step-add");
+  addStep.type = "button";
+  addStep.addEventListener("click", () => openJournalForm(null, "Prochaine étape"));
+  ui.progress.append(addStep);
   if (nextSteps.length || hasValue(project.Prochaine_etape)) ui.progress.classList.add("progress-card--next-step"); else ui.progress.classList.remove("progress-card--next-step");
 }
 function currentNextSteps(projectId) {
   const rows = (appState.tables?.AVANCEMENTS || []).filter((row) => isLinkedToProject(row, projectId));
-  return rows.filter((row) => journalType(row) === "Prochaine étape" && journalEntryState(row, rows) !== "Résolu").sort((a, b) => dateValue(a.Date_prochaine_etape) - dateValue(b.Date_prochaine_etape));
+  const stored = rows.filter((row) => journalType(row) === "Prochaine étape" && journalEntryState(row, rows) !== "Résolu");
+  const project = (appState.tables?.PROJETS || []).find((row) => String(row.id) === String(projectId));
+  const legacy = legacyNextStep(project, stored);
+  return [...stored, ...(legacy ? [legacy] : [])].sort((a, b) => dateValue(a.Date_prochaine_etape) - dateValue(b.Date_prochaine_etape));
+}
+function legacyNextStep(project, stored = []) {
+  if (!project || !hasValue(project.Prochaine_etape)) return null;
+  const same = stored.some((row) => normalizeText(journalContent(row)) === normalizeText(project.Prochaine_etape) && dateInputValue(row.Date_prochaine_etape) === dateInputValue(project.Date_prochaine_etape));
+  return same ? null : { id: "legacy", Projet: project.id, Type_entree: "Prochaine étape", Contenu: project.Prochaine_etape, Date_prochaine_etape: project.Date_prochaine_etape, Etat_entree: "Ouvert", legacy: true };
 }
 
 function renderVigilance(value, status) {
@@ -543,7 +555,7 @@ function dateInputValue(value){if(!hasValue(value))return "";const d=new Date(ty
 function valuesFromForm(form, allowed){const values={};for(const [name,raw] of new FormData(form).entries()){if(!allowed.includes(name))continue;if(["Responsable","Elu_pilote"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else if(name==="Avancement")values[name]=hasValue(raw)?Number(raw):null;else if(name.startsWith("Date_")||name==="Echeance")values[name]=hasValue(raw)?new Date(`${raw}T00:00:00`).getTime()/1000:null;else values[name]=String(raw).trim();}return values;}
 async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn);await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,valuesFromForm(ui.editForm,allowed)]],"Projet mis à jour.");}
 
-function openJournalForm(row = null) {
+function openJournalForm(row = null, initialType = "") {
   appState.editingJournalId = row?.id ?? null; appState.journalActionSource = null; ui.trackingForm.reset();
   ui.trackingDialog.querySelector("#tracking-title").textContent = row ? "Modifier l’entrée du journal" : "Ajouter au journal";
   ui.trackingDialog.querySelector("[type=submit]").textContent = row ? "Enregistrer la modification" : "Ajouter l’entrée";
@@ -557,6 +569,7 @@ function openJournalForm(row = null) {
     ui.trackingDialog.querySelector(".form-message").textContent = ""; ui.trackingDialog.showModal(); content.querySelector("textarea").focus(); return;
   }
   const typeField = formField("Type_entree", "Type d’entrée", "choice", type); const typeSelect = typeField.querySelector("select"); typeSelect.replaceChildren(...JOURNAL_TYPES.map((item) => option(item, item)));
+  if (initialType && JOURNAL_TYPES.includes(initialType)) typeSelect.value = initialType;
   const contentField = formField("Contenu", "Qu’est-ce qui a changé ?", "textarea", ""); contentField.querySelector("textarea").required = true;
   contentField.querySelector("textarea").addEventListener("input", (event) => { delete event.currentTarget.dataset.automatic; });
   const dateField = formField("Date_MAJ", "Date", "date", row?.Date_MAJ || row?.Date || new Date());
@@ -580,7 +593,7 @@ function renderJournalDynamic(container, type, row) {
     const wrapper = element("label", "form-field form-field--wide"); wrapper.append(textElement("span", "Étape qui vient d’être franchie", "form-field__label"));
     const select = document.createElement("select"); select.name = "Etape_source"; select.className = "form-field__control"; select.required = true;
     const steps = currentNextSteps(appState.selectedProject.id); select.append(option("", "Sélectionner une étape…"), ...steps.map((step) => option(step.id, `${formatDate(step.Date_prochaine_etape)} — ${journalContent(step)}`)));
-    if (!steps.length && hasValue(appState.selectedProject.Prochaine_etape)) select.append(option("legacy", `${formatDate(appState.selectedProject.Date_prochaine_etape)} — ${appState.selectedProject.Prochaine_etape}`)); wrapper.append(select); container.append(wrapper);
+    wrapper.append(select); container.append(wrapper);
     const add = textElement("button", "+ Ajouter une nouvelle prochaine étape", "button button--secondary form-field--wide"); add.type = "button";
     const replacement = element("div", "replacement-step form-grid form-field--wide"); replacement.hidden = true;
     const next = formField("Nouvelle_etape", "Nouvelle prochaine étape", "textarea", ""); const date = formField("Nouvelle_etape_date", "Date prévue", "date", ""); replacement.append(next, date);
@@ -671,6 +684,14 @@ async function saveJournal(event) {
       if (sourceId !== "legacy") values[schema.parent] = Number(sourceId);
     }
     const actions = [["AddRecord", "AVANCEMENTS", null, values]];
+    if (type === "Prochaine étape") {
+      const legacy = legacyNextStep(appState.selectedProject, (appState.tables.AVANCEMENTS || []).filter((row) => isLinkedToProject(row, appState.selectedProject.id) && journalType(row) === "Prochaine étape"));
+      if (legacy) {
+        const migrated = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: legacy.Contenu, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert", [schema.createdAt]: createdAt - 1 };
+        if (hasValue(legacy.Date_prochaine_etape)) migrated.Date_prochaine_etape = legacy.Date_prochaine_etape;
+        actions.unshift(["AddRecord", "AVANCEMENTS", null, migrated]);
+      }
+    }
     if (appState.journalActionSource) {
       actions.push(["UpdateRecord", "AVANCEMENTS", appState.journalActionSource.id, { [schema.state]: "Résolu" }]);
       if (type === "Vigilance levée" && projectHasColumn("Point_vigilance")) {
