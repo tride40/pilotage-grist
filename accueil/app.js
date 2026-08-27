@@ -46,6 +46,7 @@ function configureCards() {
     const status = card.querySelector(".link-status");
     if (url) {
       card.href = url;
+      status.textContent = "";
       card.setAttribute("aria-label", `${card.querySelector("strong").textContent} — ouvrir la page`);
       return;
     }
