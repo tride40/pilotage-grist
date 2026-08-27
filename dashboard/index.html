@@ -6,7 +6,7 @@
     <meta name="description" content="Tableau de bord du pilotage des projets">
     <title>Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
-    <link rel="stylesheet" href="../commun/components.css?v=4">
+    <link rel="stylesheet" href="../commun/components.css?v=5">
     <link rel="stylesheet" href="style.css?v=5">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="demo-data.js?v=5" defer></script>
@@ -20,7 +20,7 @@
           <h1>Pilotage des projets</h1>
           <p class="dashboard-header__subtitle">Vue d'ensemble de l'activité</p>
         </div>
-        <div class="dashboard-header__actions"><a class="button button--secondary home-button" href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16" target="_top" aria-label="Revenir à l’accueil"><span class="home-button__icon" aria-hidden="true">⌂</span>Accueil</a><time class="dashboard-date" id="current-date"></time></div>
+        <div class="dashboard-header__actions"><a class="button button--secondary home-button" href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16" target="_top" aria-label="Revenir à l’accueil"><span class="home-button__icon" aria-hidden="true">⌂</span>Accueil</a><button class="button button--primary" id="new-project" type="button">+ Nouveau projet</button><time class="dashboard-date" id="current-date"></time></div>
       </div>
     </header>
 
@@ -36,7 +36,7 @@
             <p class="section-kicker">Portefeuille</p>
             <h2 class="section-header__title" id="projects-title">Projets actifs</h2>
           </div>
-          <div class="projects-heading__actions"><p class="results-count" id="results-count" aria-live="polite"></p><button class="button button--primary" id="new-project" type="button">+ Nouveau projet</button></div>
+          <div class="projects-heading__actions"><p class="results-count" id="results-count" aria-live="polite"></p></div>
         </div>
 
         <div class="dashboard-toolbar" aria-label="Filtres des projets">
