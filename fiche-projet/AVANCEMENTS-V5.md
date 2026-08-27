@@ -20,6 +20,7 @@ Ces colonnes doivent être des colonnes de saisie, sans formule. `Projet`, `Date
 
 - `Avancement`
 - `Information`
+- `Prochaine étape`
 - `Étape franchie`
 - `Vigilance`
 - `Vigilance levée`
