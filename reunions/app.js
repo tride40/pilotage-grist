@@ -1,178 +1,55 @@
 "use strict";
+const REQUIRED_TABLES=["PROJETS","REUNIONS","INTERLOCUTEURS"],OPTIONAL_TABLES=["ACTIONS","CONSIGNES_POLITIQUES","ARBITRAGES_DECISIONS"],REUNION_COLUMNS=["Reunion_origine","Reunion","Origine_reunion"];
+const FOLLOWUPS={ACTIONS:{label:"Action",button:"+ Action",texts:["Action","Intitule","Sujet"],initial:["Points_cles","Objet"]},CONSIGNES_POLITIQUES:{label:"Consigne",button:"+ Consigne",texts:["Consigne","Texte","Sujet"],initial:["Decisions_prises","Points_cles","Objet"]},ARBITRAGES_DECISIONS:{label:"Arbitrage",button:"+ Arbitrage",texts:["Sujet","Arbitrage","Decision"],initial:["Arbitrage_attendu","Decisions_prises","Objet"]}};
+const MEETING_FIELDS=[["Projet","Projet","project"],["Date_reunion","Date","date"],["Heure","Heure","time"],["Objet","Objet","text"],["Type_reunion","Type de réunion","text"],["Lieu","Lieu","text"],["Participants","Participants","participants"],["Compte_rendu","Compte rendu","textarea"],["Points_cles","Points clés","textarea"],["Decisions_prises","Décisions prises","textarea"],["Arbitrage_attendu","Arbitrage attendu","textarea"],["Prochaine_reunion","Prochaine réunion","date"],["Saisi_par","Saisi par","person"],["CR_finalise","Compte rendu finalisé","checkbox"]];
+const PROJECT_PEOPLE=["Responsable","Agent_pilote","Elu_pilote","Interlocuteurs","Membres","Membres_projet","Equipe_projet","Partenaires"];
+const state={project:null,projects:[],meetings:[],people:[],tables:{},writable:null,tableNames:[],filter:"all",search:"",demo:false,editing:null,participantIds:[],showAllPeople:false,participantSearch:"",followupMeeting:null,busy:false};
+const $=s=>document.querySelector(s),ui={state:$("#interface-state"),content:$("#meetings-content"),projectName:$("#project-name"),projectSelector:$("#project-selector"),total:$("#meeting-count"),kpis:$("#meeting-kpis"),filters:$("#filter-list"),search:$("#meeting-search"),results:$("#results-count"),list:$("#meeting-list"),template:$("#meeting-template"),newMeeting:$("#new-meeting"),meetingDialog:$("#meeting-dialog"),meetingForm:$("#meeting-form"),meetingFields:$("#meeting-fields"),followupDialog:$("#followup-dialog"),followupForm:$("#followup-form"),followupFields:$("#followup-fields"),feedback:$("#feedback")};
 
-const REQUIRED_TABLES = ["PROJETS", "REUNIONS", "INTERLOCUTEURS"];
-const OPTIONAL_TABLES = ["ACTIONS", "CONSIGNES_POLITIQUES", "ARBITRAGES_DECISIONS"];
-const state = { project: null, projects: [], meetings: [], people: [], tables: {}, writable: null, filter: "all", search: "", demo: false, editing: null, lastMeeting: null, busy: false };
-const ui = {
-  state: document.querySelector("#interface-state"), content: document.querySelector("#meetings-content"),
-  projectName: document.querySelector("#project-name"), projectSelector: document.querySelector("#project-selector"), total: document.querySelector("#meeting-count"),
-  kpis: document.querySelector("#meeting-kpis"), filters: document.querySelector("#filter-list"),
-  search: document.querySelector("#meeting-search"), results: document.querySelector("#results-count"),
-  list: document.querySelector("#meeting-list"), template: document.querySelector("#meeting-template"),
-  newMeeting: document.querySelector("#new-meeting"), meetingDialog: document.querySelector("#meeting-dialog"), meetingForm: document.querySelector("#meeting-form"), meetingFields: document.querySelector("#meeting-fields"),
-  followupDialog: document.querySelector("#followup-dialog"), followupForm: document.querySelector("#followup-form"), followupFields: document.querySelector("#followup-fields"), feedback: document.querySelector("#feedback"),
-};
+async function initialize(){bindControls();try{if(isDemo()){state.demo=true;state.tableNames=[...REQUIRED_TABLES,...OPTIONAL_TABLES];applyData(window.MEETINGS_DEMO_DATA.project,window.MEETINGS_DEMO_DATA.tables);return}if(!window.grist?.docApi)throw Error("L’API Grist n’est pas disponible.");await timeout(Promise.resolve(window.grist.ready({requiredAccess:"full"})),"initialisation de Grist");state.tableNames=normalizeTableNames(await timeout(window.grist.docApi.listTables(),"détection des tables"));const missing=REQUIRED_TABLES.filter(n=>!state.tableNames.includes(n));if(missing.length)throw Error(`Tables Grist introuvables : ${missing.join(", ")}.`);const names=availableTables();state.tables=await fetchTables(names);state.writable=await fetchWritableColumns(names);sync();populateProjects();state.project=firstProject();window.grist.onRecord(record=>{const p=record&&state.projects.find(row=>same(row.id,record.id));if(p){state.project=p;render()}});render()}catch(error){console.error(error);showState("Connexion à Grist impossible",exactError(error))}}
+const availableTables=()=>[...REQUIRED_TABLES,...OPTIONAL_TABLES.filter(n=>state.tableNames.includes(n))];
+async function fetchTables(names){return Object.fromEntries(await Promise.all(names.map(async n=>[n,columnar(await timeout(window.grist.docApi.fetchTable(n),`lecture de ${n}`))])))}
+function timeout(p,label,delay=10000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(Error(`Délai dépassé pendant : ${label}.`)),delay))])}
+function applyData(project,tables){state.tables=tables;state.writable=Object.fromEntries(Object.entries(tables).map(([n,rows])=>[n,new Set(rows.flatMap(Object.keys))]));sync();state.project=project;populateProjects();render()}
+function sync(){state.projects=state.tables.PROJETS||[];state.meetings=state.tables.REUNIONS||[];state.people=state.tables.INTERLOCUTEURS||[]}
+function normalizeTableNames(v){const rows=Array.isArray(v)?v:Array.isArray(v?.tables)?v.tables:[];return rows.map(r=>typeof r==="string"?r:r?.id??r?.tableId??r?.name??"").filter(Boolean)}
+function columnar(c){if(!c||typeof c!=="object")return[];const names=Object.keys(c).filter(n=>Array.isArray(c[n])),length=Math.max(0,...names.map(n=>c[n].length));return Array.from({length},(_,i)=>Object.fromEntries(names.map(n=>[n,c[n][i]])))}
+async function fetchWritableColumns(names){const[t,c]=await Promise.all([window.grist.docApi.fetchTable("_grist_Tables"),window.grist.docApi.fetchTable("_grist_Tables_column")]),ids=new Map(columnar(t).map(r=>[String(r.id),r.tableId])),rows=columnar(c);return Object.fromEntries(names.map(table=>[table,new Set(rows.filter(col=>ids.get(String(col.parentId))===table&&!hasValue(col.formula)&&!isTrue(col.isFormula)).map(col=>col.colId))]))}
+function isDemo(){return["localhost","127.0.0.1"].includes(location.hostname)&&self===top&&new URLSearchParams(location.search).get("demo")==="1"&&window.MEETINGS_DEMO_DATA}
 
-/* Connexion au document Grist et au projet sélectionné. */
-async function initialize() {
-  bindControls();
-  try {
-    if (isLocalDemoMode()) { state.demo = true; applyData(window.MEETINGS_DEMO_DATA.project, window.MEETINGS_DEMO_DATA.tables); return; }
-    if (!window.grist?.docApi) throw new Error("L’API Grist n’est pas disponible.");
-    setLoadingMessage("Initialisation de l’API Grist…");
-    await withTimeout(Promise.resolve(window.grist.ready({ requiredAccess: "full" })), "initialisation de l’API Grist");
-    setLoadingMessage("Détection des tables du document…");
-    const tableNames = normalizeTableNames(await withTimeout(window.grist.docApi.listTables(), "détection des tables"));
-    const missing = REQUIRED_TABLES.filter((name) => !tableNames.includes(name));
-    if (missing.length) throw new Error(`Tables Grist introuvables : ${missing.join(", ")}.`);
-    setLoadingMessage("Lecture des réunions et des interlocuteurs…");
-    const tables = await fetchTables([...REQUIRED_TABLES, ...OPTIONAL_TABLES.filter((name) => tableNames.includes(name))]);
-    state.tables = tables;
-    state.writable = await fetchWritableColumns([...REQUIRED_TABLES,...OPTIONAL_TABLES.filter(name=>tableNames.includes(name))]);
-    state.projects = tables.PROJETS;
-    state.meetings = tables.REUNIONS;
-    state.people = tables.INTERLOCUTEURS;
-    populateProjectSelector();
-    state.project = firstActiveProject();
-    window.grist.onRecord((record) => {
-      const matchingProject = record && state.projects.find((project) => String(project.id) === String(record.id));
-      if (matchingProject) { state.project = matchingProject; ui.projectSelector.value = String(matchingProject.id); render(); }
-    });
-    render();
-  } catch (error) {
-    console.error("Erreur de chargement du widget Réunions :", error);
-    showInterfaceState("Connexion à Grist impossible", exactError(error));
-  }
-}
+function projectMeetings(){return state.project?state.meetings.filter(m=>referenceIds(m.Projet).some(id=>same(id,state.project.id))).sort((a,b)=>dateValue(b.Date_reunion??b.Date)-dateValue(a.Date_reunion??a.Date)):[]}
+function filtered(rows){const today=startToday(),q=normalizeText(state.search);return rows.filter(m=>{const d=dateValue(m.Date_reunion??m.Date),ok=state.filter==="all"||(state.filter==="upcoming"&&d>=today)||(state.filter==="past"&&d>0&&d<today)||(state.filter==="decisions"&&(hasValue(m.Decisions_prises)||hasValue(m.Arbitrage_attendu)));return ok&&normalizeText([m.Objet,m.Type_reunion,m.Points_cles,m.Decisions_prises].filter(hasValue).join(" ")).includes(q)})}
+function populateProjects(){ui.projectSelector.replaceChildren(...[...state.projects].sort((a,b)=>textOr(a.Nom_projet,"").localeCompare(textOr(b.Nom_projet,""),"fr")).map(p=>option(p.id,textOr(p.Nom_projet,`Projet ${p.id}`))));ui.projectSelector.disabled=!state.projects.length}
+function firstProject(){return state.projects.find(p=>!isTrue(p.Archive)&&!["termine","abandonne"].includes(normalizeText(p.Statut)))||state.projects[0]||null}
+function render(){if(!state.project){showState("Aucun projet sélectionné","Sélectionnez une ligne dans PROJETS.");return}const rows=projectMeetings(),today=startToday();ui.projectSelector.value=String(state.project.id);ui.projectName.textContent=textOr(state.project.Nom_projet,"Projet sans nom");ui.total.textContent=`${rows.length} ${rows.length>1?"réunions":"réunion"}`;const kpis=[["Total",rows.length],["À venir",rows.filter(r=>dateValue(r.Date_reunion??r.Date)>=today).length],["Décisions",rows.filter(r=>hasValue(r.Decisions_prises)).length],["Arbitrages",rows.filter(r=>hasValue(r.Arbitrage_attendu)).length]];ui.kpis.replaceChildren(...kpis.map(([l,v])=>{const c=element("article","card meeting-kpi");c.append(textElement("span",l,"meeting-kpi__label"),textElement("strong",v,"meeting-kpi__value"));return c}));renderList(filtered(rows));ui.state.hidden=true;ui.content.hidden=false}
+function renderList(rows){ui.results.textContent=`${rows.length} résultat${rows.length>1?"s":""}`;ui.list.replaceChildren(...(rows.length?rows.map(meetingCard):[textElement("p","Aucune réunion ne correspond à ces critères.","card empty-results")]))}
+function meetingCard(m){const card=ui.template.content.firstElementChild.cloneNode(true);card.dataset.meetingId=String(m.id);card.querySelector(".meeting-card__date").textContent=formatDate(m.Date_reunion??m.Date)||"Date non renseignée";card.querySelector(".meeting-card__title").textContent=textOr(m.Objet,"Réunion sans objet");const badges=card.querySelector(".meeting-card__badges");if(hasValue(m.Type_reunion))badges.append(badge(m.Type_reunion,"info"));badges.append(badge(isUpcoming(m)?"À venir":"Passée",isUpcoming(m)?"warning":"success"));const dl=card.querySelector(".meeting-card__details");definition(dl,"Participants",peopleValue(m.Participants));definition(dl,"Lieu",m.Lieu);definition(dl,"Durée",m.Duree);definition(dl,"Organisateur",peopleValue(m.Organisateur??m.Responsable));const sections=card.querySelector(".meeting-card__sections");note(sections,"Pourquoi / compte rendu",m.Compte_rendu,"info");note(sections,"Points clés",m.Points_cles,"info",true);note(sections,"Décisions prises",m.Decisions_prises,"decision",true);note(sections,"Arbitrage attendu",m.Arbitrage_attendu,"arbitration",true);note(sections,"Prochaines étapes",m.Prochaines_etapes??m.Prochaine_etape,"info");card.insertBefore(followupSection(m),card.querySelector(".meeting-card__actions"));card.querySelector("[data-edit]").addEventListener("click",()=>openMeetingForm(m));if(!dl.children.length)dl.remove();if(!sections.children.length)sections.remove();return card}
+function followupSection(meeting){const section=element("section","meeting-followups"),head=element("div","meeting-followups__header"),rows=followupsFor(meeting);head.append(textElement("h4","Suites données à cette réunion"),badge(`${rows.length} suite${rows.length>1?"s":""}`,"info"));section.append(head);if(rows.length){const list=element("ul","meeting-followups__list");rows.forEach(({table,row,cfg})=>{const li=element("li",`followup-item followup-item--${table.toLowerCase()}`),main=element("div");main.append(textElement("span",cfg.label,"followup-item__type"),textElement("strong",followupText(row,cfg),"followup-item__text"));li.append(main);if(hasValue(row.Statut))li.append(badge(row.Statut,statusKind(row.Statut)));list.append(li)});section.append(list)}else section.append(textElement("p","Aucune suite liée pour le moment.","meeting-followups__empty"));const actions=element("div","followup-actions");Object.entries(FOLLOWUPS).forEach(([table,cfg])=>{if(!relationColumn(table))return;const b=element("button","button button--secondary");b.type="button";b.textContent=cfg.button;b.addEventListener("click",()=>openFollowup(table,meeting));actions.append(b)});if(actions.children.length)section.append(actions);return section}
+function followupsFor(meeting){const out=[];Object.entries(FOLLOWUPS).forEach(([table,cfg])=>{const rel=relationColumn(table,false);if(rel)(state.tables[table]||[]).filter(r=>referenceIds(r[rel]).some(id=>same(id,meeting.id))).forEach(row=>out.push({table,row,cfg}))});return out}
+function relationColumn(table,writable=true){return REUNION_COLUMNS.find(n=>writable?hasColumn(table,n):(hasColumn(table,n)||(state.tables[table]||[]).some(r=>Object.hasOwn(r,n))))}
+function followupText(row,cfg){const col=cfg.texts.find(n=>hasValue(row[n]));return col?displayValue(row[col]):"Sans intitulé"}
+function definition(c,l,v){if(!hasValue(v))return;const d=element("div");d.append(textElement("dt",l),textElement("dd",v));c.append(d)}
+function note(c,l,v,kind,open=false){if(!hasValue(v))return;const d=element("details",`meeting-note meeting-note--${kind}`);d.open=open;d.append(textElement("summary",l),textElement("p",v));c.append(d)}
 
-async function fetchTables(names) {
-  const entries = await Promise.all(names.map(async (name) => [name, columnarToRecords(await withTimeout(window.grist.docApi.fetchTable(name), `lecture de la table ${name}`))]));
-  return Object.fromEntries(entries);
-}
-function withTimeout(promise, label, delay = 10000) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => window.setTimeout(() => reject(new Error(`Délai dépassé pendant : ${label}.`)), delay)),
-  ]);
-}
-function applyData(project, tables) { state.tables=tables; state.projects = tables.PROJETS || [project]; state.project = project; state.meetings = tables.REUNIONS || []; state.people = tables.INTERLOCUTEURS || []; populateProjectSelector(); render(); }
-function normalizeTableNames(value) { const rows = Array.isArray(value) ? value : Array.isArray(value?.tables) ? value.tables : []; return rows.map((row) => typeof row === "string" ? row : row?.id ?? row?.tableId ?? row?.name ?? "").filter(Boolean); }
-function columnarToRecords(columns) { if (!columns || typeof columns !== "object") return []; const names = Object.keys(columns).filter((name) => Array.isArray(columns[name])); const length = Math.max(0, ...names.map((name) => columns[name].length)); return Array.from({ length }, (_, index) => Object.fromEntries(names.map((name) => [name, columns[name][index]]))); }
-async function fetchWritableColumns(names){const [tm,cm]=await Promise.all([window.grist.docApi.fetchTable("_grist_Tables"),window.grist.docApi.fetchTable("_grist_Tables_column")]);const ids=new Map(columnarToRecords(tm).map(r=>[String(r.id),r.tableId])),cols=columnarToRecords(cm);return Object.fromEntries(names.map(table=>[table,new Set(cols.filter(c=>ids.get(String(c.parentId))===table&&!hasValue(c.formula)&&!isTrue(c.isFormula)).map(c=>c.colId))]));}
-function isLocalDemoMode() { return ["localhost", "127.0.0.1"].includes(window.location.hostname) && window.self === window.top && new URLSearchParams(window.location.search).get("demo") === "1" && Boolean(window.MEETINGS_DEMO_DATA); }
+function bindControls(){ui.projectSelector.addEventListener("change",()=>{state.project=state.projects.find(p=>same(p.id,ui.projectSelector.value))||null;render()});ui.filters.addEventListener("click",e=>{const b=e.target.closest("[data-filter]");if(!b)return;state.filter=b.dataset.filter;ui.filters.querySelectorAll("[data-filter]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));render()});ui.search.addEventListener("input",()=>{state.search=ui.search.value;render()});ui.newMeeting.addEventListener("click",()=>openMeetingForm());document.querySelectorAll("dialog [data-close]").forEach(b=>b.addEventListener("click",()=>b.closest("dialog").close()));ui.meetingForm.addEventListener("submit",saveMeeting);ui.followupForm.addEventListener("submit",saveFollowup)}
+const hasColumn=(table,name)=>Boolean(state.writable?.[table]?.has(name));
+function openMeetingForm(meeting=null){state.editing=meeting;state.participantIds=validPersonIds(meeting?.Participants);state.showAllPeople=false;state.participantSearch="";ui.meetingForm.reset();$("#meeting-form-title").textContent=meeting?"Modifier la réunion":"Nouvelle réunion";ui.meetingFields.replaceChildren(...MEETING_FIELDS.filter(([n])=>hasColumn("REUNIONS",n)||["Projet","Date_reunion","Objet"].includes(n)).map(([n,l,t])=>buildField(n,l,t,meeting?.[n]??(n==="Projet"?state.project?.id:""))));ui.meetingDialog.querySelector(".form-message").textContent="";ui.meetingDialog.showModal()}
+function buildField(name,label,type,value){if(type==="participants")return participantField(label);const wrap=element("label",`form-field${type==="textarea"?" form-field--wide":""}`);wrap.append(textElement("span",label,"form-field__label"));let c;if(type==="textarea"){c=element("textarea");c.rows=4}else if(["project","person"].includes(type)){c=element("select");const rows=type==="project"?state.projects:state.people;c.append(option("","Non renseigné"),...rows.map(r=>option(r.id,type==="project"?textOr(r.Nom_projet,`Projet ${r.id}`):personLabel(r))))}else{c=element("input");c.type=type}c.className="form-field__control";c.name=name;if(type==="checkbox")c.checked=isTrue(value);else if(type==="date")c.value=inputDate(value);else c.value=displayValue(value);wrap.append(c);return wrap}
+function participantField(label){const wrap=element("fieldset","form-field form-field--wide participant-picker");wrap.append(textElement("legend",label,"form-field__label"));const chips=element("div","participant-chips");chips.dataset.chips="";chips.setAttribute("aria-live","polite");const search=element("input","form-field__control participant-search");search.type="search";search.placeholder="Rechercher par nom, organisme ou fonction…";search.setAttribute("aria-label","Rechercher un participant");search.addEventListener("input",()=>{state.participantSearch=search.value;renderPicker(wrap)});const heading=textElement("p","Interlocuteurs du projet","participant-picker__heading"),options=element("div","participant-options");options.dataset.options="";options.setAttribute("role","list");const toggle=element("button","button button--link participant-toggle");toggle.type="button";toggle.addEventListener("click",()=>{state.showAllPeople=!state.showAllPeople;renderPicker(wrap)});wrap.append(chips,search,heading,options,toggle);renderPicker(wrap);return wrap}
+function renderPicker(wrap){const chips=wrap.querySelector("[data-chips]");chips.replaceChildren(...state.participantIds.map(id=>{const p=person(id),chip=element("span","participant-chip"),remove=element("button");chip.append(textElement("span",p?personLabel(p):`Interlocuteur ${id}`));remove.type="button";remove.textContent="×";remove.setAttribute("aria-label",`Retirer ${p?personLabel(p):id}`);remove.addEventListener("click",()=>{state.participantIds=state.participantIds.filter(x=>!same(x,id));renderPicker(wrap)});chip.append(remove);return chip}));const q=normalizeText(state.participantSearch),pool=state.showAllPeople||q?state.people:projectPeople(),available=pool.filter(p=>!state.participantIds.some(id=>same(id,p.id))).filter(p=>!q||personSearch(p).includes(q)),options=wrap.querySelector("[data-options]");options.replaceChildren(...(available.length?available.map(p=>{const b=element("button","participant-option");b.type="button";b.setAttribute("role","listitem");b.append(textElement("strong",personLabel(p)),textElement("span",[p.Fonction,p.Organisme].filter(hasValue).join(" · ")));b.addEventListener("click",()=>{state.participantIds=[...new Set([...state.participantIds,String(p.id)])];renderPicker(wrap)});return b}):[textElement("p",q?"Aucun interlocuteur ne correspond à la recherche.":"Tous les interlocuteurs proposés sont sélectionnés.","participant-empty")]));wrap.querySelector(".participant-picker__heading").textContent=state.showAllPeople||q?"Annuaire des interlocuteurs":"Interlocuteurs du projet";const t=wrap.querySelector(".participant-toggle");t.textContent=state.showAllPeople?"Afficher seulement les interlocuteurs du projet":"Afficher tous les interlocuteurs";t.setAttribute("aria-expanded",String(state.showAllPeople))}
+function projectPeople(){return validPersonIds(PROJECT_PEOPLE.map(n=>state.project?.[n])).map(person).filter(Boolean)}
+function validPersonIds(v){const known=new Set(state.people.map(p=>String(p.id)));return[...new Set(referenceIds(v).filter(id=>id!=="0"&&known.has(id)))]}
+const person=id=>state.people.find(p=>same(p.id,id)),personLabel=p=>textOr(p.Nom_complet,[p.Prenom,p.Nom].filter(hasValue).join(" ")||`Interlocuteur ${p.id}`),personSearch=p=>normalizeText([p.Nom_complet,p.Prenom,p.Nom,p.Organisme,p.Fonction].filter(hasValue).join(" "));
+function formValues(form,table){const values={};for(const c of form.elements){const n=c.name;if(!n||n==="TargetTable"||(!hasColumn(table,n)&&!(table==="REUNIONS"&&["Projet","Date_reunion","Objet"].includes(n))))continue;if(c.type==="checkbox")values[n]=c.checked;else if(!hasValue(c.value))continue;else if(["Projet","Saisi_par","Responsable",...REUNION_COLUMNS].includes(n))values[n]=Number(c.value);else if(c.type==="date")values[n]=new Date(`${c.value}T00:00:00`).getTime()/1000;else values[n]=c.value.trim()}if(table==="REUNIONS"&&hasColumn(table,"Participants"))values.Participants=["L",...state.participantIds.map(Number).filter(n=>Number.isFinite(n)&&n>0)];return values}
+async function saveMeeting(e){e.preventDefault();const fields=formValues(ui.meetingForm,"REUNIONS");if(!hasValue(fields.Projet)||!hasValue(fields.Objet)){ui.meetingDialog.querySelector(".form-message").textContent="Le projet et l’objet sont obligatoires.";return}try{const result=await write([[state.editing?"UpdateRecord":"AddRecord","REUNIONS",state.editing?.id??null,fields]]),meeting=state.editing?state.meetings.find(r=>same(r.id,state.editing.id)):result.added.REUNIONS?.[0];if(!meeting)throw Error("La ligne a été écrite mais n’a pas été retrouvée après relecture de REUNIONS.");if(!referenceIds(meeting.Projet).some(id=>same(id,fields.Projet)))throw Error(`La réunion ${meeting.id} existe, mais sa référence Projet est incorrecte.`);ui.meetingDialog.close();render();focusMeeting(meeting.id);feedback(state.editing?"Réunion modifiée.":"Réunion créée et affichée dans le projet.")}catch(error){ui.meetingDialog.querySelector(".form-message").textContent=`Écriture impossible — ${exactError(error)}`}}
+function openFollowup(table,meeting){const rel=relationColumn(table);if(!rel){feedback(`Aucune colonne de réunion d’origine modifiable dans ${table}.`);return}state.followupMeeting=meeting;ui.followupForm.reset();ui.followupForm.elements.TargetTable.value=table;const cfg=FOLLOWUPS[table],text=cfg.texts.find(n=>hasColumn(table,n)),initial=cfg.initial.find(n=>hasValue(meeting[n]));$("#followup-title").textContent=`Nouvel élément — ${cfg.label}`;const defs=[["Projet","Projet","project",state.project.id],[rel,"Réunion d’origine","hidden",meeting.id],...(text?[[text,cfg.label,"textarea",initial?meeting[initial]:""]]:[]),["Responsable","Responsable","person",""],["Echeance","Échéance","date",""],["Statut","Statut","text","À faire"],["Commentaire","Commentaire","textarea",""]];ui.followupFields.replaceChildren(...defs.filter(([n,,t])=>t==="hidden"||hasColumn(table,n)).map(([n,l,t,v])=>t==="hidden"?hidden(n,v):buildField(n,l,t,v)));ui.followupDialog.querySelector(".form-message").textContent="";ui.followupDialog.showModal()}
+function hidden(name,value){const i=element("input");i.type="hidden";i.name=name;i.value=value;return i}
+async function saveFollowup(e){e.preventDefault();const table=ui.followupForm.elements.TargetTable.value,meetingId=state.followupMeeting?.id,rel=relationColumn(table);try{if(!meetingId||!rel)throw Error("La réunion d’origine ne peut pas être résolue.");const fields=formValues(ui.followupForm,table);if(!same(fields.Projet,state.project.id)||!same(fields[rel],meetingId))throw Error("Les références Projet ou Réunion d’origine sont absentes.");const result=await write([["AddRecord",table,null,fields]]),row=result.added[table]?.[0];if(!row)throw Error(`La ligne n’a pas été retrouvée après relecture de ${table}.`);if(!referenceIds(row[rel]).some(id=>same(id,meetingId)))throw Error(`La référence ${rel} ne pointe pas vers la réunion ${meetingId}.`);ui.followupDialog.close();render();focusMeeting(meetingId);feedback(`${FOLLOWUPS[table].label} créé et rattaché à la réunion.`)}catch(error){ui.followupDialog.querySelector(".form-message").textContent=`Création impossible — ${exactError(error)}`}}
+async function write(actions){if(state.busy)throw Error("Une écriture est déjà en cours.");state.busy=true;const before=Object.fromEntries(actions.map(([,t])=>[t,new Set((state.tables[t]||[]).map(r=>String(r.id))) ]));try{if(state.demo){for(const[type,table,id,fields]of actions){if(type==="AddRecord"){const next=Math.max(0,...(state.tables[table]||[]).map(r=>Number(r.id)||0))+1;state.tables[table].push({id:next,...fields})}else{const row=state.tables[table].find(r=>same(r.id,id));if(!row)throw Error(`Ligne ${id} introuvable dans ${table}.`);Object.assign(row,fields)}}}else{await timeout(window.grist.docApi.applyUserActions(actions),"écriture dans Grist");state.tables=await fetchTables(availableTables());sync()}const added={};for(const[,table]of actions)added[table]=(state.tables[table]||[]).filter(r=>!before[table]?.has(String(r.id)));return{added}}finally{state.busy=false}}
 
-/* Sélection, tri et filtrage des réunions. */
-function projectMeetings() {
-  if (!state.project) return [];
-  return state.meetings.filter((meeting) => referenceIds(meeting.Projet).includes(String(state.project.id)))
-    .sort((left, right) => dateValue(right.Date_reunion ?? right.Date) - dateValue(left.Date_reunion ?? left.Date));
-}
-function filteredMeetings(meetings) {
-  const today = startOfToday();
-  return meetings.filter((meeting) => {
-    const timestamp = dateValue(meeting.Date_reunion ?? meeting.Date);
-    const matchesFilter = state.filter === "all"
-      || (state.filter === "upcoming" && timestamp >= today)
-      || (state.filter === "past" && timestamp > 0 && timestamp < today)
-      || (state.filter === "decisions" && (hasValue(meeting.Decisions_prises) || hasValue(meeting.Arbitrage_attendu)));
-    const haystack = normalizeText([meeting.Objet, meeting.Type_reunion, meeting.Points_cles, meeting.Decisions_prises].filter(hasValue).join(" "));
-    return matchesFilter && haystack.includes(normalizeText(state.search));
-  });
-}
-function calculateKpis(meetings) {
-  const today = startOfToday();
-  return [["Total", meetings.length], ["À venir", meetings.filter((row) => dateValue(row.Date_reunion ?? row.Date) >= today).length], ["Décisions", meetings.filter((row) => hasValue(row.Decisions_prises)).length], ["Arbitrages", meetings.filter((row) => hasValue(row.Arbitrage_attendu)).length]];
-}
-function populateProjectSelector() {
-  const projects = [...state.projects].sort((left, right) => textOr(left.Nom_projet, "").localeCompare(textOr(right.Nom_projet, ""), "fr"));
-  ui.projectSelector.replaceChildren(...projects.map((project) => {
-    const option = element("option"); option.value = String(project.id); option.textContent = textOr(project.Nom_projet, "Projet sans nom"); return option;
-  }));
-  ui.projectSelector.disabled = projects.length === 0;
-}
-function firstActiveProject() {
-  return state.projects.find((project) => !isTrue(project.Archive) && !["termine", "abandonne"].includes(normalizeText(project.Statut))) || state.projects[0] || null;
-}
-
-/* Rendu de l'interface. */
-function render() {
-  if (!state.project) { showInterfaceState("Aucun projet sélectionné", "Sélectionnez une ligne dans la table PROJETS pour afficher ses réunions."); return; }
-  const meetings = projectMeetings();
-  ui.projectSelector.value = String(state.project.id);
-  ui.projectName.textContent = textOr(state.project.Nom_projet, "Projet sans nom");
-  ui.total.textContent = `${meetings.length} ${meetings.length > 1 ? "réunions" : "réunion"}`;
-  renderKpis(calculateKpis(meetings)); renderMeetingList(filteredMeetings(meetings));
-  ui.state.hidden = true; ui.content.hidden = false;
-}
-function renderKpis(items) {
-  ui.kpis.replaceChildren(...items.map(([label, value]) => { const card = element("article", "card meeting-kpi"); card.append(textElement("span", label, "meeting-kpi__label"), textElement("strong", value, "meeting-kpi__value")); return card; }));
-}
-function renderMeetingList(meetings) {
-  ui.results.textContent = `${meetings.length} résultat${meetings.length > 1 ? "s" : ""}`;
-  if (!meetings.length) { ui.list.replaceChildren(textElement("p", "Aucune réunion ne correspond à ces critères.", "card empty-results")); return; }
-  ui.list.replaceChildren(...meetings.map(renderMeetingCard));
-}
-function renderMeetingCard(meeting) {
-  const card = ui.template.content.firstElementChild.cloneNode(true);
-  card.querySelector(".meeting-card__date").textContent = formatDate(meeting.Date_reunion ?? meeting.Date) || "Date non renseignée";
-  card.querySelector(".meeting-card__title").textContent = textOr(meeting.Objet, "Réunion sans objet");
-  const badges = card.querySelector(".meeting-card__badges");
-  if (hasValue(meeting.Type_reunion)) badges.append(makeBadge(meeting.Type_reunion, "info"));
-  badges.append(makeBadge(isUpcoming(meeting) ? "À venir" : "Passée", isUpcoming(meeting) ? "warning" : "success"));
-  const details = card.querySelector(".meeting-card__details");
-  appendDefinition(details, "Participants", peopleValue(meeting.Participants)); appendDefinition(details, "Lieu", meeting.Lieu);
-  appendDefinition(details, "Durée", meeting.Duree); appendDefinition(details, "Organisateur", peopleValue(meeting.Organisateur ?? meeting.Responsable));
-  const sections = card.querySelector(".meeting-card__sections");
-  appendNote(sections, "Points clés", meeting.Points_cles, "info"); appendNote(sections, "Décisions prises", meeting.Decisions_prises, "decision");
-  appendNote(sections, "Arbitrage attendu", meeting.Arbitrage_attendu, "arbitration"); appendNote(sections, "Prochaines étapes", meeting.Prochaines_etapes ?? meeting.Prochaine_etape, "info");
-  card.querySelector("[data-edit]").addEventListener("click",()=>openMeetingForm(meeting));
-  if (!details.children.length) details.remove(); if (!sections.children.length) sections.remove(); return card;
-}
-function appendDefinition(container, label, value) { if (!hasValue(value)) return; const wrapper = element("div"); wrapper.append(textElement("dt", label), textElement("dd", displayValue(value))); container.append(wrapper); }
-function appendNote(container, label, value, kind) { if (!hasValue(value)) return; const note = element("section", `meeting-note meeting-note--${kind}`); note.append(textElement("strong", label), textElement("p", displayValue(value))); container.append(note); }
-function makeBadge(value, kind) { return textElement("span", displayValue(value), `badge badge--${kind}`); }
-function setLoadingMessage(message) { const text = ui.state.querySelector("p"); if (text) text.textContent = message; }
-function showInterfaceState(title, message) { ui.content.hidden = true; const box = element("div"); box.append(textElement("strong", title), textElement("p", message)); ui.state.replaceChildren(box); ui.state.hidden = false; }
-
-/* Contrôles locaux sans rechargement. */
-function bindControls() {
-  ui.projectSelector.addEventListener("change", () => { state.project = state.projects.find((project) => String(project.id) === ui.projectSelector.value) || null; render(); });
-  ui.filters.addEventListener("click", (event) => { const button = event.target.closest("[data-filter]"); if (!button) return; state.filter = button.dataset.filter; ui.filters.querySelectorAll("[data-filter]").forEach((item) => item.setAttribute("aria-pressed", String(item === button))); render(); });
-  ui.search.addEventListener("input", () => { state.search = ui.search.value; render(); });
-  ui.newMeeting.addEventListener("click",()=>openMeetingForm());
-  document.querySelectorAll("dialog [data-close]").forEach(button=>button.addEventListener("click",()=>button.closest("dialog").close()));
-  ui.meetingForm.addEventListener("submit",saveMeeting);ui.followupForm.addEventListener("submit",saveFollowup);
-}
-
-/* Création, édition et suites de réunion. */
-const MEETING_FIELDS=[["Projet","Projet","project"],["Date_reunion","Date","date"],["Heure","Heure","time"],["Objet","Objet","text"],["Type_reunion","Type de réunion","text"],["Lieu","Lieu","text"],["Participants","Participants","people"],["Compte_rendu","Compte rendu","textarea"],["Points_cles","Points clés","textarea"],["Decisions_prises","Décisions prises","textarea"],["Arbitrage_attendu","Arbitrage attendu","textarea"],["Prochaine_reunion","Prochaine réunion","date"],["Saisi_par","Saisi par","person"],["CR_finalise","Compte rendu finalisé","checkbox"]];
-function hasColumn(table,name){return state.demo?(state.tables[table]||[]).some(row=>Object.prototype.hasOwnProperty.call(row,name)):Boolean(state.writable?.[table]?.has(name));}
-function openMeetingForm(meeting=null){state.editing=meeting;ui.meetingForm.reset();document.querySelector("#meeting-form-title").textContent=meeting?"Modifier la réunion":"Nouvelle réunion";ui.meetingFields.replaceChildren(...MEETING_FIELDS.filter(([name])=>hasColumn("REUNIONS",name)||["Projet","Date_reunion","Objet"].includes(name)).map(([name,label,type])=>buildField(name,label,type,meeting?.[name]??(name==="Projet"?state.project?.id:""))));ui.meetingDialog.querySelector(".form-message").textContent="";ui.meetingDialog.showModal();}
-function buildField(name,label,type,value){const wrap=element("label",`form-field${type==="textarea"||type==="people"?" form-field--wide":""}`);wrap.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=element("textarea");control.rows=4;}else if(["project","person","people"].includes(type)){control=element("select");if(type==="people")control.multiple=true;const rows=type==="project"?state.projects:state.people;if(type!=="people")control.append(makeOption("","Non renseigné"));control.append(...rows.map(row=>makeOption(row.id,type==="project"?textOr(row.Nom_projet,`Projet ${row.id}`):textOr(row.Nom_complet,`Interlocuteur ${row.id}`))));}else{control=element("input");control.type=type;}control.className="form-field__control";control.name=name;if(type==="checkbox")control.checked=isTrue(value);else if(type==="date")control.value=inputDate(value);else if(type==="people"){const ids=referenceIds(value);[...control.options].forEach(o=>o.selected=ids.includes(o.value));}else control.value=displayValue(value);wrap.append(control);return wrap;}
-function makeOption(value,label){const option=element("option");option.value=value;option.textContent=label;return option;}function inputDate(value){const t=dateValue(value);return t?new Date(t).toISOString().slice(0,10):"";}
-function formValues(form,table){const values={};for(const control of form.elements){const name=control.name;if(!name||name==="TargetTable"||(!hasColumn(table,name)&&!(["Projet","Date_reunion","Objet"].includes(name)&&table==="REUNIONS")))continue;if(control.type==="checkbox")values[name]=control.checked;else if(control.multiple){const ids=[...control.selectedOptions].map(o=>Number(o.value));if(ids.length)values[name]=["L",...ids];}else if(!hasValue(control.value))continue;else if(["Projet","Saisi_par","Responsable","Reunion_origine"].includes(name))values[name]=Number(control.value);else if(control.type==="date")values[name]=new Date(`${control.value}T00:00:00`).getTime()/1000;else values[name]=control.value.trim();}return values;}
-async function saveMeeting(event){event.preventDefault();const fields=formValues(ui.meetingForm,"REUNIONS");const action=state.editing?["UpdateRecord","REUNIONS",state.editing.id,fields]:["AddRecord","REUNIONS",null,fields];try{const id=await write([action]);state.lastMeeting=state.editing?{...state.editing,...fields}:state.meetings.find(row=>String(row.id)===String(id))||{id,...fields};ui.meetingDialog.close();render();showFollowups();}catch(error){ui.meetingDialog.querySelector(".form-message").textContent=`Écriture impossible — ${exactError(error)}`;}}
-function showFollowups(){const panel=element("section","followup-panel");panel.append(textElement("h3","Suites de la réunion"),textElement("p","Créez immédiatement une suite en réutilisant le contexte déjà saisi."));const actions=element("div","followup-actions");[["ACTIONS","+ Action"],["CONSIGNES_POLITIQUES","+ Consigne politique"],["ARBITRAGES_DECISIONS","+ Arbitrage"]].filter(([table])=>state.tables[table]).forEach(([table,label])=>{const button=element("button","button button--secondary");button.type="button";button.textContent=label;button.addEventListener("click",()=>openFollowup(table));actions.append(button);});panel.append(actions);ui.list.prepend(panel);}
-function openFollowup(table){ui.followupForm.reset();ui.followupForm.elements.TargetTable.value=table;const names={ACTIONS:"Nouvelle action",CONSIGNES_POLITIQUES:"Nouvelle consigne politique",ARBITRAGES_DECISIONS:"Nouvel arbitrage"};document.querySelector("#followup-title").textContent=names[table];const textName=table==="ACTIONS"?"Action":table==="CONSIGNES_POLITIQUES"?"Consigne":"Sujet";const initial=table==="ARBITRAGES_DECISIONS"?state.lastMeeting.Arbitrage_attendu:state.lastMeeting.Points_cles||state.lastMeeting.Objet;const defs=[["Projet","Projet","project",state.project.id],["Reunion_origine","Réunion d’origine","hidden",state.lastMeeting.id],[textName,table==="ACTIONS"?"Action":table==="CONSIGNES_POLITIQUES"?"Consigne":"Sujet","textarea",initial],["Responsable","Responsable","person",""],["Echeance","Échéance","date",""],["Statut","Statut","text","À faire"],["Commentaire","Commentaire","textarea",""]];ui.followupFields.replaceChildren(...defs.filter(([name])=>name==="Projet"||name==="Reunion_origine"||hasColumn(table,name)).map(([name,label,type,value])=>type==="hidden"?hiddenField(name,value):buildField(name,label,type,value)));ui.followupDialog.querySelector(".form-message").textContent="";ui.followupDialog.showModal();}
-function hiddenField(name,value){const input=element("input");input.type="hidden";input.name=name;input.value=value;return input;}
-async function saveFollowup(event){event.preventDefault();const table=ui.followupForm.elements.TargetTable.value;try{await write([["AddRecord",table,null,formValues(ui.followupForm,table)]]);ui.followupDialog.close();feedback("Suite créée.");}catch(error){ui.followupDialog.querySelector(".form-message").textContent=`Création impossible — ${exactError(error)}`;}}
-async function write(actions){if(state.busy)throw new Error("Une écriture est déjà en cours.");state.busy=true;try{let id;if(state.demo){for(const [type,table,rowId,fields] of actions){if(type==="AddRecord"){id=Math.max(0,...state.tables[table].map(r=>Number(r.id)||0))+1;state.tables[table].push({id,...fields});}else Object.assign(state.tables[table].find(r=>String(r.id)===String(rowId)),fields);}}else{const result=await window.grist.docApi.applyUserActions(actions);id=result?.retValues?.[0]??null;state.tables=await fetchTables([...REQUIRED_TABLES,...OPTIONAL_TABLES.filter(name=>state.tables[name])]);state.projects=state.tables.PROJETS;state.people=state.tables.INTERLOCUTEURS;state.meetings=state.tables.REUNIONS;}return id;}finally{state.busy=false;}}
-function feedback(message){ui.feedback.textContent=message;ui.feedback.hidden=false;setTimeout(()=>ui.feedback.hidden=true,4000);}
-
-/* Formats tolérants aux cellules Grist vides. */
-function peopleValue(value) { return referenceIds(value).map((id) => state.people.find((person) => String(person.id) === id)?.Nom_complet || id).join(", "); }
-function referenceIds(value) { if (!hasValue(value)) return []; const values = Array.isArray(value) ? value : [value]; return values.filter((item) => item !== "L" && hasValue(item)).map(String); }
-function isUpcoming(meeting) { return dateValue(meeting.Date_reunion ?? meeting.Date) >= startOfToday(); }
-function startOfToday() { const date = new Date(); date.setHours(0, 0, 0, 0); return date.getTime(); }
-function dateValue(value) { if (!hasValue(value)) return 0; const date = new Date(typeof value === "number" ? value * 1000 : value); return Number.isNaN(date.getTime()) ? 0 : date.getTime(); }
-function formatDate(value) { const timestamp = dateValue(value); return timestamp ? new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(timestamp)) : ""; }
-function hasValue(value) { return value !== null && value !== undefined && String(value).trim() !== ""; }
-function displayValue(value) { if (Array.isArray(value)) return value.filter((item) => item !== "L").map(displayValue).join(", "); return hasValue(value) ? String(value).trim() : ""; }
-function textOr(value, fallback) { return hasValue(value) ? displayValue(value) : fallback; }
-function normalizeText(value) { return displayValue(value).toLocaleLowerCase("fr-FR").normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
-function isTrue(value) { return value === true || value === 1 || ["true", "vrai", "oui", "1"].includes(normalizeText(value)); }
-function exactError(error) { return error instanceof Error ? `${error.name} : ${error.message}` : String(error); }
-function element(tag, className) { const node = document.createElement(tag); if (className) node.className = className; return node; }
-function textElement(tag, value, className) { const node = element(tag, className); node.textContent = displayValue(value); return node; }
-
+function focusMeeting(id){requestAnimationFrame(()=>{const c=ui.list.querySelector(`[data-meeting-id="${CSS.escape(String(id))}"]`);if(c){c.classList.add("meeting-card--highlight");c.scrollIntoView({block:"nearest",behavior:"smooth"});setTimeout(()=>c.classList.remove("meeting-card--highlight"),1800)}})}
+function feedback(m){ui.feedback.textContent=m;ui.feedback.hidden=false;setTimeout(()=>ui.feedback.hidden=true,4000)}function showState(t,m){ui.content.hidden=true;const b=element("div");b.append(textElement("strong",t),textElement("p",m));ui.state.replaceChildren(b);ui.state.hidden=false}
+const peopleValue=v=>referenceIds(v).map(id=>person(id)?personLabel(person(id)):id).join(", "),referenceIds=v=>!hasValue(v)?[]:(Array.isArray(v)?v.flat(3):[v]).filter(x=>x!=="L"&&hasValue(x)).map(String),same=(a,b)=>String(a)===String(b),startToday=()=>{const d=new Date;d.setHours(0,0,0,0);return d.getTime()},isUpcoming=m=>dateValue(m.Date_reunion??m.Date)>=startToday();
+function dateValue(v){if(!hasValue(v))return 0;const d=new Date(typeof v==="number"?v*1000:v);return Number.isNaN(d.getTime())?0:d.getTime()}function formatDate(v){const t=dateValue(v);return t?new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date(t)):""}const inputDate=v=>dateValue(v)?new Date(dateValue(v)).toISOString().slice(0,10):"",hasValue=v=>v!==null&&v!==undefined&&String(v).trim()!=="",displayValue=v=>Array.isArray(v)?v.filter(x=>x!=="L").map(displayValue).join(", "):hasValue(v)?String(v).trim():"",textOr=(v,f)=>hasValue(v)?displayValue(v):f,normalizeText=v=>displayValue(v).toLocaleLowerCase("fr-FR").normalize("NFD").replace(/[\u0300-\u036f]/g,""),isTrue=v=>v===true||v===1||["true","vrai","oui","1"].includes(normalizeText(v)),exactError=e=>e instanceof Error?`${e.name} : ${e.message}`:String(e);
+function statusKind(v){const t=normalizeText(v);return/(fait|realise|termine|valide)/.test(t)?"success":/(retard|bloque|annule)/.test(t)?"danger":/(arbitr|decid)/.test(t)?"arbitration":"info"}function badge(v,k){return textElement("span",v,`badge badge--${k}`)}function option(v,l){const o=element("option");o.value=v;o.textContent=l;return o}function element(tag,cls){const n=document.createElement(tag);if(cls)n.className=cls;return n}function textElement(tag,v,cls){const n=element(tag,cls);n.textContent=displayValue(v);return n}
 initialize();
