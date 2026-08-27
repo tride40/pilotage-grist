@@ -109,7 +109,7 @@ dialog form{display:grid;grid-template-rows:auto minmax(0,1fr) auto;max-height:c
 .journal-tools{display:grid;gap:var(--space-3);margin-bottom:var(--space-4);padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface)}.journal-tools__results{align-self:end;margin:0;color:var(--color-text-muted);font-size:.82rem;font-weight:700}.progress-card--next-step .next-steps__item{padding:var(--space-3)}
 .next-step-add{align-self:flex-start;margin-top:var(--space-3)}
 
-@media (max-width:30rem){.dialog-actions{display:grid;grid-template-columns:1fr 1fr}.dialog-actions .button{width:100%;min-height:var(--touch-target)}.project-toolbar__actions{width:100%}.project-toolbar__actions .button{flex:1 1 9rem}.journal-card__actions .button{min-height:var(--touch-target)}}
+@media (max-width:30rem){.dialog-actions{display:grid;grid-template-columns:1fr 1fr}.dialog-actions .button{width:100%;min-height:var(--touch-target)}.project-toolbar__actions{width:100%}.project-toolbar__actions .button{flex:1 1 9rem}.project-toolbar__actions .home-button{flex:1 1 100%;min-height:var(--touch-target)}.journal-card__actions .button{min-height:var(--touch-target)}}
 
 /* Tablette : deux colonnes lorsque l'espace le permet */
 @media (min-width: 48rem) {
