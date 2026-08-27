@@ -23,8 +23,8 @@ window.MEETINGS_DEMO_DATA = {
     ARBITRAGES_DECISIONS: [{id:601,Projet:1,Reunion_origine:301,Sujet:"Stationnement",Responsable:12,Echeance:"2026-09-12",Statut:"À décider",Commentaire:""}],
   },
   columnMeta: {
-    ACTIONS: { Statut: { type: "Choice", choices: ["À faire", "En cours", "À reprendre", "Réalisée", "Annulée"] } },
-    CONSIGNES_POLITIQUES: { Statut: { type: "Choice", choices: ["À diffuser", "En cours", "Appliquée"] } },
-    ARBITRAGES_DECISIONS: { Statut: { type: "Choice", choices: ["À décider", "Décidé", "Reporté"] } },
+    ACTIONS: { Projet: { type: "Ref:PROJETS" }, Reunion_origine: { type: "Ref:REUNIONS" }, Statut: { type: "Choice", choices: ["À faire", "En cours", "À reprendre", "Réalisée", "Annulée"] } },
+    CONSIGNES_POLITIQUES: { Projet: { type: "Ref:PROJETS:Nom_projet" }, Reunion_origine: { type: "Ref:REUNIONS:Resume_reunion" }, Statut: { type: "Choice", choices: ["À diffuser", "En cours", "Appliquée"] } },
+    ARBITRAGES_DECISIONS: { Projet: { type: "Ref:PROJETS" }, Reunion_origine: { type: "Ref:REUNIONS:Resume_reunion" }, Statut: { type: "Choice", choices: ["À décider", "Décidé", "Reporté"] } },
   },
 };
