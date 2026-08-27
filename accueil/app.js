@@ -5,13 +5,13 @@
  * Collez entre les guillemets l'URL complète de chaque page (voir README.md).
  */
 const PAGE_URLS = Object.freeze({
-  dashboard: "",
-  project: "",
-  meetings: "",
-  instructions: "",
-  actions: "",
-  contacts: "",
-  weekly: "",
+  dashboard: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/9",
+  project: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/10",
+  meetings: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/11",
+  instructions: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/12",
+  actions: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/13",
+  contacts: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/14",
+  weekly: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/15",
 });
 
 const DEMO_URLS = Object.freeze({
