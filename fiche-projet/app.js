@@ -11,9 +11,12 @@ const PROJECT_CHOICE_FALLBACKS = {
   Statut: ["À lancer", "En cours", "En attente", "Bloqué", "Terminé", "Abandonné"],
   Priorite: ["Faible", "Normale", "Haute", "Prioritaire"],
 };
-const JOURNAL_TYPES = ["Avancement", "Information", "Prochaine étape", "Étape franchie", "Vigilance", "Blocage", "Décision attendue"];
+const JOURNAL_TYPES = ["Avancement", "Information", "Prochaine étape", "Étape franchie", "Vigilance", "Blocage"];
 const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance levée", "Décision attendue": "Décision prise" };
-const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "" };
+const DECISION_OPEN_STATUSES = new Set(["a preparer", "a decider", "reportee"]);
+const DECISION_CLOSED_STATUSES = new Set(["decidee", "decide", "sans suite"]);
+const DECISION_STATUS_FALLBACKS = ["À préparer", "À décider", "Reportée", "Décidée", "Sans suite"];
+const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "" };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -30,6 +33,7 @@ const ui = {
   meetings: document.querySelector("#meetings-list"),
   actions: document.querySelector("#actions-list"),
   arbitrations: document.querySelector("#arbitrations-list"),
+  decisionButton: document.querySelector("#add-decision"), decisionDialog: document.querySelector("#decision-dialog"), decisionForm: document.querySelector("#decision-form"), decisionFields: document.querySelector("#decision-fields"),
   contacts: document.querySelector("#contacts-list"),
   selector: document.querySelector("#project-selector"), editButton: document.querySelector("#edit-project"), trackingButton: document.querySelector("#update-tracking"),
   editDialog: document.querySelector("#edit-dialog"), editForm: document.querySelector("#edit-form"), editFields: document.querySelector("#edit-fields"),
@@ -89,13 +93,13 @@ async function fetchMetadata() {
     const tableIds = new Map(columnarToRecords(tableMeta).map((row) => [String(row.id), row.tableId]));
     const columns = columnarToRecords(columnMeta);
     const byTable = (table) => columns.filter((column) => tableIds.get(String(column.parentId)) === table);
-    const details = Object.fromEntries(["PROJETS", "AVANCEMENTS"].map((table) => [table, new Map(byTable(table).map((column) => [column.colId, column]))]));
+    const details = Object.fromEntries(["PROJETS", "AVANCEMENTS", "ARBITRAGES_DECISIONS"].map((table) => [table, new Map(byTable(table).map((column) => [column.colId, column]))]));
     const writable = Object.fromEntries(Object.entries(details).map(([table, map]) => [table, new Set([...map.values()].filter(isWritableColumn).map((column) => column.colId))]));
     const choices = Object.fromEntries(PROJECT_CHOICE_FIELDS.map((field) => [field, extractChoiceValues(details.PROJETS.get(field))]));
     return { details, writable, choices };
   } catch (error) {
     console.warn("Métadonnées Grist indisponibles : fallbacks sûrs activés.", error);
-    return { details: {}, writable: { PROJETS: new Set(Object.keys(appState.tables.PROJETS?.[0] || {})), AVANCEMENTS: new Set(Object.keys(appState.tables.AVANCEMENTS?.[0] || {})) }, choices: Object.fromEntries(PROJECT_CHOICE_FIELDS.map((field) => [field, []])), warning: exactError(error) };
+    return { details: {}, writable: { PROJETS: new Set(Object.keys(appState.tables.PROJETS?.[0] || {})), AVANCEMENTS: new Set(Object.keys(appState.tables.AVANCEMENTS?.[0] || {})), ARBITRAGES_DECISIONS: new Set(Object.keys(appState.tables.ARBITRAGES_DECISIONS?.[0] || {})) }, choices: Object.fromEntries(PROJECT_CHOICE_FIELDS.map((field) => [field, []])), warning: exactError(error) };
   }
 }
 function isWritableColumn(column) {
@@ -198,7 +202,7 @@ function buildTimeline(updates, meetings, instructions, arbitrations) {
     ...updates.map((row) => timelineEvent("Avancement", row.Date_MAJ, row.Travail_realise || row.Prochaine_etape)),
     ...meetings.map((row) => timelineEvent("Réunion", row.Date_reunion, row.Objet || row.Points_cles)),
     ...instructions.map((row) => timelineEvent("Consigne politique", row.Date_MAJ || row.Echeance, row.Consigne)),
-    ...arbitrations.map((row) => timelineEvent("Arbitrage", row.Date_MAJ || row.Echeance_decision, row.Sujet || row.Question_a_trancher)),
+    ...arbitrations.map((row) => timelineEvent("Décision", row.Date_MAJ || row.Echeance_decision, row.Sujet || row.Question_a_trancher)),
   ].filter((event) => hasValue(event.date));
   return events.sort((a, b) => dateValue(b.date) - dateValue(a.date));
 }
@@ -396,7 +400,7 @@ function renderMeetings(rows) {
     const card = makeItemCard(textOr(row.Objet, "Réunion"), row.Date_reunion);
     appendBadges(card.meta, [[row.Type_reunion, "info"]]);
     appendFields(card.body, [["Participants", personValue(row.Participants)], ["Points clés", row.Points_cles], ["Décisions prises", row.Decisions_prises]]);
-    if (hasValue(row.Arbitrage_attendu)) card.body.append(makeCallout("Arbitrage attendu", row.Arbitrage_attendu));
+    if (hasValue(row.Arbitrage_attendu)) card.body.append(makeCallout("Décision à prendre", row.Arbitrage_attendu));
     return card.root;
   });
 }
@@ -412,19 +416,29 @@ function renderActions(rows) {
 }
 
 function renderArbitrations(rows) {
-  renderCollection(ui.arbitrations, rows, "Aucun arbitrage lié à ce projet.", (row) => {
-    const root = element("article", "arbitration-block");
+  const open = rows.filter(isOpenDecision), closed = rows.filter((row) => !isOpenDecision(row));
+  ui.arbitrations.replaceChildren();
+  if (!rows.length) return void ui.arbitrations.append(makeEmpty("Aucune décision liée à ce projet."));
+  [["Décisions ouvertes", open], ["Décisions closes", closed]].forEach(([title, group]) => {
+    if (!group.length) return;
+    const section = element("section", "decision-group"); section.append(textElement("h3", `${title} · ${group.length}`, "decision-group__title"));
+    const list = element("div", "stack-list");
+    group.forEach((row) => {
+    const root = element("article", `arbitration-block card${isOpenDecision(row) ? " decision-card--open" : " decision-card--closed"}`);
     const header = element("div", "item-card__header");
-    header.append(textElement("h3", textOr(row.Sujet, "Arbitrage")));
+    header.append(textElement("h4", textOr(row.Sujet, "Décision")));
     if (hasValue(row.Echeance_decision)) header.append(textElement("time", formatDate(row.Echeance_decision), "item-card__date"));
     const meta = element("div", "item-card__meta");
-    appendBadges(meta, [[row.Type, "arbitration"], [row.Statut, statusKind(row.Statut)], [row.Urgence, "danger"], [isTrue(row.A_decider) ? "À décider" : "", "arbitration"]]);
+    appendBadges(meta, [[row.Statut, statusKind(row.Statut)], [row.Urgence, "danger"], [isTrue(row.Point_hebdo) ? "Point hebdo" : "", "arbitration"]]);
     const body = element("div", "item-card__body");
-    appendFields(body, [["Question à trancher", row.Question_a_trancher], ["Options", row.Options], ["Position élue", row.Position_elue]]);
+    appendFields(body, [["Contexte", row.Contexte], ["Question à trancher", row.Question_a_trancher], ["Options", row.Options], ["Position élue", row.Position_elue], ["Décision prise", row.Decision_prise], ["Date de décision", formatDate(row.Date_decision)], ["Instance", row.Instance_decision], ["Décision par", personValue(row.Decision_par)]]);
+    const edit = textElement("button", isOpenDecision(row) ? "Modifier" : "Consulter / compléter", "button button--secondary"); edit.type = "button"; edit.addEventListener("click", () => openDecisionForm(row)); body.append(edit);
     root.append(header, meta, body);
-    return root;
+    list.append(root);
+    }); section.append(list); ui.arbitrations.append(section);
   });
 }
+function isOpenDecision(row) { const status = normalizeText(row.Statut); return DECISION_OPEN_STATUSES.has(status) || (!DECISION_CLOSED_STATUSES.has(status) && !isTrue(row.Transmis)); }
 
 function renderTimeline(events) {
   ui.timeline.replaceChildren();
@@ -520,8 +534,9 @@ const PROJECT_FIELDS = [
 function bindEditing() {
   ui.selector.addEventListener("change", () => selectProject(ui.selector.value, true)); ui.editButton.addEventListener("click", openProjectForm); ui.trackingButton.addEventListener("click", () => openJournalForm());
   document.querySelector("#add-journal-inline").addEventListener("click", () => openJournalForm());
+  ui.decisionButton.addEventListener("click", () => openDecisionForm());
   document.querySelectorAll("dialog [data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
-  ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.deleteForm.addEventListener("submit", deleteJournal);
+  ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.decisionForm.addEventListener("submit", saveDecision); ui.deleteForm.addEventListener("submit", deleteJournal);
   ui.journalSearch.addEventListener("input", () => { appState.journalSearch = ui.journalSearch.value; renderWhenReady(); });
   ui.journalTypeFilter.addEventListener("change", () => { appState.journalTypeFilter = ui.journalTypeFilter.value; renderWhenReady(); });
   ui.journalStateFilter.addEventListener("change", () => { appState.journalStateFilter = ui.journalStateFilter.value; renderWhenReady(); });
@@ -554,6 +569,60 @@ function formField(name,label,type,value){const wrapper=element("label",`form-fi
 function dateInputValue(value){if(!hasValue(value))return "";const d=new Date(typeof value==="number"?value*1000:value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
 function valuesFromForm(form, allowed){const values={};for(const [name,raw] of new FormData(form).entries()){if(!allowed.includes(name))continue;if(["Responsable","Elu_pilote"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else if(name==="Avancement")values[name]=hasValue(raw)?Number(raw):null;else if(name.startsWith("Date_")||name==="Echeance")values[name]=hasValue(raw)?new Date(`${raw}T00:00:00`).getTime()/1000:null;else values[name]=String(raw).trim();}return values;}
 async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn);await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,valuesFromForm(ui.editForm,allowed)]],"Projet mis à jour.");}
+
+const DECISION_FIELDS = [
+  ["Sujet", "Sujet", "text"], ["Contexte", "Contexte", "textarea"], ["Question_a_trancher", "Question à trancher", "textarea"],
+  ["Options", "Options", "textarea"], ["Position_elue", "Position élue", "textarea"], ["Urgence", "Urgence", "choice"],
+  ["Echeance_decision", "Échéance", "date"], ["Statut", "Statut", "choice"], ["Point_hebdo", "À présenter au point hebdo", "checkbox"],
+];
+const DECISION_RESULT_FIELDS = [
+  ["Decision_prise", "Décision prise", "textarea"], ["Date_decision", "Date de décision", "date"], ["Instance_decision", "Instance de décision", "text"], ["Decision_par", "Décision par", "person"],
+];
+function decisionHasColumn(name) { return appState.demo ? (appState.tables.ARBITRAGES_DECISIONS || []).some((row) => Object.prototype.hasOwnProperty.call(row, name)) : Boolean(appState.metadata?.writable?.ARBITRAGES_DECISIONS?.has(name)); }
+function decisionChoices(name) {
+  const column = appState.metadata?.details?.ARBITRAGES_DECISIONS?.get(name), metadata = extractChoiceValues(column);
+  const existing = (appState.tables.ARBITRAGES_DECISIONS || []).map((row) => displayValue(row[name])).filter(Boolean);
+  const fallback = name === "Statut" ? DECISION_STATUS_FALLBACKS : name === "Urgence" ? ["Normale", "Haute", "Urgente", "Critique"] : [];
+  return [...new Set([...(metadata.length ? metadata : fallback), ...existing])];
+}
+function decisionField(name, label, type, value) {
+  if (type === "person") {
+    const wrapper = formField(name, label, "elu", value); wrapper.querySelector("select").replaceChildren(option("", "Non renseigné"), ...(appState.tables.INTERLOCUTEURS || []).map((person) => option(person.id, textOr(person.Nom_complet, `Interlocuteur ${person.id}`)))); return wrapper;
+  }
+  if (type === "checkbox") { const wrapper = element("label", "switch-field form-field--wide"), control = document.createElement("input"); control.type = "checkbox"; control.name = name; control.checked = isTrue(value); wrapper.append(control, textElement("span", label)); return wrapper; }
+  const wrapper = formField(name, label, type === "choice" ? "text" : type, value), control = wrapper.querySelector("input,textarea");
+  if (type === "choice") { const select = document.createElement("select"); select.className = "form-field__control"; select.name = name; select.append(option("", "Non renseigné"), ...decisionChoices(name).map((choice) => option(choice, choice))); select.value = displayValue(value); control.replaceWith(select); }
+  return wrapper;
+}
+function openDecisionForm(row = null) {
+  appState.editingDecisionId = row?.id ?? null; ui.decisionForm.reset(); ui.decisionFields.replaceChildren();
+  ui.decisionDialog.querySelector("#decision-title").textContent = row ? "Modifier la décision" : "Nouvelle décision";
+  ui.decisionDialog.querySelector("[type=submit]").textContent = row ? "Enregistrer" : "Créer la décision";
+  const project = element("div", "journal-context form-field--wide"); project.append(textElement("span", "Projet", "item-label"), textElement("strong", textOr(appState.selectedProject.Nom_projet, "Projet")));
+  ui.decisionFields.append(project, ...DECISION_FIELDS.filter(([name]) => decisionHasColumn(name)).map(([name, label, type]) => decisionField(name, label, type, row?.[name] ?? (name === "Statut" ? "À préparer" : ""))));
+  const result = element("div", "decision-result form-grid form-field--wide"); result.append(...DECISION_RESULT_FIELDS.filter(([name]) => decisionHasColumn(name)).map(([name, label, type]) => decisionField(name, label, type, row?.[name]))); ui.decisionFields.append(result);
+  const status = ui.decisionForm.elements.Statut; const refresh = () => { result.hidden = normalizeText(status?.value) !== "decidee"; }; if (status) status.addEventListener("change", refresh); refresh();
+  const subject = ui.decisionForm.elements.Sujet; if (subject) subject.required = true;
+  ui.decisionDialog.querySelector(".form-message").textContent = ""; ui.decisionDialog.showModal(); subject?.focus();
+}
+async function saveDecision(event) {
+  event.preventDefault(); const message = ui.decisionDialog.querySelector(".form-message");
+  try {
+    if (!decisionHasColumn("Projet")) throw new Error("ARBITRAGES_DECISIONS.Projet doit être une référence éditable vers PROJETS.");
+    const allowed = new Set([...DECISION_FIELDS, ...DECISION_RESULT_FIELDS].map(([name]) => name).filter(decisionHasColumn));
+    const values = { Projet: appState.selectedProject.id }; const data = new FormData(ui.decisionForm);
+    for (const name of allowed) {
+      if (name === "Projet") continue; const raw = data.get(name);
+      if (["Echeance_decision", "Date_decision"].includes(name)) values[name] = hasValue(raw) ? new Date(`${raw}T00:00:00`).getTime() / 1000 : null;
+      else if (name === "Point_hebdo") values[name] = data.has(name);
+      else if (name === "Decision_par") values[name] = hasValue(raw) ? Number(raw) : null;
+      else values[name] = String(raw || "").trim();
+    }
+    if (!hasValue(values.Sujet)) throw new Error("Renseignez le sujet de la décision.");
+    const action = appState.editingDecisionId ? ["UpdateRecord", "ARBITRAGES_DECISIONS", appState.editingDecisionId, values] : ["AddRecord", "ARBITRAGES_DECISIONS", null, values];
+    await writeChanges(ui.decisionDialog, [action], appState.editingDecisionId ? "Décision mise à jour." : "Décision créée et liée au projet.");
+  } catch (error) { console.error("Écriture de la décision impossible", error); message.textContent = `Enregistrement impossible — ${exactError(error)}`; }
+}
 
 function openJournalForm(row = null, initialType = "") {
   appState.editingJournalId = row?.id ?? null; appState.journalActionSource = null; ui.trackingForm.reset();

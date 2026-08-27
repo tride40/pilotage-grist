@@ -64,10 +64,12 @@
 .section-action[aria-disabled="true"] { cursor: default; opacity: .8; }
 .empty-section { padding: var(--space-5); border: 1px dashed var(--color-border); border-radius: var(--radius-lg); color: var(--color-text-muted); text-align: center; }
 
-/* Les arbitrages politiques gardent une identité violette forte */
+/* Les décisions politiques gardent une identité violette forte */
 .arbitration-section { padding: var(--space-4); border-radius: var(--radius-lg); background: var(--color-arbitration-soft); }
 .arbitration-section .section-kicker, .arbitration-section .section-header__title { color: var(--color-arbitration); }
 .arbitration-block { display: grid; gap: var(--space-3); box-shadow: var(--shadow-sm); }
+.decision-group{display:grid;gap:var(--space-3)}.decision-group+.decision-group{margin-top:var(--space-5);padding-top:var(--space-5);border-top:1px solid color-mix(in srgb,var(--color-arbitration) 25%,transparent)}.decision-group__title{margin:0;color:var(--color-arbitration);font-size:.9rem}.decision-card--open{border-inline-start:4px solid var(--color-arbitration)}.decision-card--closed{opacity:.88;border-inline-start:4px solid var(--color-success)}.arbitration-block{padding:var(--space-4)}.arbitration-block h4{margin:0;font-size:1rem}
+.decision-result{padding:var(--space-4);border-radius:var(--radius-md);background:var(--color-success-soft)}.decision-result[hidden]{display:none}
 
 /* Chronologie synthétique */
 .timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
