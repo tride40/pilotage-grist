@@ -8,10 +8,27 @@ La V5 inspecte les métadonnées Grist avant chaque écriture et exclut toute co
 | --- | --- | --- |
 | `Projet` | Référence vers `PROJETS` | Projet auquel appartient l’entrée |
 | `Date_MAJ` | Date | Date de l’événement |
-| `Type_entree` | Choix | `Avancement`, `Information`, `Étape franchie`, `Vigilance`, `Blocage`, `Décision attendue` |
+| `Type_entree` | Choix | Types métier du journal |
 | `Contenu` | Texte multiligne | Réponse à « Qu’est-ce qui a changé ? » |
+| `Entree_parent` | Référence vers `AVANCEMENTS` | Relie une résolution à l’entrée initiale |
+| `Etat_entree` | Choix | `Ouvert` ou `Résolu` |
+| `Decisionnaire` | Référence vers `INTERLOCUTEURS` | Personne appelée à décider |
 
-Ces quatre colonnes doivent être des colonnes de saisie, sans formule. `Projet`, `Date_MAJ` et une colonne de contenu reconnue sont bloquantes. Pour rester compatible avec l’ancien modèle, la V5 accepte aussi `Type`, ainsi que `Fait_marquant`, `Travail_realise` ou `Commentaire` comme colonne de contenu, mais `Type_entree` et `Contenu` sont les IDs à privilégier.
+Ces colonnes doivent être des colonnes de saisie, sans formule. `Projet`, `Date_MAJ` et une colonne de contenu reconnue sont bloquantes. Pour rester compatible avec l’ancien modèle, la V5 accepte aussi `Type`, ainsi que `Fait_marquant`, `Travail_realise` ou `Commentaire` comme colonne de contenu, mais `Type_entree` et `Contenu` sont les IDs à privilégier.
+
+## Choix de `Type_entree` pour la V6
+
+- `Avancement`
+- `Information`
+- `Étape franchie`
+- `Vigilance`
+- `Vigilance levée`
+- `Blocage`
+- `Déblocage`
+- `Décision attendue`
+- `Décision prise`
+
+Les trois types de résolution sont créés par les actions contextuelles de la timeline. Ils ne sont pas proposés dans le formulaire d’ajout principal.
 
 ## Colonnes existantes utilisées si elles sont éditables
 

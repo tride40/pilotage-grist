@@ -12,7 +12,8 @@ const PROJECT_CHOICE_FALLBACKS = {
   Priorite: ["Faible", "Normale", "Haute", "Prioritaire"],
 };
 const JOURNAL_TYPES = ["Avancement", "Information", "Étape franchie", "Vigilance", "Blocage", "Décision attendue"];
-const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, deletingJournalId: null };
+const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance levée", "Décision attendue": "Décision prise" };
+const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, journalActionSource: null, deletingJournalId: null };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -303,18 +304,25 @@ function renderVigilance(value, status) {
 function renderUpdates(rows) {
   renderCollection(ui.updates, rows, "Le journal est vide. Ajoutez le premier changement de ce projet.", (row) => {
     const content = journalContent(row);
+    const type = journalType(row);
     const card = makeItemCard(content || "Entrée du journal", row.Date_MAJ || row.Date);
     card.root.classList.add("journal-card");
-    appendBadges(card.meta, [[journalType(row), journalKind(journalType(row))]]);
+    appendBadges(card.meta, [[type, journalKind(type)], [journalEntryState(row, rows), journalEntryState(row, rows) === "Résolu" ? "success" : "info"]]);
     appendFields(card.body, [
-      ["Saisi par", personValue(row.Saisi_par)], ["Avancement", formatProgress(row.Avancement)],
-      ["Prochaine étape", row.Prochaine_etape], ["Difficulté ou blocage", row.Difficulte_blocage],
+      ["Saisi par", personValue(row.Saisi_par)], ["Décisionnaire", personValue(row.Decisionnaire)],
+      ["Avancement", type === "Avancement" ? formatProgress(row.Avancement) : ""],
+      ["Prochaine étape", row.Prochaine_etape], ["Date prochaine étape", formatDate(row.Date_prochaine_etape)], ["Difficulté ou blocage", row.Difficulte_blocage],
       ["Point de vigilance", row.Point_vigilance], ["Commentaire", row.Commentaire],
     ]);
     if (hasValue(row.Decision_attendue)) card.body.append(makeCallout("Décision attendue", row.Decision_attendue));
     const actions = element("div", "journal-card__actions");
     const edit = textElement("button", "Modifier", "button button--secondary"); edit.type = "button"; edit.addEventListener("click", () => openJournalForm(row));
     const remove = textElement("button", "Supprimer", "button button--ghost-danger"); remove.type = "button"; remove.addEventListener("click", () => confirmDeleteJournal(row.id));
+    const resolutionType = JOURNAL_RESOLUTION_TYPES[type];
+    if (resolutionType && journalEntryState(row, rows) !== "Résolu") {
+      const label = type === "Blocage" ? "Marquer comme débloqué" : type === "Vigilance" ? "Lever la vigilance" : "Exprimer la décision";
+      const resolve = textElement("button", label, "button button--primary"); resolve.type = "button"; resolve.addEventListener("click", () => openJournalResolution(row, resolutionType)); actions.append(resolve);
+    }
     actions.append(edit, remove); card.body.append(actions);
     return card.root;
   });
@@ -324,6 +332,11 @@ function journalType(row) { return textOr(row.Type_entree || row.Type, inferJour
 function inferJournalType(row) { if (hasValue(row.Decision_attendue)) return "Décision attendue"; if (hasValue(row.Difficulte_blocage)) return "Blocage"; if (hasValue(row.Point_vigilance)) return "Vigilance"; if (hasValue(row.Avancement)) return "Avancement"; return "Information"; }
 function journalContent(row) { return firstField(row, ["Contenu", "Fait_marquant", "Travail_realise", "Commentaire", "Prochaine_etape", "Difficulte_blocage", "Decision_attendue", "Point_vigilance"]); }
 function journalKind(type) { const value = normalizeText(type); if (value.includes("blocage")) return "danger"; if (value.includes("vigilance")) return "warning"; if (value.includes("decision")) return "arbitration"; if (value.includes("etape")) return "success"; return "info"; }
+function journalEntryState(row, rows) {
+  if (!JOURNAL_RESOLUTION_TYPES[journalType(row)]) return "";
+  const resolvedByChild = rows.some((candidate) => referenceIds(candidate.Entree_parent).some((id) => String(id) === String(row.id)) && ["deblocage", "vigilance levee", "decision prise"].includes(normalizeText(journalType(candidate))));
+  return resolvedByChild || normalizeText(row.Etat_entree) === "resolu" ? "Résolu" : "Ouvert";
+}
 
 function renderInstructions(rows) {
   renderCollection(ui.instructions, rows, "Aucune consigne liée à ce projet.", (row) => {
@@ -498,23 +511,54 @@ function valuesFromForm(form, allowed){const values={};for(const [name,raw] of n
 async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn);await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,valuesFromForm(ui.editForm,allowed)]],"Projet mis à jour.");}
 
 function openJournalForm(row = null) {
-  appState.editingJournalId = row?.id ?? null; ui.trackingForm.reset();
+  appState.editingJournalId = row?.id ?? null; appState.journalActionSource = null; ui.trackingForm.reset();
   ui.trackingDialog.querySelector("#tracking-title").textContent = row ? "Modifier l’entrée du journal" : "Ajouter au journal";
   ui.trackingDialog.querySelector("[type=submit]").textContent = row ? "Enregistrer la modification" : "Ajouter l’entrée";
   ui.trackingFields.replaceChildren();
-  const type = journalType(row || {}); const typeField = formField("Type_entree", "Type d’entrée", "choice", type); const typeSelect = typeField.querySelector("select"); typeSelect.replaceChildren(...JOURNAL_TYPES.map((item)=>option(item,item)));
-  const contentField = formField("Contenu", "Qu’est-ce qui a changé ?", "textarea", row ? journalContent(row) : ""); contentField.classList.add("form-field--wide"); contentField.querySelector("textarea").required=true;
-  const dateField=formField("Date_MAJ","Date","date",row?.Date_MAJ||row?.Date||new Date());
-  const dynamic=element("div","journal-dynamic form-grid form-field--wide");
-  const switchWrap=element("label","switch-field form-field--wide"); const toggle=document.createElement("input");toggle.type="checkbox";toggle.name="update_project"; const switchText=textElement("span","Mettre également à jour l’état actuel du projet");switchWrap.append(toggle,switchText);
-  const synthesis=element("div","synthesis-fields form-grid form-field--wide");synthesis.hidden=true;
-  ui.trackingFields.append(typeField,contentField,dateField,dynamic); if(!row)ui.trackingFields.append(switchWrap,synthesis);
-  const refresh=()=>renderJournalDynamic(dynamic,typeSelect.value,row);typeSelect.addEventListener("change",refresh);refresh();
-  if(!row){toggle.addEventListener("change",()=>{synthesis.hidden=!toggle.checked;if(toggle.checked)renderSynthesisFields(synthesis,typeSelect.value);});typeSelect.addEventListener("change",()=>{if(toggle.checked)renderSynthesisFields(synthesis,typeSelect.value);});}
-  ui.trackingDialog.querySelector(".form-message").textContent="";ui.trackingDialog.showModal();contentField.querySelector("textarea").focus();
+  const type = journalType(row || {});
+  const typeField = formField("Type_entree", "Type d’entrée", "choice", type); const typeSelect = typeField.querySelector("select"); typeSelect.replaceChildren(...JOURNAL_TYPES.map((item) => option(item, item)));
+  const contentField = formField("Contenu", "Qu’est-ce qui a changé ?", "textarea", row ? journalContent(row) : ""); contentField.querySelector("textarea").required = true;
+  contentField.querySelector("textarea").addEventListener("input", (event) => { delete event.currentTarget.dataset.automatic; });
+  const dateField = formField("Date_MAJ", "Date", "date", row?.Date_MAJ || row?.Date || new Date());
+  const dynamic = element("div", "journal-dynamic form-grid form-field--wide");
+  ui.trackingFields.append(typeField, contentField, dateField, dynamic);
+  const refresh = () => {
+    const prompts = { Avancement: "Qu’est-ce qui explique cette évolution ?", Information: "Quelle information souhaitez-vous consigner ?", "Étape franchie": "Quelle étape vient d’être franchie ?", Vigilance: "Quel nouveau point de vigilance faut-il signaler ?", Blocage: "Quel blocage faut-il consigner ?", "Décision attendue": "Quelle décision doit être prise ?" };
+    const textarea = contentField.querySelector("textarea"); contentField.querySelector(".form-field__label").textContent = prompts[typeSelect.value] || "Qu’est-ce qui a changé ?";
+    if (!row && typeSelect.value !== "Étape franchie" && textarea.dataset.automatic === "true") { textarea.value = ""; delete textarea.dataset.automatic; }
+    if (!row && typeSelect.value === "Étape franchie" && !textarea.value && hasValue(appState.selectedProject.Prochaine_etape)) { textarea.value = `Étape franchie : ${appState.selectedProject.Prochaine_etape}`; textarea.dataset.automatic = "true"; }
+    renderJournalDynamic(dynamic, typeSelect.value, row);
+  };
+  typeSelect.addEventListener("change", refresh); refresh();
+  ui.trackingDialog.querySelector(".form-message").textContent = ""; ui.trackingDialog.showModal(); contentField.querySelector("textarea").focus();
 }
-function renderJournalDynamic(container,type,row){container.replaceChildren();if(type==="Avancement")container.append(formField("Avancement","Nouvel avancement (%)","number",row?.Avancement));else if(type==="Vigilance")container.append(formField("Point_vigilance","Détail de la vigilance","textarea",row?.Point_vigilance));else if(type==="Blocage")container.append(formField("Difficulte_blocage","Détail du blocage","textarea",row?.Difficulte_blocage));else if(type==="Décision attendue")container.append(formField("Decision_attendue","Décision attendue","textarea",row?.Decision_attendue));else if(type==="Étape franchie")container.append(formField("Travail_realise","Étape franchie","textarea",row?.Travail_realise));}
-function renderSynthesisFields(container,type){container.replaceChildren();if(type==="Avancement")container.append(formField("current_Avancement","Avancement actuel (%)","number",appState.selectedProject.Avancement));if(type==="Vigilance")container.append(formField("current_Point_vigilance","Point de vigilance actuel","textarea",appState.selectedProject.Point_vigilance));container.append(formField("current_Prochaine_etape","Prochaine étape actuelle","textarea",appState.selectedProject.Prochaine_etape),formField("current_Date_prochaine_etape","Date de la prochaine étape","date",appState.selectedProject.Date_prochaine_etape));if(projectHasColumn("Statut")){const status=formField("current_Statut","Statut actuel","choice",appState.selectedProject.Statut);const select=status.querySelector("select");select.replaceChildren(option("","Ne pas modifier"),...projectChoiceValues("Statut").map((item)=>option(item,item)));select.value="";container.append(status);}}
+function renderJournalDynamic(container, type, row) {
+  container.replaceChildren();
+  if (type === "Avancement") {
+    const field = formField("Avancement", "Nouvel avancement actuel (%)", "number", row?.Avancement ?? appState.selectedProject.Avancement); field.querySelector("input").required = true; container.append(field);
+  } else if (type === "Étape franchie") {
+    if (hasValue(appState.selectedProject.Prochaine_etape)) { const reminder = element("div", "journal-context"); reminder.append(textElement("span", "Étape actuelle considérée comme franchie", "item-label"), textElement("strong", appState.selectedProject.Prochaine_etape)); container.append(reminder); }
+    const next = formField("Prochaine_etape", "Nouvelle prochaine étape", "textarea", row?.Prochaine_etape); next.querySelector("textarea").required = true;
+    const date = formField("Date_prochaine_etape", "Date de la nouvelle prochaine étape", "date", row?.Date_prochaine_etape); date.querySelector("input").required = true; container.append(next, date);
+  } else if (type === "Vigilance") {
+    const field = formField("Point_vigilance", "Point de vigilance actuel", "textarea", row?.Point_vigilance); container.append(field);
+  } else if (type === "Blocage") {
+    const field = formField("Difficulte_blocage", "Détail du blocage", "textarea", row?.Difficulte_blocage); container.append(field);
+  } else if (type === "Décision attendue") {
+    const decision = formField("Decision_attendue", "Décision attendue", "textarea", row?.Decision_attendue); const person = formField("Decisionnaire", "Décisionnaire", "elu", row?.Decisionnaire || appState.selectedProject.Elu_pilote); container.append(decision, person);
+  }
+}
+function openJournalResolution(source, type) {
+  appState.editingJournalId = null; appState.journalActionSource = source; ui.trackingForm.reset(); ui.trackingFields.replaceChildren();
+  const prompts = { Déblocage: ["Marquer comme débloqué", "Comment le blocage a-t-il été levé ?"], "Vigilance levée": ["Lever la vigilance", "Pourquoi cette vigilance peut-elle être levée ?"], "Décision prise": ["Exprimer la décision", "Quelle décision a été prise ?"] };
+  ui.trackingDialog.querySelector("#tracking-title").textContent = prompts[type][0]; ui.trackingDialog.querySelector("[type=submit]").textContent = prompts[type][0];
+  const hidden = document.createElement("input"); hidden.type = "hidden"; hidden.name = "Type_entree"; hidden.value = type;
+  const context = element("div", "journal-context form-field--wide"); context.append(textElement("span", "Entrée concernée", "item-label"), textElement("strong", journalContent(source)));
+  const content = formField("Contenu", prompts[type][1], "textarea", ""); content.querySelector("textarea").required = true;
+  const date = formField("Date_MAJ", "Date", "date", new Date()); ui.trackingFields.append(hidden, context, content, date);
+  if (type === "Décision prise") ui.trackingFields.append(formField("Decisionnaire", "Décisionnaire", "elu", source.Decisionnaire || appState.selectedProject.Elu_pilote));
+  ui.trackingDialog.querySelector(".form-message").textContent = ""; ui.trackingDialog.showModal(); content.querySelector("textarea").focus();
+}
 function journalSchema() {
   const writable = appState.demo ? new Set(Object.keys(appState.tables.AVANCEMENTS?.[0] || {})) : appState.metadata?.writable?.AVANCEMENTS;
   if (!writable) throw new Error("Métadonnées d’AVANCEMENTS indisponibles : écriture annulée par sécurité.");
@@ -533,12 +577,16 @@ function journalSchema() {
     date: namedDate || (dateColumns.length === 1 ? dateColumns[0].colId : null),
     type: pick("Type_entree", "Type"),
     content: pick("Contenu", "Fait_marquant", "Travail_realise", "Commentaire"),
+    parent: pick("Entree_parent"),
+    state: pick("Etat_entree"),
+    decisionMaker: pick("Decisionnaire"),
   };
   if (!schema.project) {
     const refs = details ? [...details.values()].filter((column) => String(column.type || "").startsWith("Ref")).map((column) => `${column.colId} (${column.type}${isWritableColumn(column) ? ", éditable" : ", calculée"})`) : [];
     throw new Error(`AVANCEMENTS : aucune référence éditable unique vers PROJETS détectée${refs.length ? `. Références trouvées : ${refs.join(", ")}` : ". Aucune colonne Ref trouvée dans les métadonnées"}.`);
   }
   if (!schema.date) throw new Error(`AVANCEMENTS : aucune date éditable reconnue${dateColumns.length > 1 ? `. Dates trouvées : ${dateColumns.map((column) => column.colId).join(", ")}` : " (attendu : Date_MAJ)"}.`);
+  if (!schema.type) throw new Error("AVANCEMENTS : créez la colonne éditable Type_entree (Choix) pour utiliser le journal métier.");
   if (!schema.content) throw new Error("AVANCEMENTS : aucune colonne de contenu éditable reconnue. Créez Contenu (Texte).");
   return schema;
 }
@@ -553,19 +601,32 @@ async function saveJournal(event) {
     if (!content) { message.textContent = "Décrivez ce qui a changé."; return; }
     const rawDate = data.get("Date_MAJ");
     if (!hasValue(rawDate)) { message.textContent = "Renseignez la date de l’entrée."; return; }
-    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: new Date(`${rawDate}T12:00:00`).getTime() / 1000, [schema.content]: content };
-    if (schema.type) values[schema.type] = data.get("Type_entree");
-    for (const field of ["Avancement", "Point_vigilance", "Difficulte_blocage", "Decision_attendue", "Travail_realise"]) {
-      if (schema.writable.has(field) && hasValue(data.get(field))) values[field] = field === "Avancement" ? Number(data.get(field)) : String(data.get(field)).trim();
+    const type = String(data.get("Type_entree") || "");
+    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: new Date(`${rawDate}T12:00:00`).getTime() / 1000, [schema.content]: content, [schema.type]: type };
+    for (const field of ["Avancement", "Point_vigilance", "Difficulte_blocage", "Decision_attendue", "Travail_realise", "Prochaine_etape", "Date_prochaine_etape"]) {
+      if (!schema.writable.has(field) || !hasValue(data.get(field))) continue;
+      values[field] = field === "Avancement" ? Number(data.get(field)) : field === "Date_prochaine_etape" ? new Date(`${data.get(field)}T00:00:00`).getTime() / 1000 : String(data.get(field)).trim();
     }
+    if (schema.decisionMaker && hasValue(data.get("Decisionnaire"))) values[schema.decisionMaker] = Number(data.get("Decisionnaire"));
+    if (appState.journalActionSource) {
+      if (!schema.parent || !schema.state) throw new Error("Pour cette action, créez les colonnes éditables Entree_parent (Référence vers AVANCEMENTS) et Etat_entree (Choix : Ouvert, Résolu).");
+      values[schema.parent] = appState.journalActionSource.id; values[schema.state] = "Résolu";
+    } else if (!appState.editingJournalId && schema.state && Object.prototype.hasOwnProperty.call(JOURNAL_RESOLUTION_TYPES, type)) values[schema.state] = "Ouvert";
     const journalAction = appState.editingJournalId ? ["UpdateRecord", "AVANCEMENTS", appState.editingJournalId, values] : ["AddRecord", "AVANCEMENTS", null, values];
     const actions = [journalAction];
-    if (!appState.editingJournalId && data.get("update_project")) {
-      const map = { current_Avancement: "Avancement", current_Point_vigilance: "Point_vigilance", current_Prochaine_etape: "Prochaine_etape", current_Date_prochaine_etape: "Date_prochaine_etape", current_Statut: "Statut" };
+    if (appState.journalActionSource) {
+      actions.push(["UpdateRecord", "AVANCEMENTS", appState.journalActionSource.id, { [schema.state]: "Résolu" }]);
+    } else if (!appState.editingJournalId) {
       const project = {};
-      for (const [source, target] of Object.entries(map)) {
-        const raw = data.get(source); if (!projectHasColumn(target) || !hasValue(raw)) continue;
-        project[target] = target === "Avancement" ? Number(raw) : target.startsWith("Date_") ? new Date(`${raw}T00:00:00`).getTime() / 1000 : String(raw).trim();
+      if (type === "Avancement") {
+        if (!projectHasColumn("Avancement")) throw new Error("PROJETS.Avancement n’est pas éditable.");
+        if (!hasValue(data.get("Avancement"))) throw new Error("Renseignez le nouvel avancement.");
+        project.Avancement = Number(data.get("Avancement"));
+      } else if (type === "Étape franchie") {
+        if (!projectHasColumn("Prochaine_etape") || !projectHasColumn("Date_prochaine_etape")) throw new Error("PROJETS doit contenir les colonnes éditables Prochaine_etape et Date_prochaine_etape.");
+        project.Prochaine_etape = String(data.get("Prochaine_etape") || "").trim(); project.Date_prochaine_etape = new Date(`${data.get("Date_prochaine_etape")}T00:00:00`).getTime() / 1000;
+      } else if (type === "Vigilance" && projectHasColumn("Point_vigilance")) {
+        project.Point_vigilance = String(data.get("Point_vigilance") || content).trim();
       }
       if (Object.keys(project).length) actions.push(["UpdateRecord", "PROJETS", appState.selectedProject.id, project]);
     }
