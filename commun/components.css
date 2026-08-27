@@ -102,7 +102,7 @@
 @media (max-width: 30rem) {
   .header-actions, .dashboard-header__actions { width: 100%; }
   .sanguinet-brand { width: 6.5rem; margin-right: auto; }
-  .home-button { width: 100%; }
+  .app-header .header-actions .button, .app-header .dashboard-header__actions .button, .home-button { width: 100%; }
 }
 
 @media (max-width: 47.99rem) {
