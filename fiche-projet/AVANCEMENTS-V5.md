@@ -13,6 +13,7 @@ La V5 inspecte les métadonnées Grist avant chaque écriture et exclut toute co
 | `Entree_parent` | Référence vers `AVANCEMENTS` | Relie une résolution à l’entrée initiale |
 | `Etat_entree` | Choix | `Ouvert` ou `Résolu` |
 | `Decisionnaire` | Référence vers `INTERLOCUTEURS` | Personne appelée à décider |
+| `Cree_le` | Date et heure | Horodatage automatique immuable utilisé pour départager les entrées d’une même date |
 
 Ces colonnes doivent être des colonnes de saisie, sans formule. `Projet`, `Date_MAJ` et une colonne de contenu reconnue sont bloquantes. Pour rester compatible avec l’ancien modèle, la V5 accepte aussi `Type`, ainsi que `Fait_marquant`, `Travail_realise` ou `Commentaire` comme colonne de contenu, mais `Type_entree` et `Contenu` sont les IDs à privilégier.
 
@@ -30,6 +31,10 @@ Ces colonnes doivent être des colonnes de saisie, sans formule. `Projet`, `Date
 - `Décision prise`
 
 Les trois types de résolution sont créés par les actions contextuelles de la timeline. Ils ne sont pas proposés dans le formulaire d’ajout principal.
+
+## Ordre du journal en V8
+
+Le journal est toujours trié par `Date_MAJ` décroissante, puis par `Cree_le` décroissante lorsque plusieurs entrées partagent la même date. L’identifiant Grist décroissant sert uniquement de repli pour les anciennes lignes sans horodatage. Les recherches et filtres ne changent jamais cet ordre.
 
 ## Colonnes existantes utilisées si elles sont éditables
 

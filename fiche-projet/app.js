@@ -13,7 +13,7 @@ const PROJECT_CHOICE_FALLBACKS = {
 };
 const JOURNAL_TYPES = ["Avancement", "Information", "Prochaine étape", "Étape franchie", "Vigilance", "Blocage", "Décision attendue"];
 const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance levée", "Décision attendue": "Décision prise" };
-const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, journalActionSource: null, deletingJournalId: null };
+const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "" };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -25,6 +25,7 @@ const ui = {
   progress: document.querySelector("#progress-card"),
   vigilance: document.querySelector("#vigilance-panel"),
   updates: document.querySelector("#updates-list"),
+  journalSearch: document.querySelector("#journal-search"), journalTypeFilter: document.querySelector("#journal-type-filter"), journalStateFilter: document.querySelector("#journal-state-filter"), journalResults: document.querySelector("#journal-results"),
   instructions: document.querySelector("#instructions-list"),
   meetings: document.querySelector("#meetings-list"),
   actions: document.querySelector("#actions-list"),
@@ -125,7 +126,7 @@ function isLocalDemoMode() {
 function buildProjectView(project, tables) {
   const projectId = project.id;
   const linked = (tableName) => tables[tableName].filter((row) => isLinkedToProject(row, projectId));
-  const updates = sortByDate(linked("AVANCEMENTS"), ["Date_MAJ", "Date"]);
+  const updates = sortJournalRows(linked("AVANCEMENTS"));
   const instructions = linked("CONSIGNES_POLITIQUES").sort(compareInstructions);
   const meetings = sortByDate(linked("REUNIONS"), ["Date_reunion", "Date"]);
   const actions = linked("ACTIONS").filter(isOpenAction).sort(compareActions);
@@ -187,6 +188,9 @@ function isOpenAction(row) {
 
 function sortByDate(rows, fields) {
   return [...rows].sort((a, b) => dateValue(firstField(b, fields)) - dateValue(firstField(a, fields)));
+}
+function sortJournalRows(rows) {
+  return [...rows].sort((a, b) => dateValue(firstField(b, ["Date_MAJ", "Date"])) - dateValue(firstField(a, ["Date_MAJ", "Date"])) || dateValue(b.Cree_le) - dateValue(a.Cree_le) || (Number(b.id) || 0) - (Number(a.id) || 0));
 }
 
 function buildTimeline(updates, meetings, instructions, arbitrations) {
@@ -278,25 +282,27 @@ function renderObjective(project) {
 
 function renderProgress(project) {
   ui.progress.replaceChildren();
+  const nextSteps = currentNextSteps(project.id);
   const percentage = parseProgress(project.Avancement);
   const heading = element("div", "progress-card__heading");
   heading.append(textElement("h2", "Avancement"), textElement("span", percentage === null ? "—" : `${percentage} %`, "progress-card__value"));
   ui.progress.append(heading);
   if (percentage !== null) ui.progress.append(makeProgress(percentage));
   const details = element("dl", "summary-details");
-  appendDefinition(details, "Prochaine étape", project.Prochaine_etape);
-  appendDefinition(details, "Date prochaine étape", formatDate(project.Date_prochaine_etape));
+  if (!nextSteps.length) {
+    appendDefinition(details, "Prochaine étape", project.Prochaine_etape);
+    appendDefinition(details, "Date prochaine étape", formatDate(project.Date_prochaine_etape));
+  }
   appendDefinition(details, "Échéance", formatDate(project.Echeance));
   appendDefinition(details, "Dernière mise à jour", formatDate(project.Derniere_MAJ));
   if (details.children.length) ui.progress.append(details);
-  const nextSteps = currentNextSteps(project.id);
   if (nextSteps.length) {
     const section = element("div", "next-steps"); section.append(textElement("h3", "Prochaines étapes"));
     const list = element("ol", "next-steps__list");
     nextSteps.forEach((row) => { const item = element("li", "next-steps__item"); item.append(textElement("span", journalContent(row))); if (hasValue(row.Date_prochaine_etape)) item.append(textElement("time", formatDate(row.Date_prochaine_etape))); list.append(item); });
     section.append(list); ui.progress.append(section);
   }
-  if (hasValue(project.Prochaine_etape)) ui.progress.classList.add("progress-card--next-step"); else ui.progress.classList.remove("progress-card--next-step");
+  if (nextSteps.length || hasValue(project.Prochaine_etape)) ui.progress.classList.add("progress-card--next-step"); else ui.progress.classList.remove("progress-card--next-step");
 }
 function currentNextSteps(projectId) {
   const rows = (appState.tables?.AVANCEMENTS || []).filter((row) => isLinkedToProject(row, projectId));
@@ -313,10 +319,17 @@ function renderVigilance(value, status) {
 
 /* ---------- Rendu des sections liées ---------- */
 function renderUpdates(rows) {
-  renderCollection(ui.updates, rows, "Le journal est vide. Ajoutez le premier changement de ce projet.", (row) => {
+  fillJournalTypeFilter(rows);
+  const filtered = rows.filter((row) => {
+    const type = journalType(row), state = journalEntryState(row, rows);
+    const haystack = normalizeText([type, journalContent(row), personValue(row.Saisi_par), personValue(row.Decisionnaire), row.Prochaine_etape, row.Point_vigilance, row.Difficulte_blocage, row.Decision_attendue].filter(hasValue).join(" "));
+    return (!appState.journalSearch || haystack.includes(normalizeText(appState.journalSearch))) && (!appState.journalTypeFilter || type === appState.journalTypeFilter) && (!appState.journalStateFilter || state === appState.journalStateFilter);
+  });
+  ui.journalResults.textContent = `${filtered.length} entrée${filtered.length > 1 ? "s" : ""}`;
+  renderCollection(ui.updates, filtered, rows.length ? "Aucune entrée ne correspond à ces filtres." : "Le journal est vide. Ajoutez le premier changement de ce projet.", (row) => {
     const content = journalContent(row);
     const type = journalType(row);
-    const card = makeItemCard(content || "Entrée du journal", row.Date_MAJ || row.Date);
+    const card = makeItemCard(content || "Entrée du journal", row.Date_MAJ || row.Date, journalDateLabel(row));
     card.root.classList.add("journal-card");
     appendBadges(card.meta, [[type, journalKind(type)], [journalEntryState(row, rows), journalEntryState(row, rows) === "Résolu" ? "success" : "info"]]);
     appendFields(card.body, [
@@ -338,10 +351,16 @@ function renderUpdates(rows) {
     return card.root;
   });
 }
+function fillJournalTypeFilter(rows) {
+  const selected = appState.journalTypeFilter;
+  const values = [...new Set(rows.map(journalType).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+  ui.journalTypeFilter.replaceChildren(option("", "Tous les types"), ...values.map((value) => option(value, value))); ui.journalTypeFilter.value = selected;
+}
 
 function journalType(row) { return textOr(row.Type_entree || row.Type, inferJournalType(row)); }
 function inferJournalType(row) { if (hasValue(row.Decision_attendue)) return "Décision attendue"; if (hasValue(row.Difficulte_blocage)) return "Blocage"; if (hasValue(row.Point_vigilance)) return "Vigilance"; if (hasValue(row.Avancement)) return "Avancement"; return "Information"; }
 function journalContent(row) { return firstField(row, ["Contenu", "Fait_marquant", "Travail_realise", "Commentaire", "Prochaine_etape", "Difficulte_blocage", "Decision_attendue", "Point_vigilance"]); }
+function journalDateLabel(row) { const date = formatDate(row.Date_MAJ || row.Date); const time = formatTime(row.Cree_le); return [date, time].filter(Boolean).join(" · "); }
 function journalKind(type) { const value = normalizeText(type); if (["deblocage", "vigilance levee", "decision prise", "etape franchie"].includes(value)) return "success"; if (value.includes("blocage")) return "danger"; if (value.includes("vigilance")) return "warning"; if (value.includes("decision")) return "arbitration"; if (value.includes("etape")) return "info"; return "info"; }
 function journalEntryState(row, rows) {
   if (!JOURNAL_RESOLUTION_TYPES[journalType(row)] && journalType(row) !== "Prochaine étape") return "";
@@ -432,11 +451,11 @@ function renderCollection(container, rows, emptyMessage, renderer) {
   rows.forEach((row) => container.append(renderer(row)));
 }
 
-function makeItemCard(title, date) {
+function makeItemCard(title, date, dateLabel = "") {
   const root = element("article", "card item-card");
   const header = element("div", "item-card__header");
   header.append(textElement("h3", title));
-  if (hasValue(date)) header.append(textElement("time", formatDate(date), "item-card__date"));
+  if (hasValue(date)) header.append(textElement("time", dateLabel || formatDate(date), "item-card__date"));
   const meta = element("div", "item-card__meta");
   const body = element("div", "item-card__body");
   root.append(header, meta, body);
@@ -491,6 +510,9 @@ function bindEditing() {
   document.querySelector("#add-journal-inline").addEventListener("click", () => openJournalForm());
   document.querySelectorAll("dialog [data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
   ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.deleteForm.addEventListener("submit", deleteJournal);
+  ui.journalSearch.addEventListener("input", () => { appState.journalSearch = ui.journalSearch.value; renderWhenReady(); });
+  ui.journalTypeFilter.addEventListener("change", () => { appState.journalTypeFilter = ui.journalTypeFilter.value; renderWhenReady(); });
+  ui.journalStateFilter.addEventListener("change", () => { appState.journalStateFilter = ui.journalStateFilter.value; renderWhenReady(); });
   try { const channel = new BroadcastChannel("pilotage-grist"); channel.addEventListener("message", (event) => { if (event.data?.type === "select-project") selectProject(event.data.id, true); }); } catch (_) { /* facultatif */ }
 }
 function selectInitialProject(fallback) {
@@ -532,7 +554,7 @@ function openJournalForm(row = null) {
     const context = element("div", "journal-context form-field--wide"); context.append(textElement("span", "Type d’entrée", "item-label"), makeBadge(type, journalKind(type)));
     const content = formField("Contenu", "Texte de l’entrée", "textarea", journalContent(row)); content.querySelector("textarea").required = true;
     const date = formField("Date_MAJ", "Date", "date", row.Date_MAJ || row.Date); ui.trackingFields.append(hidden, context, content, date);
-    ui.trackingDialog.querySelector(".form-message").textContent = "Seuls le texte et la date de cette entrée seront modifiés."; ui.trackingDialog.showModal(); content.querySelector("textarea").focus(); return;
+    ui.trackingDialog.querySelector(".form-message").textContent = ""; ui.trackingDialog.showModal(); content.querySelector("textarea").focus(); return;
   }
   const typeField = formField("Type_entree", "Type d’entrée", "choice", type); const typeSelect = typeField.querySelector("select"); typeSelect.replaceChildren(...JOURNAL_TYPES.map((item) => option(item, item)));
   const contentField = formField("Contenu", "Qu’est-ce qui a changé ?", "textarea", ""); contentField.querySelector("textarea").required = true;
@@ -599,6 +621,7 @@ function journalSchema() {
     parent: pick("Entree_parent"),
     state: pick("Etat_entree"),
     decisionMaker: pick("Decisionnaire"),
+    createdAt: pick("Cree_le"),
   };
   if (!schema.project) {
     const refs = details ? [...details.values()].filter((column) => String(column.type || "").startsWith("Ref")).map((column) => `${column.colId} (${column.type}${isWritableColumn(column) ? ", éditable" : ", calculée"})`) : [];
@@ -607,6 +630,7 @@ function journalSchema() {
   if (!schema.date) throw new Error(`AVANCEMENTS : aucune date éditable reconnue${dateColumns.length > 1 ? `. Dates trouvées : ${dateColumns.map((column) => column.colId).join(", ")}` : " (attendu : Date_MAJ)"}.`);
   if (!schema.type) throw new Error("AVANCEMENTS : créez la colonne éditable Type_entree (Choix) pour utiliser le journal métier.");
   if (!schema.content) throw new Error("AVANCEMENTS : aucune colonne de contenu éditable reconnue. Créez Contenu (Texte).");
+  if (!schema.createdAt) throw new Error("AVANCEMENTS : créez la colonne éditable Cree_le (Date et heure) pour garantir l’ordre chronologique.");
   return schema;
 }
 async function saveJournal(event) {
@@ -625,7 +649,8 @@ async function saveJournal(event) {
     if (appState.editingJournalId) {
       await writeChanges(ui.trackingDialog, [["UpdateRecord", "AVANCEMENTS", appState.editingJournalId, { [schema.date]: entryDate, [schema.content]: content }]], "Entrée du journal modifiée."); return;
     }
-    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: content, [schema.type]: type };
+    const createdAt = Math.floor(Date.now() / 1000);
+    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: content, [schema.type]: type, [schema.createdAt]: createdAt };
     if (type === "Avancement" && schema.writable.has("Avancement")) values.Avancement = Number(data.get("Avancement"));
     if (type === "Vigilance" && schema.writable.has("Point_vigilance")) values.Point_vigilance = content;
     if (type === "Blocage" && schema.writable.has("Difficulte_blocage")) values.Difficulte_blocage = content;
@@ -666,7 +691,7 @@ async function saveJournal(event) {
         if (newStep || hasValue(newStepDate)) {
           if (!newStep || !hasValue(newStepDate)) throw new Error("Pour ajouter une étape suivante, renseignez son texte et sa date.");
           if (!schema.writable.has("Date_prochaine_etape")) throw new Error("AVANCEMENTS.Date_prochaine_etape doit être éditable pour ajouter une étape suivante.");
-          const nextValues = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: newStep, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert", Date_prochaine_etape: new Date(`${newStepDate}T00:00:00`).getTime() / 1000 };
+          const nextValues = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: newStep, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert", [schema.createdAt]: createdAt, Date_prochaine_etape: new Date(`${newStepDate}T00:00:00`).getTime() / 1000 };
           actions.push(["AddRecord", "AVANCEMENTS", null, nextValues]); remaining.push({ Contenu: newStep, Date_prochaine_etape: nextValues.Date_prochaine_etape });
         }
         const earliest = remaining.sort((a, b) => dateValue(a.Date_prochaine_etape) - dateValue(b.Date_prochaine_etape))[0];
@@ -734,6 +759,7 @@ function isTrue(value) { return value === true || value === 1 || ["true", "vrai"
 function normalizeText(value) { return hasValue(value) ? String(value).trim().toLocaleLowerCase("fr-FR").normalize("NFD").replace(/[\u0300-\u036f]/g, "") : ""; }
 function dateValue(value) { if (!hasValue(value)) return 0; const date = new Date(typeof value === "number" ? value * 1000 : value); return Number.isNaN(date.getTime()) ? 0 : date.getTime(); }
 function formatDate(value) { if (!hasValue(value)) return ""; const timestamp = dateValue(value); return timestamp ? new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(timestamp)) : displayValue(value); }
+function formatTime(value) { if (!hasValue(value)) return ""; const timestamp = dateValue(value); return timestamp ? new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(new Date(timestamp)) : ""; }
 function parseProgress(value) { if (!hasValue(value)) return null; const number = Number(String(value).replace("%", "").replace(",", ".")); if (!Number.isFinite(number)) return null; const percentage = number > 0 && number <= 1 ? number * 100 : number; return Math.round(Math.min(100, Math.max(0, percentage))); }
 function formatProgress(value) { const percentage = parseProgress(value); return percentage === null ? "" : `${percentage} %`; }
 function initials(name) { const parts = displayValue(name).split(/\s+/).filter(Boolean); return parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?"; }

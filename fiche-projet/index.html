@@ -7,10 +7,10 @@
     <title>Fiche projet</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css">
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
-    <script src="demo-data.js?v=7" defer></script>
-    <script src="app.js?v=7" defer></script>
+    <script src="demo-data.js?v=8" defer></script>
+    <script src="app.js?v=8" defer></script>
   </head>
   <body>
     <main class="app-shell project-sheet">
@@ -40,6 +40,7 @@
         <div class="content-grid">
           <section class="sheet-section span-full" aria-labelledby="updates-title">
             <div class="section-header"><div><p class="section-kicker">Suivi vivant</p><h2 class="section-header__title" id="updates-title">Journal du projet</h2></div><button class="button button--primary" id="add-journal-inline" type="button">+ Ajouter</button></div>
+            <div class="journal-tools" role="search"><label class="form-field journal-tools__search"><span class="form-field__label">Rechercher</span><input class="form-field__control" id="journal-search" type="search" placeholder="Texte, personne, étape…"></label><label class="form-field"><span class="form-field__label">Type</span><select class="form-field__control" id="journal-type-filter"><option value="">Tous les types</option></select></label><label class="form-field"><span class="form-field__label">État</span><select class="form-field__control" id="journal-state-filter"><option value="">Tous les états</option><option value="Ouvert">Ouvert</option><option value="Résolu">Résolu</option></select></label><p class="journal-tools__results" id="journal-results" aria-live="polite"></p></div>
             <div class="stack-list" id="updates-list"></div>
           </section>
 
