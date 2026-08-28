@@ -5,13 +5,12 @@ const RELATED_TABLES = [
   "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
 
-const PROJECT_CHOICE_FIELDS = ["Categorie", "Statut", "Priorite"];
+const PROJECT_CHOICE_FIELDS = ["Thematiques", "Statut"];
 const PROJECT_CHOICE_FALLBACKS = {
-  Categorie: ["Urbanisme", "Aménagement", "Habitat", "Mobilités", "Bâtiments", "Environnement", "Littoral", "Foncier", "Autre"],
-  Statut: ["À lancer", "En cours", "En attente", "Bloqué", "Terminé", "Abandonné"],
-  Priorite: ["Faible", "Normale", "Haute", "Prioritaire"],
+  Thematiques: ["Finances & Fiscalité", "Sécurité & Tranquillité publique", "Voirie & Mobilités", "Concertation & Participation citoyenne", "Solidarités & Intergénérationnel", "Enfance, Jeunesse & Éducation", "Travaux & Patrimoine bâti", "Urbanisme & Cadre de vie", "Environnement & Transition écologique", "Culture, Vie associative & Festivités", "Vie économique & Tourisme", "Sport"],
+  Statut: ["À venir", "En cours", "Terminé", "Abandonné"],
 };
-const JOURNAL_TYPES = ["Avancement", "Information", "Prochaine étape", "Étape franchie", "Vigilance", "Blocage"];
+const JOURNAL_TYPES = ["Avancement", "Information"];
 const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance levée", "Décision attendue": "Décision prise" };
 const DECISION_OPEN_STATUSES = new Set(["a preparer", "a decider", "reportee"]);
 const DECISION_CLOSED_STATUSES = new Set(["decidee", "decide", "sans suite"]);
@@ -276,14 +275,13 @@ function renderProjectBadges(project) {
   ui.badges.replaceChildren();
   [
     [project.Statut, statusKind(project.Statut)],
-    [project.Priorite, "warning"],
-    [project.Categorie, "arbitration"],
+    [displayValue(project.Thematiques), "arbitration"],
   ].filter(([value]) => hasValue(value)).forEach(([value, kind]) => ui.badges.append(makeBadge(value, kind)));
 }
 
 function renderHeroPeople(project) {
   ui.people.replaceChildren();
-  appendDefinition(ui.people, "Agent pilote", personValue(project.Responsable));
+  appendDefinition(ui.people, "Agent pilote", personValue(project.Agent_pilote || project.Responsable));
   appendDefinition(ui.people, "Élu pilote", personValue(project.Elu_pilote));
   if (!ui.people.children.length) ui.people.hidden = true;
   else ui.people.hidden = false;
@@ -299,31 +297,15 @@ function renderObjective(project) {
 
 function renderProgress(project) {
   ui.progress.replaceChildren();
-  const nextSteps = currentNextSteps(project.id);
-  const percentage = parseProgress(project.Avancement);
   const heading = element("div", "progress-card__heading");
-  heading.append(textElement("h2", "Avancement"), textElement("span", percentage === null ? "—" : `${percentage} %`, "progress-card__value"));
+  heading.append(textElement("h2", "Calendrier"));
   ui.progress.append(heading);
-  if (percentage !== null) ui.progress.append(makeProgress(percentage));
   const details = element("dl", "summary-details");
-  if (!nextSteps.length) {
-    appendDefinition(details, "Prochaine étape", project.Prochaine_etape);
-    appendDefinition(details, "Date prochaine étape", formatDate(project.Date_prochaine_etape));
-  }
-  appendDefinition(details, "Échéance", formatDate(project.Echeance));
+  appendDefinition(details, "Lancement", [project.Mois_lancement, project.Annee_lancement].filter(hasValue).join(" "));
+  appendDefinition(details, "Objectif de réalisation", [project.Trimestre_objectif, project.Annee_objectif].filter(hasValue).join(" "));
   appendDefinition(details, "Dernière mise à jour", formatDate(project.Derniere_MAJ));
   if (details.children.length) ui.progress.append(details);
-  if (nextSteps.length) {
-    const section = element("div", "next-steps"); section.append(textElement("h3", "Prochaines étapes"));
-    const list = element("ol", "next-steps__list");
-    nextSteps.forEach((row) => { const item = element("li", "next-steps__item"); item.append(textElement("span", journalContent(row))); if (hasValue(row.Date_prochaine_etape)) item.append(textElement("time", formatDate(row.Date_prochaine_etape))); list.append(item); });
-    section.append(list); ui.progress.append(section);
-  }
-  const addStep = textElement("button", "+ Ajouter une prochaine étape", "button button--secondary next-step-add");
-  addStep.type = "button";
-  addStep.addEventListener("click", () => openJournalForm(null, "Prochaine étape"));
-  ui.progress.append(addStep);
-  if (nextSteps.length || hasValue(project.Prochaine_etape)) ui.progress.classList.add("progress-card--next-step"); else ui.progress.classList.remove("progress-card--next-step");
+  ui.progress.classList.remove("progress-card--next-step");
 }
 function currentNextSteps(projectId) {
   const rows = (appState.tables?.AVANCEMENTS || []).filter((row) => isLinkedToProject(row, projectId));
@@ -408,8 +390,8 @@ function renderInstructions(rows) {
     const card = makeItemCard(textOr(row.Consigne, "Consigne"), row.Echeance);
     if (isTrue(row.En_retard)) card.root.classList.add("item-card--danger");
     else if (isTrue(row.A_controler)) card.root.classList.add("item-card--warning");
-    appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)], [row.Priorite, "warning"], [isTrue(row.A_controler) ? "À contrôler" : "", "warning"], [isTrue(row.En_retard) ? "En retard" : "", "danger"]]);
-    appendFields(card.body, [["Responsable", personValue(row.Responsable)], ["Retour du service", row.Retour_service]]);
+    appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)]]);
+    appendFields(card.body, [["Émetteur", personValue(row.Emetteur)], ["Destinataire(s)", personValue(row.Destinataires || row.Responsable)]]);
     return card.root;
   });
 }
@@ -428,8 +410,8 @@ function renderActions(rows) {
   renderCollection(ui.actions, rows, "Aucune action ouverte.", (row) => {
     const card = makeItemCard(textOr(row.Action, "Action"), row.Echeance);
     if (isTrue(row.En_retard)) card.root.classList.add("item-card--danger");
-    appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)], [row.Priorite, "warning"], [isTrue(row.En_retard) ? "En retard" : "", "danger"], [isActionAwaitingControl(row) ? "À contrôler" : "", "warning"]]);
-    appendFields(card.body, [["Responsable", personValue(row.Responsable)]]);
+    appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)], [isTrue(row.En_retard) ? "En retard" : "", "danger"]]);
+    appendFields(card.body, [["Attribuée à", personValue(row.Attribuee_a || row.Responsable)]]);
     return card.root;
   });
 }
@@ -448,7 +430,7 @@ function renderArbitrations(rows) {
     header.append(textElement("h4", textOr(row.Sujet, "Décision")));
     if (hasValue(row.Echeance_decision)) header.append(textElement("time", formatDate(row.Echeance_decision), "item-card__date"));
     const meta = element("div", "item-card__meta");
-    appendBadges(meta, [[row.Statut, statusKind(row.Statut)], [row.Urgence, "danger"], [isTrue(row.Point_hebdo) ? "Point hebdo" : "", "arbitration"]]);
+    appendBadges(meta, [[row.Statut, statusKind(row.Statut)]]);
     const body = element("div", "item-card__body");
     appendFields(body, [["Contexte", row.Contexte], ["Question à trancher", row.Question_a_trancher], ["Options", row.Options], ["Position élue", row.Position_elue], ["Décision prise", row.Decision_prise], ["Date de décision", formatDate(row.Date_decision)], ["Instance", row.Instance_decision], ["Décision par", personValue(row.Decision_par)]]);
     const controls = element("div", "journal-card__actions");
@@ -570,8 +552,8 @@ function makeProgress(percentage) {
 /* ---------- Sélection autonome et édition ---------- */
 const PROJECT_FIELDS = [
   ["Nom_projet", "Nom du projet", "text"], ["Description", "Description", "textarea"], ["Objectif_politique", "Objectif politique", "textarea"],
-  ["Categorie", "Catégorie", "choice"], ["Statut", "Statut", "choice"], ["Priorite", "Priorité", "choice"], ["Responsable", "Agent pilote", "agent"], ["Elu_pilote", "Élu pilote", "elu"],
-  ["Echeance", "Échéance", "date"], ["Date_debut", "Date de début", "date"], ["Prochaine_etape", "Prochaine étape", "textarea"], ["Date_prochaine_etape", "Date prochaine étape", "date"], ["Point_vigilance", "Point de vigilance", "textarea"],
+  ["Thematiques", "Thématique(s)", "choicelist"], ["Statut", "Statut", "choice"], ["Agent_pilote", "Agent pilote", "agent"], ["Responsable", "Agent pilote (compatibilité)", "agent"], ["Elu_pilote", "Élu pilote", "elu"],
+  ["Mois_lancement", "Mois de lancement", "text"], ["Annee_lancement", "Année de lancement", "number"], ["Trimestre_objectif", "Trimestre objectif", "text"], ["Annee_objectif", "Année objectif", "number"], ["Motif_abandon", "Motif d’abandon", "textarea"],
 ];
 
 function bindEditing() {
@@ -602,22 +584,22 @@ function renderProjectSelector() {
 }
 function option(value,label){const item=document.createElement("option");item.value=value;item.textContent=label;return item;}
 function openProjectForm() {
-  ui.editFields.replaceChildren(...PROJECT_FIELDS.filter(([name]) => projectHasColumn(name)).map(([name, label, type]) => formField(name, label, type, appState.selectedProject[name])));
+  ui.editFields.replaceChildren(...PROJECT_FIELDS.filter(([name]) => projectHasColumn(name) && !(name === "Responsable" && projectHasColumn("Agent_pilote"))).map(([name, label, type]) => formField(name, label, type, appState.selectedProject[name])));
   const fallback = PROJECT_CHOICE_FIELDS.filter((field) => !(appState.metadata?.choices?.[field] || []).length);
   ui.editDialog.querySelector(".form-message").textContent = fallback.length ? `Choix Grist indisponibles pour ${fallback.join(", ")} : valeurs existantes et valeurs sûres proposées.` : "";
   ui.editDialog.showModal();
 }
 function projectHasColumn(name){return appState.demo?(appState.tables.PROJETS || []).some((row)=>Object.prototype.hasOwnProperty.call(row,name)):Boolean(appState.metadata?.writable?.PROJETS?.has(name));}
 function projectChoiceValues(field) { const metadata = appState.metadata?.choices?.[field] || []; const existing = (appState.tables.PROJETS || []).map((row) => displayValue(row[field])).filter(Boolean); return [...new Set([...(metadata.length ? metadata : (PROJECT_CHOICE_FALLBACKS[field] || [])), ...existing])]; }
-function formField(name,label,type,value){const wrapper=element("label",`form-field${type==="textarea"?" form-field--wide":""}`);wrapper.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=document.createElement("textarea");control.rows=3;}else if(type==="choice"){control=document.createElement("select");const values=projectChoiceValues(name);control.append(option("","Non renseigné"),...values.map((item)=>option(item,item)));}else if(["agent","elu"].includes(type)){control=document.createElement("select");const flag=type==="agent"?"Est_agent_Sanguinet":"Est_elu_Sanguinet";const people=(appState.tables.INTERLOCUTEURS||[]).filter((person)=>isTrue(person[flag]));control.append(option("","Non renseigné"),...people.map((p)=>option(p.id,textOr(p.Nom_complet,`Interlocuteur ${p.id}`))));}else{control=document.createElement("input");control.type=type; if(type==="number"){control.min=0;control.max=100;}}control.className="form-field__control";control.name=name;control.value=type==="date"?dateInputValue(value):displayValue(value);wrapper.append(control);return wrapper;}
+function formField(name,label,type,value){const wrapper=element("label",`form-field${type==="textarea"||type==="choicelist"?" form-field--wide":""}`);wrapper.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=document.createElement("textarea");control.rows=3;}else if(type==="choice"||type==="choicelist"){control=document.createElement("select");const values=projectChoiceValues(name);if(type==="choice")control.append(option("","Non renseigné"));control.append(...values.map((item)=>option(item,item)));if(type==="choicelist"){control.multiple=true;control.size=Math.min(6,values.length);const selected=new Set(referenceIds(value));[...control.options].forEach(item=>{item.selected=selected.has(item.value)})}}else if(["agent","elu"].includes(type)){control=document.createElement("select");const flag=type==="agent"?"Est_agent_Sanguinet":"Est_elu_Sanguinet";const role=type==="agent"?"agent":"elu",people=(appState.tables.INTERLOCUTEURS||[]).filter((person)=>isTrue(person[flag])||normalizeText(person.Role_interne)===role);control.append(option("","Non renseigné"),...people.map((p)=>option(p.id,textOr(p.Nom_complet,`Interlocuteur ${p.id}`))));}else{control=document.createElement("input");control.type=type;if(type==="number"){control.min=2000;control.max=2200;}}control.className="form-field__control";control.name=name;if(type!=="choicelist")control.value=type==="date"?dateInputValue(value):displayValue(value);wrapper.append(control);return wrapper;}
 function dateInputValue(value){if(!hasValue(value))return "";const d=new Date(typeof value==="number"?value*1000:value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
-function valuesFromForm(form, allowed){const values={};for(const [name,raw] of new FormData(form).entries()){if(!allowed.includes(name))continue;if(["Responsable","Elu_pilote"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else if(name==="Avancement")values[name]=hasValue(raw)?Number(raw):null;else if(name.startsWith("Date_")||name==="Echeance")values[name]=hasValue(raw)?new Date(`${raw}T00:00:00`).getTime()/1000:null;else values[name]=String(raw).trim();}return values;}
-async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn);await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,valuesFromForm(ui.editForm,allowed)]],"Projet mis à jour.");}
+function valuesFromForm(form, allowed){const data=new FormData(form),values={};for(const [name,raw] of data.entries()){if(!allowed.includes(name)||name==="Thematiques")continue;if(["Responsable","Agent_pilote","Elu_pilote"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else if(["Annee_lancement","Annee_objectif"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else values[name]=String(raw).trim();}if(allowed.includes("Thematiques"))values.Thematiques=["L",...data.getAll("Thematiques").filter(hasValue)];return values;}
+async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn),values=valuesFromForm(ui.editForm,allowed),next={...appState.selectedProject,...values},active=normalizeText(next.Statut)==="en cours",message=ui.editDialog.querySelector(".form-message");if(active&&!hasValue(next.Elu_pilote)){message.textContent="Désignez un Élu pilote avant de passer le projet à En cours.";return}if(active&&!hasValue(next.Agent_pilote||next.Responsable)){message.textContent="Désignez un Agent pilote avant de passer le projet à En cours.";return}if(normalizeText(next.Statut)==="abandonne"&&!hasValue(next.Motif_abandon)){message.textContent="Le motif d’abandon est obligatoire.";return}await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,values]],"Projet mis à jour.");}
 
 const DECISION_FIELDS = [
   ["Sujet", "Sujet", "text"], ["Contexte", "Contexte", "textarea"], ["Question_a_trancher", "Question à trancher", "textarea"],
   ["Options", "Options", "textarea"], ["Position_elue", "Position élue", "textarea"], ["Urgence", "Urgence", "choice"],
-  ["Echeance_decision", "Échéance", "date"], ["Statut", "Statut", "choice"], ["Point_hebdo", "À présenter au point hebdo", "checkbox"],
+  ["Echeance_decision", "Date nécessaire", "date"], ["Statut", "Statut", "choice"],
 ];
 const DECISION_RESULT_FIELDS = [
   ["Decision_prise", "Décision prise", "textarea"], ["Date_decision", "Date de décision", "date"], ["Instance_decision", "Instance de décision", "text"], ["Decision_par", "Décision par", "person"],
@@ -690,7 +672,7 @@ function openJournalForm(row = null, initialType = "") {
   const dynamic = element("div", "journal-dynamic form-grid form-field--wide");
   ui.trackingFields.append(typeField, dynamic, contentField, dateField);
   const refresh = () => {
-    const prompts = { Avancement: "Qu’est-ce qui explique cette évolution ?", Information: "Quelle information souhaitez-vous consigner ?", "Prochaine étape": "Quelle prochaine étape faut-il planifier ?", "Étape franchie": "Quel résultat ou commentaire accompagne cette étape franchie ?", Vigilance: "Quel nouveau point de vigilance faut-il signaler ?", Blocage: "Quel blocage faut-il consigner ?", "Décision attendue": "Quelle décision doit être prise ?" };
+    const prompts = { Avancement: "Quel avancement souhaitez-vous consigner ?", Information: "Quelle information souhaitez-vous consigner ?" };
     const textarea = contentField.querySelector("textarea"); contentField.querySelector(".form-field__label").textContent = prompts[typeSelect.value] || "Qu’est-ce qui a changé ?";
     renderJournalDynamic(dynamic, typeSelect.value, row);
   };
@@ -699,9 +681,7 @@ function openJournalForm(row = null, initialType = "") {
 }
 function renderJournalDynamic(container, type, row) {
   container.replaceChildren();
-  if (type === "Avancement") {
-    const field = formField("Avancement", "Nouvel avancement actuel (%)", "number", row?.Avancement ?? appState.selectedProject.Avancement); field.querySelector("input").required = true; container.append(field);
-  } else if (type === "Prochaine étape") {
+  if (type === "Prochaine étape") {
     const date = formField("Date_prochaine_etape", "Date prévue", "date", row?.Date_prochaine_etape); date.querySelector("input").required = true; container.append(date);
   } else if (type === "Étape franchie") {
     const wrapper = element("label", "form-field form-field--wide"); wrapper.append(textElement("span", "Étape qui vient d’être franchie", "form-field__label"));
@@ -778,7 +758,6 @@ async function saveJournal(event) {
     }
     const createdAt = Math.floor(Date.now() / 1000);
     const values = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: content, [schema.type]: type, [schema.createdAt]: createdAt };
-    if (type === "Avancement" && schema.writable.has("Avancement")) values.Avancement = Number(data.get("Avancement"));
     if (type === "Vigilance" && schema.writable.has("Point_vigilance")) values.Point_vigilance = content;
     if (type === "Blocage" && schema.writable.has("Difficulte_blocage")) values.Difficulte_blocage = content;
     if (type === "Décision attendue" && schema.writable.has("Decision_attendue")) values.Decision_attendue = content;
@@ -815,11 +794,7 @@ async function saveJournal(event) {
       }
     } else {
       const project = {};
-      if (type === "Avancement") {
-        if (!projectHasColumn("Avancement")) throw new Error("PROJETS.Avancement n’est pas éditable.");
-        if (!hasValue(data.get("Avancement"))) throw new Error("Renseignez le nouvel avancement.");
-        project.Avancement = Number(data.get("Avancement"));
-      } else if (type === "Étape franchie") {
+      if (type === "Étape franchie") {
         const sourceId = data.get("Etape_source"); if (sourceId !== "legacy") actions.push(["UpdateRecord", "AVANCEMENTS", Number(sourceId), { [schema.state]: "Résolu" }]);
         const newStep = String(data.get("Nouvelle_etape") || "").trim(), newStepDate = data.get("Nouvelle_etape_date");
         const remaining = currentNextSteps(appState.selectedProject.id).filter((step) => String(step.id) !== String(sourceId));
