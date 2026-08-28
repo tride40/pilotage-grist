@@ -37,6 +37,7 @@ Cette compatibilité sert uniquement à accompagner la migration. Elle ne valide
 ## Recette bloquante avant fusion
 
 - [ ] Ouvrir `diagnostic-v3/` comme widget personnalisé dans la copie du document Grist et obtenir « Schéma prêt pour la recette fonctionnelle ».
+- [ ] Cliquer sur « Exporter le schéma », conserver le fichier `schema-grist-v3-AAAA-MM-JJ.json` avec le dossier de recette et vérifier que `containsBusinessRows` vaut `false`.
 - [ ] Depuis une réunion ayant déjà un compte rendu, enregistrer une modification exceptionnelle avec un motif, un demandeur et un approbateur distincts.
 - [ ] Vérifier que la version initiale et la nouvelle version sont présentes dans `REUNIONS_VERSIONS`, puis que seule la version approuvée est affichée dans `REUNIONS`.
 - [ ] Vérifier que la modification est refusée si le demandeur et l'approbateur sont identiques.
