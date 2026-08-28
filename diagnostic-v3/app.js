@@ -4,7 +4,7 @@ const EXPECTED={
   INTERLOCUTEURS:{Nom_complet:"Text",Interne_Mairie:"Bool",Role_interne:"Choice",Actif:"Bool"},
   SERVICES:{Nom_service:"Text",Actif:"Bool"},
   ACTIONS:{Projet:"Ref:PROJETS",Action:"Text",Statut:{type:"Choice",choices:["À attribuer","À faire","En cours","Réalisée","Non aboutie"]},Demandee_par:"Ref:INTERLOCUTEURS",Attribuee_a:"Ref:INTERLOCUTEURS",Service_destinataire:"Ref:SERVICES",Echeance:"Date",Date_fin:"Date",Resultat:"Text",Raison_non_aboutie:"Text",Reunion_origine:"Ref:REUNIONS"},
-  CONSIGNES_POLITIQUES:{Projet:"Ref:PROJETS",Consigne:"Text",Emetteur:"Ref:INTERLOCUTEURS",Destinataires:"RefList:INTERLOCUTEURS",Statut:{type:"Choice",choices:["Active","Archivée"]},Date_emission:"Date",Date_archivage:"Date",Motif_archivage:"Text"},
+  CONSIGNES_POLITIQUES:{Projet:"Ref:PROJETS",Consigne:"Text",Emetteur:"Ref:INTERLOCUTEURS",Destinataires:"RefList:INTERLOCUTEURS",Services_destinataires:"RefList:SERVICES",Statut:{type:"Choice",choices:["Active","Archivée"]},Date_emission:"Date",Date_archivage:"Date",Motif_archivage:"Text"},
   ARBITRAGES_DECISIONS:{Projet:"Ref:PROJETS",Sujet:"Text",Question_a_trancher:"Text",Statut:"Choice",Reunion_origine:"Ref:REUNIONS"},
   REUNIONS:{Projet:"Ref:PROJETS",Date_reunion:"Date",Objet:"Text",Participants:"RefList:INTERLOCUTEURS",Compte_rendu:"Text",Points_cles:"Text"},
   JALONS:{Projet:"Ref:PROJETS",Jalon:"Text",Ordre:"Int",Date_prevue:"Date",Franchi:"Bool",Reunion_origine:"Ref:REUNIONS"},
