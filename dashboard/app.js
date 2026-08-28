@@ -551,10 +551,7 @@ async function openProject(project) {
   if (!state.demo && typeof window.grist?.setCursorPos === "function") {
     try { await window.grist.setCursorPos({ rowId: project.id }); } catch (error) { console.warn("Synchronisation Grist impossible", error); }
   }
-  const configured = new URLSearchParams(window.location.search).get("ficheProjetUrl");
-  if (configured) {
-    const target = new URL(configured, window.location.href); target.searchParams.set("projectId", project.id); target.searchParams.set("mode", "project"); window.open(target.href, "_top");
-  } else if (window.PilotageContext) {
+  if (window.PilotageContext) {
     window.open(window.PilotageContext.projectPageUrl(project.id), "_top");
   } else {
     showFeedback(`${context.name} sélectionné. Ouvrez la page « Fiche projet » dans Grist.`);
