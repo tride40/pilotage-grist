@@ -555,7 +555,7 @@ async function openProject(project) {
   if (configured) {
     const target = new URL(configured, window.location.href); target.searchParams.set("projectId", project.id); target.searchParams.set("mode", "project"); window.open(target.href, "_top");
   } else if (window.PilotageContext) {
-    window.open(window.PilotageContext.url("../fiche-projet/", { projectId: project.id, mode: "project" }), "_top");
+    window.open(window.PilotageContext.projectPageUrl(project.id), "_top");
   } else {
     showFeedback(`${context.name} sélectionné. Ouvrez la page « Fiche projet » dans Grist.`);
   }

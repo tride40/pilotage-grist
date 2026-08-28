@@ -20,6 +20,7 @@ function load(search, topLevel = false) {
   assert.equal(context.configureProjectReturn(link, { id: 42, Nom_projet: "Port" }), true);
   assert.equal(link.hidden, false);
   assert.match(link.href, /\/p\/10$/);
+  assert.match(context.projectPageUrl(42), /\/p\/10$/);
   link.onclick();
   assert.deepEqual(writes[0].slice(0, 1), ["pilotage-grist:selected-project"]);
   assert.equal(writes[0][1].id, 42);
