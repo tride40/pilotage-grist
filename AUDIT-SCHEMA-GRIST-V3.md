@@ -205,6 +205,7 @@ Cible : conserver `Projet`, `Date_evenement`, `Type_entree`, `Titre`, `Descripti
 - `SERVICES_MEMBRES` : seulement si nécessaire pour la relation plusieurs-à-plusieurs.
 - Ne pas créer de table « Demandes au service » : utiliser ACTIONS avec `Statut=À attribuer`.
 - Ne pas créer de table de résumé narratif ni de sélection manuelle pour Mon pilotage.
+- Ajouter `Reunion_origine` (`Ref:REUNIONS`, facultative) à ACTIONS, ARBITRAGES_DECISIONS, JALONS, BLOCAGES, VIGILANCES et ATTENTES_EXTERNES afin que les conséquences créées depuis une réunion restent traçables comme de vrais objets.
 
 ## 14. Dépendances observées dans le dépôt
 
