@@ -1,6 +1,8 @@
 # Publication de la V3
 
-État : **candidate en cours de recette sur la branche `refonte-v3` - ne pas fusionner dans `main` avant validation du schéma Grist**.
+État : **schéma Grist validé le 29 août 2026 ; candidate prête pour la recette fonctionnelle sur la branche `refonte-v3`**.
+
+Le contrôle direct du dernier export `.grist` a confirmé une base saine, 15 tables métier et aucun écart structurel ou de formule d'audit. Ne pas fusionner dans `main` avant validation de la recette fonctionnelle ci-dessous.
 
 ## Périmètre validé
 
@@ -36,7 +38,8 @@ Cette compatibilité sert uniquement à accompagner la migration. Elle ne valide
 
 ## Recette bloquante avant fusion
 
-- [ ] Ouvrir `diagnostic-v3/` comme widget personnalisé dans la copie du document Grist et obtenir « Schéma prêt pour la recette fonctionnelle ».
+- [x] Valider le dernier export du document Grist : intégrité correcte, 15 tables métier et aucun écart avec le schéma V3.
+- [ ] Ouvrir `diagnostic-v3/` comme widget personnalisé dans la copie du document Grist et confirmer « Schéma prêt pour la recette fonctionnelle » depuis l'environnement Grist.
 - [ ] Cliquer sur « Exporter le schéma », conserver le fichier `schema-grist-v3-AAAA-MM-JJ.json` avec le dossier de recette et vérifier que `containsBusinessRows` vaut `false`.
 - [ ] Depuis une réunion ayant déjà un compte rendu, enregistrer une modification exceptionnelle avec un motif, un demandeur et un approbateur distincts.
 - [ ] Vérifier que la version initiale et la nouvelle version sont présentes dans `REUNIONS_VERSIONS`, puis que seule la version approuvée est affichée dans `REUNIONS`.
