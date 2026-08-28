@@ -13,10 +13,10 @@ const PROJECT_CHOICE_FALLBACKS = {
 };
 const JOURNAL_TYPES = ["Avancement", "Information"];
 const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance levée", "Décision attendue": "Décision prise" };
-const DECISION_OPEN_STATUSES = new Set(["a preparer", "a decider", "reportee"]);
-const DECISION_CLOSED_STATUSES = new Set(["decidee", "decide", "sans suite"]);
-const DECISION_STATUS_FALLBACKS = ["À préparer", "À décider", "Reportée", "Décidée", "Sans suite"];
-const appState = { selectedProject: null, tables: null, tableNames: [], metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, decisionTransitionRow: null, decisionTransitionStatus: "", journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
+const DECISION_OPEN_STATUSES = new Set(["demandee", "en instruction", "a preparer", "a decider", "reportee"]);
+const DECISION_CLOSED_STATUSES = new Set(["prise", "sans suite", "decidee", "decide"]);
+const DECISION_STATUS_FALLBACKS = ["Demandée", "En instruction", "Prise", "Sans suite"];
+const appState = { selectedProject: null, tables: null, tableNames: [], metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -33,7 +33,7 @@ const ui = {
   meetings: document.querySelector("#meetings-list"),
   actions: document.querySelector("#actions-list"),
   arbitrations: document.querySelector("#arbitrations-list"),
-  decisionButton: document.querySelector("#add-decision"), decisionDialog: document.querySelector("#decision-dialog"), decisionForm: document.querySelector("#decision-form"), decisionFields: document.querySelector("#decision-fields"), transitionDialog: document.querySelector("#decision-transition-dialog"), transitionForm: document.querySelector("#decision-transition-form"), transitionTitle: document.querySelector("#decision-transition-title"), transitionSubject: document.querySelector("#decision-transition-subject"), transitionLabel: document.querySelector("#decision-transition-label"),
+  decisionButton: document.querySelector("#add-decision"), decisionDialog: document.querySelector("#decision-dialog"), decisionForm: document.querySelector("#decision-form"), decisionFields: document.querySelector("#decision-fields"),
   contacts: document.querySelector("#contacts-list"),
   selector: document.querySelector("#project-selector"), editButton: document.querySelector("#edit-project"), trackingButton: document.querySelector("#update-tracking"),
   editDialog: document.querySelector("#edit-dialog"), editForm: document.querySelector("#edit-form"), editFields: document.querySelector("#edit-fields"),
@@ -447,7 +447,7 @@ function renderArbitrations(rows) {
     appendFields(body, [["Contexte", row.Contexte], ["Question à trancher", row.Question_a_trancher], ["Options", row.Options], ["Position élue", row.Position_elue], ["Décision prise", row.Decision_prise], ["Date de décision", formatDate(row.Date_decision)], ["Instance", row.Instance_decision], ["Décision par", personValue(row.Decision_par)]]);
     const controls = element("div", "journal-card__actions");
     if (isOpenDecision(row)) {
-      controls.append(decisionWorkflowButton("Reporter", "secondary", () => transitionDecision(row, "Reportée")), decisionWorkflowButton("Décider", "primary", () => openDecisionForm(row, "Décidée")), decisionWorkflowButton("Classer sans suite", "ghost-danger", () => transitionDecision(row, "Sans suite")));
+      controls.append(decisionWorkflowButton("Mettre en instruction", "secondary", () => openDecisionForm(row, "En instruction")), decisionWorkflowButton("Prendre la décision", "primary", () => openDecisionForm(row, "Prise")), decisionWorkflowButton("Classer sans suite", "ghost-danger", () => openDecisionForm(row, "Sans suite")));
     } else {
       controls.append(decisionWorkflowButton("Consulter / compléter", "secondary", () => openDecisionForm(row)));
     }
@@ -459,24 +459,6 @@ function renderArbitrations(rows) {
 }
 function isOpenDecision(row) { const status = normalizeText(row.Statut); return DECISION_OPEN_STATUSES.has(status) || (!DECISION_CLOSED_STATUSES.has(status) && !isTrue(row.Transmis)); }
 function decisionWorkflowButton(label, kind, handler) { const button = textElement("button", label, `button button--${kind}`); button.type = "button"; button.addEventListener("click", () => Promise.resolve(handler()).catch((error) => showFeedback(`Mise à jour impossible — ${exactError(error)}`))); return button; }
-function transitionDecision(row, status) {
-  appState.decisionTransitionRow = row; appState.decisionTransitionStatus = status; ui.transitionForm.reset();
-  ui.transitionTitle.textContent = status === "Reportée" ? "Reporter la décision" : "Classer la décision sans suite";
-  ui.transitionLabel.textContent = status === "Reportée" ? "Motif du report *" : "Motif du classement sans suite *";
-  ui.transitionSubject.textContent = textOr(row.Sujet, "Décision"); ui.transitionDialog.querySelector(".form-message").textContent = ""; ui.transitionDialog.showModal(); ui.transitionForm.elements.Motif.focus();
-}
-async function saveDecisionTransition(event) {
-  event.preventDefault(); const row = appState.decisionTransitionRow, status = appState.decisionTransitionStatus, reason = ui.transitionForm.elements.Motif.value.trim();
-  if (!row || !status || !reason) return;
-  const timestamp = new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(new Date());
-  const entry = `${timestamp} — ${status} — ${reason}`;
-  const values = { Statut: status };
-  if (decisionHasColumn("Motif_report") && status === "Reportée") values.Motif_report = reason;
-  if (decisionHasColumn("Historique_evolution")) values.Historique_evolution = [displayValue(row.Historique_evolution), entry].filter(Boolean).join("\n");
-  await writeChanges(ui.transitionDialog, [["UpdateRecord", "ARBITRAGES_DECISIONS", row.id, values]], `Décision ${status.toLocaleLowerCase("fr-FR")}.`);
-  appState.decisionTransitionRow = null; appState.decisionTransitionStatus = "";
-}
-
 function renderTimeline(events) {
   ui.timeline.replaceChildren();
   if (!events.length) return void ui.timeline.append(makeEmpty("Aucun événement récent."));
@@ -574,7 +556,7 @@ function bindEditing() {
   document.querySelector("#add-journal-inline").addEventListener("click", () => openJournalForm());
   ui.decisionButton.addEventListener("click", () => openDecisionForm());
   document.querySelectorAll("dialog [data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
-  ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.decisionForm.addEventListener("submit", saveDecision); ui.transitionForm.addEventListener("submit", saveDecisionTransition); ui.deleteForm.addEventListener("submit", deleteJournal);
+  ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.decisionForm.addEventListener("submit", saveDecision); ui.deleteForm.addEventListener("submit", deleteJournal);
   ui.journalSearch.addEventListener("input", () => { appState.journalSearch = ui.journalSearch.value; renderWhenReady(); });
   ui.journalTypeFilter.addEventListener("change", () => { appState.journalTypeFilter = ui.journalTypeFilter.value; renderWhenReady(); });
   ui.journalStateFilter.addEventListener("change", () => { appState.journalStateFilter = ui.journalStateFilter.value; renderWhenReady(); });
@@ -612,7 +594,7 @@ function automaticJournalValues(schema,change,before,after,now){const labels={El
 
 const DECISION_FIELDS = [
   ["Sujet", "Sujet", "text"], ["Contexte", "Contexte", "textarea"], ["Question_a_trancher", "Question à trancher", "textarea"],
-  ["Options", "Options", "textarea"], ["Position_elue", "Position élue", "textarea"], ["Urgence", "Urgence", "choice"],
+  ["Options", "Options", "textarea"], ["Position_elue", "Position élue", "textarea"], ["Demandee_par", "Demandée par", "person"],
   ["Echeance_decision", "Date nécessaire", "date"], ["Statut", "Statut", "choice"],
 ];
 const DECISION_RESULT_FIELDS = [
@@ -622,8 +604,8 @@ function decisionHasColumn(name) { return appState.demo ? (appState.tables.ARBIT
 function decisionChoices(name) {
   const column = appState.metadata?.details?.ARBITRAGES_DECISIONS?.get(name), metadata = extractChoiceValues(column);
   const existing = (appState.tables.ARBITRAGES_DECISIONS || []).map((row) => displayValue(row[name])).filter(Boolean);
-  const fallback = name === "Statut" ? DECISION_STATUS_FALLBACKS : name === "Urgence" ? ["Normale", "Haute", "Urgente", "Critique"] : [];
-  return [...new Set([...(metadata.length ? metadata : fallback), ...existing])];
+  if(name==="Statut")return DECISION_STATUS_FALLBACKS;
+  return [...new Set([...metadata,...existing])];
 }
 function decisionField(name, label, type, value) {
   if (type === "person") {
@@ -639,10 +621,10 @@ function openDecisionForm(row = null, forcedStatus = "") {
   ui.decisionDialog.querySelector("#decision-title").textContent = row ? "Modifier la décision" : "Nouvelle décision";
   ui.decisionDialog.querySelector("[type=submit]").textContent = row ? "Enregistrer" : "Créer la décision";
   const project = element("div", "journal-context form-field--wide"); project.append(textElement("span", "Projet", "item-label"), textElement("strong", textOr(appState.selectedProject.Nom_projet, "Projet")));
-  ui.decisionFields.append(project, ...DECISION_FIELDS.filter(([name]) => decisionHasColumn(name)).map(([name, label, type]) => decisionField(name, label, type, row?.[name] ?? (name === "Statut" ? "À préparer" : ""))));
+  ui.decisionFields.append(project, ...DECISION_FIELDS.filter(([name]) => decisionHasColumn(name)).map(([name, label, type]) => decisionField(name, label, type, row?.[name] ?? (name === "Statut" ? "Demandée" : ""))));
   const result = element("div", "decision-result form-grid form-field--wide"); result.append(...DECISION_RESULT_FIELDS.filter(([name]) => decisionHasColumn(name)).map(([name, label, type]) => decisionField(name, label, type, row?.[name]))); ui.decisionFields.append(result);
-  const status = ui.decisionForm.elements.Statut; const refresh = () => { result.hidden = normalizeText(status?.value) !== "decidee"; }; if (status) status.addEventListener("change", refresh); refresh();
-  if (status && forcedStatus) { status.value = forcedStatus; refresh(); }
+  const status = ui.decisionForm.elements.Statut; const refresh = () => { result.hidden = normalizeText(status?.value) !== "prise"; }; if (status) status.addEventListener("change", refresh);
+  if (status && forcedStatus) status.value = forcedStatus;if(forcedStatus==="Prise"&&ui.decisionForm.elements.Date_decision&&!hasValue(ui.decisionForm.elements.Date_decision.value))ui.decisionForm.elements.Date_decision.value=dateInputValue(new Date());refresh();
   const subject = ui.decisionForm.elements.Sujet; if (subject) subject.required = true;
   ui.decisionDialog.querySelector(".form-message").textContent = ""; ui.decisionDialog.showModal(); subject?.focus();
 }
@@ -656,10 +638,10 @@ async function saveDecision(event) {
       if (name === "Projet") continue; const raw = data.get(name);
       if (["Echeance_decision", "Date_decision"].includes(name)) values[name] = hasValue(raw) ? new Date(`${raw}T00:00:00`).getTime() / 1000 : null;
       else if (name === "Point_hebdo") values[name] = data.has(name);
-      else if (name === "Decision_par") values[name] = hasValue(raw) ? Number(raw) : null;
+      else if (["Decision_par","Demandee_par"].includes(name)) values[name] = hasValue(raw) ? Number(raw) : null;
       else values[name] = String(raw || "").trim();
     }
-    if (!hasValue(values.Sujet)) throw new Error("Renseignez le sujet de la décision.");
+    const errors=window.PilotageV3Rules?.decisionErrors(values)||[];if(errors.length)throw new Error(errors[0]);
     const action = appState.editingDecisionId ? ["UpdateRecord", "ARBITRAGES_DECISIONS", appState.editingDecisionId, values] : ["AddRecord", "ARBITRAGES_DECISIONS", null, values];
     await writeChanges(ui.decisionDialog, [action], appState.editingDecisionId ? "Décision mise à jour." : "Décision créée et liée au projet.");
   } catch (error) { console.error("Écriture de la décision impossible", error); message.textContent = `Enregistrement impossible — ${exactError(error)}`; }
