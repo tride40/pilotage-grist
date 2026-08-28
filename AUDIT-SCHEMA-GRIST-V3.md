@@ -1,6 +1,6 @@
 # Audit du schéma Grist - refonte fonctionnelle V3
 
-État du document : checklist préparatoire. Source vérifiée : dépôt `Pilotage-Grist` au 28 août 2026. Le fichier Grist lui-même n'est pas présent dans le dépôt : les mentions **OBS** ci-dessous signifient « observé dans le code, les démonstrations ou la documentation », pas « type confirmé dans Grist ».
+État du document : checklist préparatoire. Source vérifiée : dépôt `Pilotage-Grist` au 29 août 2026. Le fichier Grist lui-même n'est pas présent dans le dépôt : les mentions **OBS** ci-dessous signifient « observé dans le code, les démonstrations ou la documentation », pas « type confirmé dans Grist ».
 
 ## Règles de sécurité avant modification
 
@@ -12,6 +12,21 @@
 - [ ] Les formules ci-dessous sont des intentions fonctionnelles. Les adapter aux noms exacts confirmés dans Grist.
 
 Légende : **C** conserver ; **M** modifier/renommer ; **N** nouveau ; **R** retirer après contrôle ; **A** à auditer dans Grist.
+
+## 0. Comprendre et paramétrer les colonnes d'audit
+
+`CreatedAt`, `CreatedBy`, `ModifiedAt` et `ModifiedBy` désignent une **fonction**, pas un type Grist. Utiliser les types ordinaires ci-dessous et une **formule d'initialisation** (appelée aussi formule déclenchée), jamais une colonne Formule classique :
+
+| Fonction | Titre / ID conseillé | Type Grist | Formule d'initialisation | Déclenchement |
+|---|---|---|---|---|
+| Date de création | Créé le / `Cree_le` | DateTime | `NOW()` | cocher seulement **Appliquer aux nouveaux enregistrements** |
+| Auteur de création | Créé par / `Cree_par` | Text | `user.Name` | cocher seulement **Appliquer aux nouveaux enregistrements** |
+| Date de modification | Modifié le / `Modifie_le` | DateTime | `NOW()` | cocher **Appliquer aux nouveaux enregistrements** et **Appliquer lors des modifications > N'importe quel champ** |
+| Auteur de modification | Modifié par / `Modifie_par` | Text | `user.Name` | cocher **Appliquer aux nouveaux enregistrements** et **Appliquer lors des modifications > N'importe quel champ** |
+
+Procédure dans Grist : sélectionner la colonne, choisir le bon type, ouvrir **Comportement de la colonne > Définir une formule d'initialisation**, saisir la formule, puis régler les cases de déclenchement. Ne pas utiliser une colonne Formule permanente : `NOW()` se recalculerait et ne conserverait pas l'instant historique. `user.Name` stocke un texte lisible ; utiliser `user.Email` à la place si l'adresse électronique doit être l'identifiant stable. Ces colonnes d'audit ne sont pas des références vers `INTERLOCUTEURS`.
+
+Pour les lignes déjà existantes, les formules d'initialisation ne reconstruisent pas le passé. Laisser la valeur vide ou effectuer une reprise manuelle datée et documentée ; ne pas inventer l'auteur.
 
 ## 1. PROJETS
 
@@ -37,14 +52,15 @@ Ordre conseillé : identité, pilotage, périmètre, calendrier, état, clôture
 | 16 | Motif d'abandon | `Motif_abandon` | Text | obligatoire si Abandonné | N |
 | 17 | Date de clôture | `Date_cloture` | DateTime | renseignée par le widget | N |
 | 18 | Actif dans le pilotage | `Actif_pilotage` | Formula Bool | `Statut` dans À venir/En cours | N |
-| 19 | Créé le | `Cree_le` | CreatedAt | audit | N/A |
-| 20 | Créé par | `Cree_par` | CreatedBy | audit | N/A |
-| 21 | Modifié le | `Modifie_le` | ModifiedAt | audit | N/A |
-| 22 | Pourcentage d'avancement | identifiant réel à relever | Numeric | vérifier jauges/formules | R |
-| 23 | Priorité | `Priorite` (OBS) | Choice | vérifier dashboard et démos | R |
-| 24 | Catégorie | identifiant réel à relever | Choice/Ref | migrer vers `Thematiques` | R après migration |
-| 25 | Prochaine étape | identifiant réel à relever | Text/Date | migrer vers JALONS | R après migration |
-| 26 | Point de vigilance | `Point_vigilance` (OBS) | Text | migrer vers VIGILANCES | R après migration |
+| 19 | Créé le | `Cree_le` | DateTime + initialisation | `NOW()` ; nouveaux enregistrements | N/A |
+| 20 | Créé par | `Cree_par` | Text + initialisation | `user.Name` ; nouveaux enregistrements | N/A |
+| 21 | Modifié le | `Modifie_le` | DateTime + initialisation | `NOW()` ; nouveau + toute modification | N/A |
+| 22 | Modifié par | `Modifie_par` | Text + initialisation | `user.Name` ; nouveau + toute modification | N/A |
+| 23 | Pourcentage d'avancement | identifiant réel à relever | Numeric | vérifier jauges/formules | R |
+| 24 | Priorité | `Priorite` (OBS) | Choice | vérifier dashboard et démos | R |
+| 25 | Catégorie | identifiant réel à relever | Choice/Ref | migrer vers `Thematiques` | R après migration |
+| 26 | Prochaine étape | identifiant réel à relever | Text/Date | migrer vers JALONS | R après migration |
+| 27 | Point de vigilance | `Point_vigilance` (OBS) | Text | migrer vers VIGILANCES | R après migration |
 
 Thématiques exactes : Finances & Fiscalité ; Sécurité & Tranquillité publique ; Voirie & Mobilités ; Concertation & Participation citoyenne ; Solidarités & Intergénérationnel ; Enfance, Jeunesse & Éducation ; Travaux & Patrimoine bâti ; Urbanisme & Cadre de vie ; Environnement & Transition écologique ; Culture, Vie associative & Festivités ; Vie économique & Tourisme ; Sport.
 
@@ -91,7 +107,7 @@ Si la relation multiple ne peut être maintenue proprement des deux côtés, cr�
 | 4 | Attribuée à | `Attribuee_a` | Ref:INTERLOCUTEURS | migrer `Responsable` ; une personne | M |
 | 5 | Service destinataire | `Service_destinataire` | Ref:SERVICES | utilisé tant que non attribuée | N |
 | 6 | Statut | `Statut` | Choice | À attribuer; À faire; En cours; Réalisée; Non aboutie | M |
-| 7 | Date de création | `Date_creation` | DateTime/CreatedAt | OBS | C |
+| 7 | Date de création | `Date_creation` | DateTime + initialisation | `NOW()` ; nouveaux enregistrements | C |
 | 8 | Échéance | `Echeance` | Date | facultative, OBS | C |
 | 9 | Date de fin | `Date_fin` | DateTime | automatique pour les 2 statuts finaux | M depuis `Date_realisation` |
 | 10 | Résultat | `Resultat` | Text | facultatif si Réalisée ; OBS | C |
@@ -117,7 +133,7 @@ Tri recommandé : retard, échéance croissante, sans échéance à la fin ; auc
 | 3 | Émetteur | `Emetteur` | Ref:INTERLOCUTEURS | obligatoire, OBS | C |
 | 4 | Destinataires | `Destinataires` | RefList:INTERLOCUTEURS | au moins personnes ou services ; OBS | C |
 | 5 | Services destinataires | `Services_destinataires` | RefList:SERVICES | reste attachée au service | N |
-| 6 | Date d'émission | `Date_emission` | CreatedAt/DateTime | automatique | N/A |
+| 6 | Date d'émission | `Date_emission` | DateTime + initialisation | `NOW()` ; nouveaux enregistrements | N/A |
 | 7 | État | `Statut` | Choice | Active; Archivée | M - OBS |
 | 8 | Date d'archivage | `Date_archivage` | DateTime | automatique | N |
 | 9 | Motif d'archivage | `Motif_archivage` | Text | facultatif | N |
@@ -136,11 +152,11 @@ Tri recommandé : retard, échéance croissante, sans échéance à la fin ; auc
 | 5 | Franchi | `Franchi` | Bool | défaut faux | N |
 | 6 | Date réelle | `Date_reelle` | Date | obligatoire lors du franchissement | N |
 | 7 | À retenir | `A_retenir` | Text | facultatif | N |
-| 8 | Créé le/par | `Cree_le`, `Cree_par` | CreatedAt/CreatedBy | audit | N |
+| 8 | Créé le/par | `Cree_le`, `Cree_par` | DateTime + Text | initialisations `NOW()` et `user.Name` ; nouveaux enregistrements | N |
 
 ## 7. BLOCAGES - nouvelle table
 
-Colonnes dans l'ordre : `Projet` (Ref:PROJETS), `Blocage` (Text), `Date_apparition` (DateTime), `Actif` (Bool), `Attente_externe` (Ref:ATTENTES_EXTERNES, facultatif), `Date_resolution` (DateTime), `Explication_resolution` (Text), `Cree_par` (CreatedBy). La création et la résolution produisent une entrée JOURNAL.
+Colonnes dans l'ordre : `Projet` (Ref:PROJETS), `Blocage` (Text), `Date_apparition` (DateTime), `Actif` (Bool), `Attente_externe` (Ref:ATTENTES_EXTERNES, facultatif), `Date_resolution` (DateTime), `Explication_resolution` (Text), `Cree_par` (Text avec initialisation `user.Name` sur les nouveaux enregistrements). La création et la résolution produisent une entrée JOURNAL.
 
 ## 8. VIGILANCES - nouvelle table
 
@@ -153,14 +169,23 @@ Même structure que BLOCAGES : `Projet`, `Vigilance`, `Date_apparition`, `Active
 | 1 | Projet | `Projet` | Ref:PROJETS | obligatoire | N |
 | 2 | Attente | `Attente` | Text | obligatoire | N |
 | 3 | Tiers | `Tiers` | Ref:INTERLOCUTEURS | externe | N |
-| 4 | Date de création | `Date_creation` | CreatedAt | automatique | N |
+| 4 | Date de création | `Date_creation` | DateTime + initialisation | `NOW()` ; nouveaux enregistrements | N |
 | 5 | Date attendue | `Date_attendue` | Date | facultative | N |
 | 6 | Statut | `Statut` | Choice | En attente; Reçue; Sans suite | N |
 | 7 | Date de fin | `Date_fin` | DateTime | automatique | N |
 | 8 | Résultat / motif | `Resultat` | Text | facultatif | N |
 | 9 | Blocage lié | `Blocage` | Ref:BLOCAGES | facultatif | N |
 
-Créer `RELANCES_ATTENTES` : `Attente` (Ref:ATTENTES_EXTERNES), `Date_relance` (DateTime), `Par` (Ref:INTERLOCUTEURS ou CreatedBy), `Note` (Text). Une relance n'est jamais un statut.
+### Paramétrage détaillé de RELANCES_ATTENTES
+
+| # | Titre visible | ID technique | Type Grist | Réglage | Obligatoire |
+|---:|---|---|---|---|---|
+| 1 | Attente concernée | `Attente` | Ref:ATTENTES_EXTERNES | afficher la colonne `Attente` | oui |
+| 2 | Date de relance | `Date_relance` | DateTime | colonne de données, sans formule ; le widget écrit l'heure | oui |
+| 3 | Effectuée par | `Par` | Text + initialisation | `user.Name`, nouveaux enregistrements uniquement | non, recommandé |
+| 4 | Note | `Note` | Text | texte long | non |
+
+Ne pas configurer `Par` comme Ref:INTERLOCUTEURS : le widget n'envoie actuellement pas cette référence et la correspondance entre compte Grist et interlocuteur n'est pas garantie. Ne pas ajouter de colonne `Statut` : une relance est un événement daté et l'état reste porté par `ATTENTES_EXTERNES.Statut`. Aucun champ n'a de formule permanente.
 
 ## 10. ARBITRAGES_DECISIONS (titre visible : DÉCISIONS)
 
@@ -186,17 +211,49 @@ Créer `RELANCES_ATTENTES` : `Attente` (Ref:ATTENTES_EXTERNES), `Date_relance` (
 
 ## 11. REUNIONS
 
-Conserver dans cet ordre : `Projet` (Ref:PROJETS), `Date_reunion` (Date), `Heure` (Time/Text à confirmer), `Objet` (Text), `Lieu` (Text), `Participants` (RefList:INTERLOCUTEURS), `Compte_rendu` (Text), `Points_cles` (Text), `Version_courante` (Ref:REUNIONS_VERSIONS ou Int), `Saisi_par` (Ref/CreatedBy), `Cree_le` (CreatedAt).
+Conserver dans cet ordre : `Projet` (Ref:PROJETS), `Date_reunion` (Date), `Heure` (Text), `Objet` (Text), `Lieu` (Text), `Participants` (RefList:INTERLOCUTEURS), `Compte_rendu` (Text), `Points_cles` (Text), `Saisi_par` (Ref:INTERLOCUTEURS, saisie métier facultative), `Cree_le` (DateTime avec initialisation `NOW()` sur les nouveaux enregistrements). `Version_courante` n'est pas nécessaire au code actuel.
 
 Retirer après dépendances : `Type_reunion`, `CR_finalise`, `Decisions_prises`, `Suites`, `Actions`, `Engagements`, `Arbitrage_attendu` et autres champs textuels de conséquences. Les objets créés à partir d'une réunion utilisent un unique `Reunion_origine` (Ref:REUNIONS) ; supprimer les alias `Reunion`/`Origine_reunion` seulement après migration.
 
-Créer `REUNIONS_VERSIONS` : `Reunion`, `Numero_version`, `Compte_rendu`, `Points_cles`, `Auteur`, `Date_version`, `Motif_modification`, `Demandeur`, `Approbateur`, `Statut_demande`. Exiger demandeur différent de l'approbateur.
+### Paramétrage détaillé de REUNIONS_VERSIONS
+
+| # | Titre visible | ID technique | Type Grist | Réglage / choix | Obligatoire pour le widget |
+|---:|---|---|---|---|---|
+| 1 | Réunion | `Reunion` | Ref:REUNIONS | afficher `Objet` | oui |
+| 2 | Numéro de version | `Numero_version` | Int | colonne de données, sans formule | oui |
+| 3 | Compte rendu | `Compte_rendu` | Text | texte long | oui |
+| 4 | Points clés | `Points_cles` | Text | texte long | non, recommandé |
+| 5 | Auteur | `Auteur` | Ref:INTERLOCUTEURS | le widget reprend le demandeur | non, recommandé |
+| 6 | Date de version | `Date_version` | DateTime | colonne de données, sans formule ; écrite par le widget | non, recommandé |
+| 7 | Motif de modification | `Motif_modification` | Text | texte long | oui |
+| 8 | Demandeur | `Demandeur` | Ref:INTERLOCUTEURS | afficher `Nom_complet` | oui |
+| 9 | Approbateur | `Approbateur` | Ref:INTERLOCUTEURS | afficher `Nom_complet` ; différent du demandeur | oui |
+| 10 | Statut de la demande | `Statut_demande` | Choice | choix exact actuel : `Approuvée` | non, recommandé |
+
+Ne mettre aucune formule permanente sur `Numero_version`, `Auteur`, `Date_version` ou `Statut_demande` : l'application écrit ces valeurs en une opération contrôlée. Lors de la première correction d'un compte rendu existant, elle crée automatiquement la version initiale n°1, puis la correction approuvée n°2, et actualise `REUNIONS.Compte_rendu`. `REUNIONS.Version_courante` n'est pas requise par le code actuel et peut rester absente. La règle « demandeur différent de l'approbateur » est contrôlée par le widget ; une règle d'accès Grist complémentaire pourra être ajoutée après la recette, mais n'est pas nécessaire au premier test.
 
 ## 12. AVANCEMENTS à renommer visuellement JOURNAL
 
-Le dépôt documente `Projet`, `Date_evenement`, `Type_entree`, `Titre`, `Description`, `Source_table`, `Source_id`, `Auteur`, `Automatique`, `Actif` et des champs historiques à confirmer dans `AVANCEMENTS-V5.md`.
+Conserver l'identifiant technique de table `AVANCEMENTS` et changer seulement son titre visible en **JOURNAL**.
 
-Cible : conserver `Projet`, `Date_evenement`, `Type_entree`, `Titre`, `Description`, `Source_table`, `Source_id`, `Auteur`, `Automatique`. Choix manuels autorisés pour `Type_entree` : uniquement `Avancement`, `Information`. Les autres types sont générés par l'application : changement de pilote/calendrier, jalon franchi, blocage/vigilance créé ou levé, décision prise, clôture/réouverture. Retirer après migration les pseudo-objets `Prochaine étape`, `Vigilance`, `Blocage`, `Décision attendue` désormais stockés dans leurs tables propres.
+| # | Titre visible | ID technique | Type Grist | Réglage / choix | Obligatoire |
+|---:|---|---|---|---|---|
+| 1 | Projet | `Projet` | Ref:PROJETS | afficher `Nom_projet` | oui |
+| 2 | Date de l'événement | `Date_evenement` | DateTime | colonne de données, sans formule ; écrite par le widget | oui |
+| 3 | Type d'entrée | `Type_entree` | Choice | voir liste exacte ci-dessous | oui |
+| 4 | Titre | `Titre` | Text | texte court | non, recommandé |
+| 5 | Description | `Description` | Text | texte long ; contenu principal | oui |
+| 6 | Table source | `Source_table` | Text | identifiant technique de la table d'origine | non, recommandé |
+| 7 | ID source | `Source_id` | Int | identifiant de ligne dans la table source | non, recommandé |
+| 8 | Auteur | `Auteur` | Text + initialisation | `user.Name`, nouveaux enregistrements uniquement | non, recommandé |
+| 9 | Automatique | `Automatique` | Bool | défaut faux ; le widget écrit vrai pour les traces automatiques | oui |
+| 10 | Créé le | `Cree_le` | DateTime + initialisation | `NOW()`, nouveaux enregistrements uniquement | non, recommandé |
+
+Choix exacts conseillés dans `Type_entree` : `Avancement`, `Information`, `Changement de pilote`, `Changement d’objectif`, `Changement de statut`, `Clôture du projet`, `Réouverture du projet`, `Jalon franchi`, `Blocage levé`, `Vigilance levée`, `Décision prise`. Seuls `Avancement` et `Information` sont proposés à la saisie manuelle ; les autres sont écrits par l'application.
+
+Ne pas mettre de formule permanente dans ces colonnes. `Date_evenement`, `Type_entree`, `Description`, `Source_table`, `Source_id` et `Automatique` doivent rester modifiables par le widget. Si la colonne existante s'appelle `Contenu`, la renommer techniquement en `Description` avant la recette, ou la conserver temporairement : le code sait lire les deux, mais le diagnostic V3 exige `Description` pour converger vers un schéma unique.
+
+Après migration, masquer puis retirer les anciens pseudo-objets et leurs colonnes : `Prochaine_etape`, `Date_prochaine_etape`, `Point_vigilance`, `Difficulte_blocage`, `Decision_attendue`, `Entree_parent`, `Etat_entree`, `Decisionnaire`, ainsi que le pourcentage `Avancement`. Les prochaines étapes, vigilances, blocages et décisions vivent désormais dans leurs tables propres.
 
 ## 13. Tables techniques complémentaires
 
