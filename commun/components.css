@@ -87,6 +87,7 @@
 .home-button { flex: 0 0 auto; gap: var(--space-2); min-width: 7.5rem; min-height: var(--touch-target); white-space: nowrap; }
 .home-button__icon { font-size: 1.1rem; line-height: 1; }
 .header-actions, .dashboard-header__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.app-header .header-actions,.app-header .dashboard-header__actions{position:fixed;z-index:40;top:var(--space-3);right:var(--space-3);max-width:calc(100vw - 1.5rem);padding:var(--space-2);border:1px solid rgb(255 255 255 / 18%);border-radius:var(--radius-lg);background:rgb(17 28 61 / 92%);box-shadow:var(--shadow-md);backdrop-filter:blur(10px)}
 .sanguinet-brand { display: inline-flex; flex: 0 0 auto; width: 7rem; min-height: var(--touch-target); align-items: center; justify-content: center; padding: .28rem .5rem; border: 1px solid rgb(255 255 255 / 32%); border-radius: var(--radius-md); background: rgb(255 255 255 / 94%); box-shadow: 0 2px 8px rgb(13 24 54 / 12%); }
 .sanguinet-brand img { display: block; width: 100%; height: auto; max-height: 2.65rem; object-fit: contain; }
 
@@ -102,8 +103,12 @@
 @media (max-width: 30rem) {
   .header-actions, .dashboard-header__actions { width: 100%; }
   .sanguinet-brand { width: 6.5rem; margin-right: auto; }
-  .app-header .header-actions .button, .app-header .dashboard-header__actions .button, .home-button { width: 100%; }
+  .app-header .header-actions,.app-header .dashboard-header__actions{top:auto;right:var(--space-2);bottom:var(--space-2);left:var(--space-2);max-width:none;flex-wrap:nowrap}
+  .app-header .header-actions .button,.app-header .dashboard-header__actions .button{width:auto;flex:1 1 0;padding-inline:var(--space-2)}
+  body{padding-bottom:calc(var(--touch-target) + var(--space-6))}
 }
+
+dialog form,dialog .dialog-content{overflow:auto}dialog .dialog-header{position:sticky;z-index:3;top:0;padding-block:var(--space-2);background:var(--color-surface)}dialog .dialog-actions{position:sticky;z-index:3;bottom:0;padding-block:var(--space-2);background:var(--color-surface)}
 
 @media (max-width: 47.99rem) {
   .app-header .app-header__inner { min-height: 0; padding: var(--space-5) var(--space-4); align-items: stretch; flex-direction: column; }

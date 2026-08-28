@@ -688,7 +688,7 @@ function openJournalForm(row = null, initialType = "") {
   contentField.querySelector("textarea").addEventListener("input", (event) => { delete event.currentTarget.dataset.automatic; });
   const dateField = formField("Date_MAJ", "Date", "date", row?.Date_MAJ || row?.Date || new Date());
   const dynamic = element("div", "journal-dynamic form-grid form-field--wide");
-  ui.trackingFields.append(typeField, contentField, dateField, dynamic);
+  ui.trackingFields.append(typeField, dynamic, contentField, dateField);
   const refresh = () => {
     const prompts = { Avancement: "Qu’est-ce qui explique cette évolution ?", Information: "Quelle information souhaitez-vous consigner ?", "Prochaine étape": "Quelle prochaine étape faut-il planifier ?", "Étape franchie": "Quel résultat ou commentaire accompagne cette étape franchie ?", Vigilance: "Quel nouveau point de vigilance faut-il signaler ?", Blocage: "Quel blocage faut-il consigner ?", "Décision attendue": "Quelle décision doit être prise ?" };
     const textarea = contentField.querySelector("textarea"); contentField.querySelector(".form-field__label").textContent = prompts[typeSelect.value] || "Qu’est-ce qui a changé ?";
