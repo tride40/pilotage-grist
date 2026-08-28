@@ -33,6 +33,9 @@ window.PROJECT_SHEET_DEMO = {
       { id: 12, Nom_complet: "Alex Dubois", Organisme: "Agence Territoires", Fonction: "Paysagiste", Type_interlocuteur: "Partenaire", Actif: true, Est_agent_Sanguinet: false, Est_elu_Sanguinet: false },
     ],
     SERVICES: [{ id: 21, Nom_service: "Aménagement", Actif: true }],
+    JALONS: [{id:701,Projet:1,Jalon:"Valider le plan-guide",Ordre:1,Date_prevue:"2026-10-15",Franchi:false,Date_reelle:null}],
+    BLOCAGES: [{id:702,Projet:1,Blocage:"Accord foncier en attente",Date_apparition:"2026-08-20",Actif:true,Date_resolution:null,Explication_resolution:""}],
+    VIGILANCES: [{id:703,Projet:1,Vigilance:"Maintenir les accès riverains",Date_apparition:"2026-08-22",Active:true,Date_resolution:null,Explication_resolution:""}],
     AVANCEMENTS: [
       { id: 101, Projet: 1, Date_MAJ: "2026-08-24", Cree_le: "2026-08-24T15:30:00", Type_entree: "Avancement", Contenu: "Finalisation de l’étude de capacité et partage du scénario préférentiel.", Entree_parent: 0, Etat_entree: "", Decisionnaire: 0, Saisi_par: 10, Avancement: 70, Travail_realise: "Finalisation de l’étude de capacité et partage du scénario préférentiel.", Prochaine_etape: "Arbitrer le traitement du stationnement.", Date_prochaine_etape: "2026-09-12", Difficulte_blocage: "Insertion paysagère à consolider.", Decision_attendue: "Choix entre stationnement mutualisé et poches réparties." },
       { id: 102, Projet: 1, Date_MAJ: "2026-07-28", Cree_le: "2026-07-28T10:00:00", Type_entree: "Information", Contenu: "Atelier avec les services techniques et les partenaires mobilité.", Entree_parent: 0, Etat_entree: "", Decisionnaire: 0, Saisi_par: 10, Avancement: 0, Travail_realise: "Atelier avec les services techniques et les partenaires mobilité.", Prochaine_etape: "Mettre à jour le plan-guide." },

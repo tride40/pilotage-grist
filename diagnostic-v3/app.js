@@ -7,9 +7,9 @@ const EXPECTED={
   CONSIGNES_POLITIQUES:{Projet:"Ref:PROJETS",Consigne:"Text",Emetteur:"Ref:INTERLOCUTEURS",Destinataires:"RefList:INTERLOCUTEURS",Services_destinataires:"RefList:SERVICES",Statut:{type:"Choice",choices:["Active","Archivée"]},Date_emission:"Date",Date_archivage:"Date",Motif_archivage:"Text"},
   ARBITRAGES_DECISIONS:{Projet:"Ref:PROJETS",Sujet:"Text",Question_a_trancher:"Text",Statut:"Choice",Reunion_origine:"Ref:REUNIONS"},
   REUNIONS:{Projet:"Ref:PROJETS",Date_reunion:"Date",Objet:"Text",Participants:"RefList:INTERLOCUTEURS",Compte_rendu:"Text",Points_cles:"Text"},
-  JALONS:{Projet:"Ref:PROJETS",Jalon:"Text",Ordre:"Int",Date_prevue:"Date",Franchi:"Bool",Reunion_origine:"Ref:REUNIONS"},
-  BLOCAGES:{Projet:"Ref:PROJETS",Blocage:"Text",Date_apparition:"Date",Actif:"Bool",Reunion_origine:"Ref:REUNIONS"},
-  VIGILANCES:{Projet:"Ref:PROJETS",Vigilance:"Text",Date_apparition:"Date",Active:"Bool",Reunion_origine:"Ref:REUNIONS"},
+  JALONS:{Projet:"Ref:PROJETS",Jalon:"Text",Ordre:"Int",Date_prevue:"Date",Franchi:"Bool",Date_reelle:"Date",A_retenir:"Text",Reunion_origine:"Ref:REUNIONS"},
+  BLOCAGES:{Projet:"Ref:PROJETS",Blocage:"Text",Date_apparition:"DateTime",Actif:"Bool",Date_resolution:"DateTime",Explication_resolution:"Text",Reunion_origine:"Ref:REUNIONS"},
+  VIGILANCES:{Projet:"Ref:PROJETS",Vigilance:"Text",Date_apparition:"DateTime",Active:"Bool",Date_resolution:"DateTime",Explication_resolution:"Text",Reunion_origine:"Ref:REUNIONS"},
   ATTENTES_EXTERNES:{Projet:"Ref:PROJETS",Attente:"Text",Date_attendue:"Date",Statut:"Choice",Reunion_origine:"Ref:REUNIONS"},
   RELANCES_ATTENTES:{Attente:"Ref:ATTENTES_EXTERNES",Date_relance:"Date",Commentaire:"Text"},
   REUNIONS_VERSIONS:{Reunion:"Ref:REUNIONS",Numero_version:"Int",Compte_rendu:"Text",Points_cles:"Text",Auteur:"Ref:INTERLOCUTEURS",Date_version:"DateTime",Motif_modification:"Text",Demandeur:"Ref:INTERLOCUTEURS",Approbateur:"Ref:INTERLOCUTEURS",Statut_demande:"Choice"}
