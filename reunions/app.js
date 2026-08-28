@@ -59,4 +59,10 @@ function feedback(m){ui.feedback.textContent=m;ui.feedback.hidden=false;setTimeo
 const peopleValue=v=>referenceIds(v).map(id=>person(id)?personLabel(person(id)):id).join(", "),referenceIds=v=>!hasValue(v)?[]:(Array.isArray(v)?v.flat(3):[v]).filter(x=>x!=="L"&&hasValue(x)).map(String),same=(a,b)=>String(a)===String(b),startToday=()=>{const d=new Date;d.setHours(0,0,0,0);return d.getTime()},isUpcoming=m=>dateValue(m.Date_reunion??m.Date)>=startToday();
 function dateValue(v){if(!hasValue(v))return 0;const d=new Date(typeof v==="number"?v*1000:v);return Number.isNaN(d.getTime())?0:d.getTime()}function formatDate(v){const t=dateValue(v);return t?new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date(t)):""}const inputDate=v=>dateValue(v)?new Date(dateValue(v)).toISOString().slice(0,10):"",hasValue=v=>v!==null&&v!==undefined&&String(v).trim()!=="",displayValue=v=>Array.isArray(v)?v.filter(x=>x!=="L").map(displayValue).join(", "):hasValue(v)?String(v).trim():"",textOr=(v,f)=>hasValue(v)?displayValue(v):f,normalizeText=v=>displayValue(v).toLocaleLowerCase("fr-FR").normalize("NFD").replace(/[\u0300-\u036f]/g,""),isTrue=v=>v===true||v===1||["true","vrai","oui","1"].includes(normalizeText(v)),exactError=e=>e instanceof Error?`${e.name} : ${e.message}`:String(e);
 function statusKind(v){const t=normalizeText(v);return/(fait|realise|termine|valide)/.test(t)?"success":/(retard|bloque|annule)/.test(t)?"danger":/(arbitr|decid)/.test(t)?"arbitration":"info"}function badge(v,k){return textElement("span",v,`badge badge--${k}`)}function option(v,l){const o=element("option");o.value=v;o.textContent=l;return o}function element(tag,cls){const n=document.createElement(tag);if(cls)n.className=cls;return n}function textElement(tag,v,cls){const n=element(tag,cls);n.textContent=displayValue(v);return n}
+const renderMeetingsView = render;
+render = function renderWithProjectReturn() {
+  renderMeetingsView();
+  window.PilotageContext?.configureProjectReturn(document.querySelector("#project-return"), state.project);
+};
+
 initialize();

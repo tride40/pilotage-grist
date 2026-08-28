@@ -42,4 +42,10 @@ function normalizeTableNames(value){const rows=Array.isArray(value)?value:Array.
 /* La démo publique ne peut jamais s’activer dans une iframe Grist. */
 function isDemoMode(){return window.self===window.top&&new URLSearchParams(window.location.search).get("demo")==="1"&&Boolean(window.ACTIONS_DEMO_DATA)}function gristDate(value){return value?Math.floor(new Date(`${value}T00:00:00`).getTime()/1000):null}function nowGrist(){return Math.floor(Date.now()/1000)}function optionalNumber(value){return hasValue(value)?Number(value):null}function startOfToday(){const date=new Date();date.setHours(0,0,0,0);return date.getTime()}function dateValue(value){if(!hasValue(value))return 0;const date=new Date(typeof value==="number"?value*1000:value);return Number.isNaN(date.getTime())?0:date.getTime()}function formatDate(value){const timestamp=dateValue(value);return timestamp?new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"long",year:"numeric"}).format(new Date(timestamp)):""}
 function hasValue(value){return value!==null&&value!==undefined&&String(value).trim()!==""}function displayValue(value){if(Array.isArray(value))return value.filter(item=>item!=="L").map(displayValue).join(", ");return hasValue(value)?String(value).trim():""}function textOr(value,fallback){return hasValue(value)?displayValue(value):fallback}function normalizeText(value){return displayValue(value).toLocaleLowerCase("fr-FR").normalize("NFD").replace(/[\u0300-\u036f]/g,"")}function isTrue(value){return value===true||value===1||["true","vrai","oui","1"].includes(normalizeText(value))}function exactError(error){return error instanceof Error?error.message:String(error)}function element(tag,className){const node=document.createElement(tag);if(className)node.className=className;return node}function textElement(tag,value,className){const node=element(tag,className);node.textContent=displayValue(value);return node}
+const renderActionsView = render;
+render = function renderWithProjectReturn() {
+  renderActionsView();
+  window.PilotageContext?.configureProjectReturn(document.querySelector("#project-return"), state.project);
+};
+
 initialize();

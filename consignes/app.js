@@ -184,4 +184,10 @@ function exactError(error) { return error instanceof Error ? error.message : Str
 function element(tag, className) { const node = document.createElement(tag); if (className) node.className = className; return node; }
 function textElement(tag, value, className) { const node = element(tag, className); node.textContent = displayValue(value); return node; }
 
+const renderInstructionsView = render;
+render = function renderWithProjectReturn() {
+  renderInstructionsView();
+  window.PilotageContext?.configureProjectReturn(document.querySelector("#project-return"), state.project);
+};
+
 initialize();
