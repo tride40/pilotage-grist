@@ -211,7 +211,7 @@ Ne pas configurer `Par` comme Ref:INTERLOCUTEURS : le widget n'envoie actuelleme
 
 ## 11. REUNIONS
 
-Conserver dans cet ordre : `Projet` (Ref:PROJETS), `Date_reunion` (Date), `Heure` (Text), `Objet` (Text), `Lieu` (Text), `Participants` (RefList:INTERLOCUTEURS), `Compte_rendu` (Text), `Points_cles` (Text), `Saisi_par` (Ref:INTERLOCUTEURS, saisie métier facultative), `Cree_le` (DateTime avec initialisation `NOW()` sur les nouveaux enregistrements). `Version_courante` n'est pas nécessaire au code actuel.
+Conserver dans cet ordre : `Projet` (Ref:PROJETS), `Date_reunion` (DateTime, fuseau Europe/Paris), `Objet` (Text), `Lieu` (Text), `Participants` (RefList:INTERLOCUTEURS), `Compte_rendu` (Text), `Points_cles` (Text), `Saisi_par` (Ref:INTERLOCUTEURS, saisie métier facultative), `Cree_le` (DateTime avec initialisation `NOW()` sur les nouveaux enregistrements). `Version_courante` n'est pas nécessaire au code actuel. Le widget saisit directement la date et l'heure dans `Date_reunion`.
 
 Retirer après dépendances : `Type_reunion`, `CR_finalise`, `Decisions_prises`, `Suites`, `Actions`, `Engagements`, `Arbitrage_attendu` et autres champs textuels de conséquences. Les objets créés à partir d'une réunion utilisent un unique `Reunion_origine` (Ref:REUNIONS) ; supprimer les alias `Reunion`/`Origine_reunion` seulement après migration.
 
