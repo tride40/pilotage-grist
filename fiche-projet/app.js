@@ -190,6 +190,12 @@ function isOpenAction(row) {
   return !["termine", "terminee", "cloture", "cloturee", "annule", "annulee"].includes(normalizeText(row.Statut));
 }
 
+function isActionAwaitingControl(row) {
+  const status = normalizeText(row.Statut);
+  const completed = Boolean(dateValue(row.Date_realisation)) || ["realisee", "terminee", "controle", "validee"].some((value) => status.includes(value));
+  return completed && (isTrue(row.A_controler) || (isTrue(row.Controle_requis) && !isTrue(row.Controle_effectue)) || status.includes("controler"));
+}
+
 function sortByDate(rows, fields) {
   return [...rows].sort((a, b) => dateValue(firstField(b, fields)) - dateValue(firstField(a, fields)));
 }
@@ -422,7 +428,7 @@ function renderActions(rows) {
   renderCollection(ui.actions, rows, "Aucune action ouverte.", (row) => {
     const card = makeItemCard(textOr(row.Action, "Action"), row.Echeance);
     if (isTrue(row.En_retard)) card.root.classList.add("item-card--danger");
-    appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)], [row.Priorite, "warning"], [isTrue(row.En_retard) ? "En retard" : "", "danger"], [isTrue(row.A_controler) ? "À contrôler" : "", "warning"]]);
+    appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)], [row.Priorite, "warning"], [isTrue(row.En_retard) ? "En retard" : "", "danger"], [isActionAwaitingControl(row) ? "À contrôler" : "", "warning"]]);
     appendFields(card.body, [["Responsable", personValue(row.Responsable)]]);
     return card.root;
   });
