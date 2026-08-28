@@ -9,5 +9,6 @@
   const isActionClosed=action=>["realisee","non aboutie"].includes(text(action?.Statut));
   function actionErrors(action){return text(action?.Statut)==="non aboutie"&&!has(action?.Raison_non_aboutie??action?.Commentaire)?["La raison est obligatoire pour une action non aboutie."]:[]}
   function instructionErrors(instruction){const people=Array.isArray(instruction?.Destinataires)?instruction.Destinataires.filter(value=>value!=="L"&&has(value)):has(instruction?.Destinataires)?[instruction.Destinataires]:[],services=Array.isArray(instruction?.Services_destinataires)?instruction.Services_destinataires.filter(value=>value!=="L"&&has(value)):has(instruction?.Services_destinataires)?[instruction.Services_destinataires]:[];return people.length||services.length?[]:["Choisissez au moins une personne ou un service destinataire."]}
-  return{normalize:text,projectErrors,projectJournalChanges,isProjectActive,isActionClosed,actionErrors,instructionErrors};
+  function personErrors(person){const errors=[],internal=person?.Interne_Mairie??person?.Interne_Sanguinet;if(internal&&!has(person?.Role_interne))errors.push("Choisissez le rôle interne : Agent ou Élu.");if(!internal&&!has(person?.Organisme))errors.push("Renseignez l’organisme de l’interlocuteur externe.");return errors}
+  return{normalize:text,projectErrors,projectJournalChanges,isProjectActive,isActionClosed,actionErrors,instructionErrors,personErrors};
 });
