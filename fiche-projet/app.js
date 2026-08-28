@@ -16,7 +16,7 @@ const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance 
 const DECISION_OPEN_STATUSES = new Set(["a preparer", "a decider", "reportee"]);
 const DECISION_CLOSED_STATUSES = new Set(["decidee", "decide", "sans suite"]);
 const DECISION_STATUS_FALLBACKS = ["À préparer", "À décider", "Reportée", "Décidée", "Sans suite"];
-const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
+const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, decisionTransitionRow: null, decisionTransitionStatus: "", journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -33,7 +33,7 @@ const ui = {
   meetings: document.querySelector("#meetings-list"),
   actions: document.querySelector("#actions-list"),
   arbitrations: document.querySelector("#arbitrations-list"),
-  decisionButton: document.querySelector("#add-decision"), decisionDialog: document.querySelector("#decision-dialog"), decisionForm: document.querySelector("#decision-form"), decisionFields: document.querySelector("#decision-fields"),
+  decisionButton: document.querySelector("#add-decision"), decisionDialog: document.querySelector("#decision-dialog"), decisionForm: document.querySelector("#decision-form"), decisionFields: document.querySelector("#decision-fields"), transitionDialog: document.querySelector("#decision-transition-dialog"), transitionForm: document.querySelector("#decision-transition-form"), transitionTitle: document.querySelector("#decision-transition-title"), transitionSubject: document.querySelector("#decision-transition-subject"), transitionLabel: document.querySelector("#decision-transition-label"),
   contacts: document.querySelector("#contacts-list"),
   selector: document.querySelector("#project-selector"), editButton: document.querySelector("#edit-project"), trackingButton: document.querySelector("#update-tracking"),
   editDialog: document.querySelector("#edit-dialog"), editForm: document.querySelector("#edit-form"), editFields: document.querySelector("#edit-fields"),
@@ -459,16 +459,22 @@ function renderArbitrations(rows) {
 }
 function isOpenDecision(row) { const status = normalizeText(row.Statut); return DECISION_OPEN_STATUSES.has(status) || (!DECISION_CLOSED_STATUSES.has(status) && !isTrue(row.Transmis)); }
 function decisionWorkflowButton(label, kind, handler) { const button = textElement("button", label, `button button--${kind}`); button.type = "button"; button.addEventListener("click", () => Promise.resolve(handler()).catch((error) => showFeedback(`Mise à jour impossible — ${exactError(error)}`))); return button; }
-async function transitionDecision(row, status) {
-  const reason = window.prompt(status === "Reportée" ? "Motif du report :" : "Motif du classement sans suite :", "");
-  if (reason === null) return;
-  if (!reason.trim()) throw new Error("Un motif est nécessaire pour préserver l’historique de la décision.");
+function transitionDecision(row, status) {
+  appState.decisionTransitionRow = row; appState.decisionTransitionStatus = status; ui.transitionForm.reset();
+  ui.transitionTitle.textContent = status === "Reportée" ? "Reporter la décision" : "Classer la décision sans suite";
+  ui.transitionLabel.textContent = status === "Reportée" ? "Motif du report *" : "Motif du classement sans suite *";
+  ui.transitionSubject.textContent = textOr(row.Sujet, "Décision"); ui.transitionDialog.querySelector(".form-message").textContent = ""; ui.transitionDialog.showModal(); ui.transitionForm.elements.Motif.focus();
+}
+async function saveDecisionTransition(event) {
+  event.preventDefault(); const row = appState.decisionTransitionRow, status = appState.decisionTransitionStatus, reason = ui.transitionForm.elements.Motif.value.trim();
+  if (!row || !status || !reason) return;
   const timestamp = new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(new Date());
-  const entry = `${timestamp} — ${status} — ${reason.trim()}`;
+  const entry = `${timestamp} — ${status} — ${reason}`;
   const values = { Statut: status };
-  if (decisionHasColumn("Motif_report") && status === "Reportée") values.Motif_report = reason.trim();
+  if (decisionHasColumn("Motif_report") && status === "Reportée") values.Motif_report = reason;
   if (decisionHasColumn("Historique_evolution")) values.Historique_evolution = [displayValue(row.Historique_evolution), entry].filter(Boolean).join("\n");
-  await writeChanges(ui.decisionDialog, [["UpdateRecord", "ARBITRAGES_DECISIONS", row.id, values]], `Décision ${status.toLocaleLowerCase("fr-FR")}.`);
+  await writeChanges(ui.transitionDialog, [["UpdateRecord", "ARBITRAGES_DECISIONS", row.id, values]], `Décision ${status.toLocaleLowerCase("fr-FR")}.`);
+  appState.decisionTransitionRow = null; appState.decisionTransitionStatus = "";
 }
 
 function renderTimeline(events) {
@@ -567,7 +573,7 @@ function bindEditing() {
   document.querySelector("#add-journal-inline").addEventListener("click", () => openJournalForm());
   ui.decisionButton.addEventListener("click", () => openDecisionForm());
   document.querySelectorAll("dialog [data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
-  ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.decisionForm.addEventListener("submit", saveDecision); ui.deleteForm.addEventListener("submit", deleteJournal);
+  ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.decisionForm.addEventListener("submit", saveDecision); ui.transitionForm.addEventListener("submit", saveDecisionTransition); ui.deleteForm.addEventListener("submit", deleteJournal);
   ui.journalSearch.addEventListener("input", () => { appState.journalSearch = ui.journalSearch.value; renderWhenReady(); });
   ui.journalTypeFilter.addEventListener("change", () => { appState.journalTypeFilter = ui.journalTypeFilter.value; renderWhenReady(); });
   ui.journalStateFilter.addEventListener("change", () => { appState.journalStateFilter = ui.journalStateFilter.value; renderWhenReady(); });
