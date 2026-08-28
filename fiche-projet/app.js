@@ -1,9 +1,10 @@
 "use strict";
 
-const RELATED_TABLES = [
+const REQUIRED_RELATED_TABLES = [
   "PROJETS", "INTERLOCUTEURS", "REUNIONS", "ACTIONS", "CONSIGNES_POLITIQUES",
   "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
+const OPTIONAL_RELATED_TABLES = ["SERVICES", "JALONS", "BLOCAGES", "VIGILANCES", "ATTENTES_EXTERNES", "RELANCES_ATTENTES", "REUNIONS_VERSIONS"];
 
 const PROJECT_CHOICE_FIELDS = ["Thematiques", "Statut"];
 const PROJECT_CHOICE_FALLBACKS = {
@@ -15,7 +16,7 @@ const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance 
 const DECISION_OPEN_STATUSES = new Set(["a preparer", "a decider", "reportee"]);
 const DECISION_CLOSED_STATUSES = new Set(["decidee", "decide", "sans suite"]);
 const DECISION_STATUS_FALLBACKS = ["À préparer", "À décider", "Reportée", "Décidée", "Sans suite"];
-const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, decisionTransitionRow: null, decisionTransitionStatus: "", journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
+const appState = { selectedProject: null, tables: null, tableNames: [], metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, decisionTransitionRow: null, decisionTransitionStatus: "", journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -71,7 +72,10 @@ async function initialize() {
 }
 
 async function fetchRelatedTables() {
-  const entries = await Promise.all(RELATED_TABLES.map(async (tableName) => {
+  const listed=await window.grist.docApi.listTables(),available=(Array.isArray(listed)?listed:(listed?.tables||[])).map(row=>typeof row==="string"?row:row?.id??row?.tableId??row?.name??"").filter(Boolean),missing=REQUIRED_RELATED_TABLES.filter(name=>!available.includes(name));
+  if(missing.length)throw new Error(`Tables Grist introuvables : ${missing.join(", ")}.`);
+  appState.tableNames=available;const names=[...REQUIRED_RELATED_TABLES,...OPTIONAL_RELATED_TABLES.filter(name=>available.includes(name))];
+  const entries = await Promise.all(names.map(async (tableName) => {
     const columns = await window.grist.docApi.fetchTable(tableName);
     return [tableName, columnarToRecords(columns)];
   }));
@@ -298,13 +302,17 @@ function renderObjective(project) {
 function renderProgress(project) {
   ui.progress.replaceChildren();
   const heading = element("div", "progress-card__heading");
-  heading.append(textElement("h2", "Calendrier"));
+  heading.append(textElement("h2", "Situation actuelle"));
   ui.progress.append(heading);
   const details = element("dl", "summary-details");
   appendDefinition(details, "Lancement", [project.Mois_lancement, project.Annee_lancement].filter(hasValue).join(" "));
   appendDefinition(details, "Objectif de réalisation", [project.Trimestre_objectif, project.Annee_objectif].filter(hasValue).join(" "));
+  const linked=(table)=>((appState.tables?.[table]||[]).filter(row=>isLinkedToProject(row,project.id))),active=(table,field)=>linked(table).filter(row=>!(field in row)||isTrue(row[field]));
+  const blockages=active("BLOCAGES","Actif"),vigilances=active("VIGILANCES","Active"),expectations=linked("ATTENTES_EXTERNES").filter(row=>!["recue","sans suite"].includes(normalizeText(row.Statut))),milestones=linked("JALONS").filter(row=>!isTrue(row.Franchi));
+  appendDefinition(details,"Blocages actifs",blockages.length?String(blockages.length):"");appendDefinition(details,"Vigilances actives",vigilances.length?String(vigilances.length):"");appendDefinition(details,"Attentes externes",expectations.length?String(expectations.length):"");appendDefinition(details,"Jalons à venir",milestones.length?String(milestones.length):"");
   appendDefinition(details, "Dernière mise à jour", formatDate(project.Derniere_MAJ));
   if (details.children.length) ui.progress.append(details);
+  const alerts=[...blockages.slice(0,3).map(row=>["Blocage",row.Blocage,"danger"]),...vigilances.slice(0,3).map(row=>["Vigilance",row.Vigilance,"warning"])];if(alerts.length){const list=element("div","situation-list");alerts.forEach(([label,value,tone])=>{const item=element("div",`alert alert--${tone}`);item.append(textElement("strong",label),textElement("span",value));list.append(item)});ui.progress.append(list)}
   ui.progress.classList.remove("progress-card--next-step");
 }
 function currentNextSteps(projectId) {
