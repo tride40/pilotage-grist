@@ -1,6 +1,6 @@
 "use strict";
 const EXPECTED={
-  PROJETS:{Nom_projet:"Text",Statut:{type:"Choice",choices:["À venir","En cours","Terminé","Abandonné"]},Thematiques:"ChoiceList",Services_concernes:"RefList:SERVICES",Elu_pilote:"Ref:INTERLOCUTEURS",Agent_pilote:"Ref:INTERLOCUTEURS",Elus_associes:"RefList:INTERLOCUTEURS",Agents_associes:"RefList:INTERLOCUTEURS",Interlocuteurs_externes:"RefList:INTERLOCUTEURS",Mois_lancement:"Choice",Annee_lancement:"Int",Trimestre_objectif:"Choice",Annee_objectif:"Int",Motif_abandon:"Text"},
+  PROJETS:{Nom_projet:"Text",Statut:{type:"Choice",choices:["À venir","En cours","Terminé","Abandonné"]},Thematiques:"ChoiceList",Services_concernes:"RefList:SERVICES",Elu_pilote:"Ref:INTERLOCUTEURS",Agent_pilote:"Ref:INTERLOCUTEURS",Elus_associes:"RefList:INTERLOCUTEURS",Agents_associes:"RefList:INTERLOCUTEURS",Interlocuteurs_externes:"RefList:INTERLOCUTEURS",Mois_lancement:"Choice",Annee_lancement:"Int",Trimestre_objectif:"Choice",Annee_objectif:"Int",Motif_abandon:"Text",Date_cloture:"DateTime"},
   INTERLOCUTEURS:{Nom_complet:"Text",Interne_Mairie:"Bool",Role_interne:"Choice",Actif:"Bool"},
   SERVICES:{Nom_service:"Text",Actif:"Bool"},
   ACTIONS:{Projet:"Ref:PROJETS",Action:"Text",Statut:{type:"Choice",choices:["À attribuer","À faire","En cours","Réalisée","Non aboutie"]},Demandee_par:"Ref:INTERLOCUTEURS",Attribuee_a:"Ref:INTERLOCUTEURS",Service_destinataire:"Ref:SERVICES",Echeance:"Date",Date_fin:"Date",Resultat:"Text",Raison_non_aboutie:"Text",Reunion_origine:"Ref:REUNIONS"},
