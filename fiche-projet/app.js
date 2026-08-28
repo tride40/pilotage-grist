@@ -203,12 +203,12 @@ function sortByDate(rows, fields) {
   return [...rows].sort((a, b) => dateValue(firstField(b, fields)) - dateValue(firstField(a, fields)));
 }
 function sortJournalRows(rows) {
-  return [...rows].sort((a, b) => dateValue(firstField(b, ["Date_MAJ", "Date"])) - dateValue(firstField(a, ["Date_MAJ", "Date"])) || dateValue(b.Cree_le) - dateValue(a.Cree_le) || (Number(b.id) || 0) - (Number(a.id) || 0));
+  return [...rows].sort((a, b) => dateValue(firstField(b, ["Date_evenement", "Date_MAJ", "Date"])) - dateValue(firstField(a, ["Date_evenement", "Date_MAJ", "Date"])) || dateValue(b.Cree_le) - dateValue(a.Cree_le) || (Number(b.id) || 0) - (Number(a.id) || 0));
 }
 
 function buildTimeline(updates, meetings, instructions, arbitrations) {
   const events = [
-    ...updates.map((row) => timelineEvent("Avancement", row.Date_MAJ, row.Travail_realise || row.Prochaine_etape)),
+    ...updates.map((row) => timelineEvent(journalType(row)||"Journal", row.Date_evenement||row.Date_MAJ, journalContent(row))),
     ...meetings.map((row) => timelineEvent("Réunion", row.Date_reunion, row.Objet || row.Points_cles)),
     ...instructions.map((row) => timelineEvent("Consigne politique", row.Date_MAJ || row.Echeance, row.Consigne)),
     ...arbitrations.map((row) => timelineEvent("Décision", row.Date_MAJ || row.Echeance_decision, row.Sujet || row.Question_a_trancher)),
@@ -352,7 +352,7 @@ function renderUpdates(rows) {
   renderCollection(ui.updates, displayed, rows.length ? "Aucune entrée ne correspond à ces filtres." : "Le journal est vide. Ajoutez le premier changement de ce projet.", (row) => {
     const content = journalContent(row);
     const type = journalType(row);
-    const card = makeItemCard(type, row.Date_MAJ || row.Date, journalDateLabel(row));
+    const card = makeItemCard(textOr(row.Titre,type), row.Date_evenement || row.Date_MAJ || row.Date, journalDateLabel(row));
     card.root.classList.add("journal-card");
     card.root.dataset.kind = journalKind(type);
     appendBadges(card.meta, [[journalEntryState(row, rows), journalEntryState(row, rows) === "Résolu" ? "success" : "info"]]);
@@ -384,8 +384,8 @@ function fillJournalTypeFilter(rows) {
 
 function journalType(row) { return textOr(row.Type_entree || row.Type, inferJournalType(row)); }
 function inferJournalType(row) { if (hasValue(row.Decision_attendue)) return "Décision attendue"; if (hasValue(row.Difficulte_blocage)) return "Blocage"; if (hasValue(row.Point_vigilance)) return "Vigilance"; if (hasValue(row.Avancement)) return "Avancement"; return "Information"; }
-function journalContent(row) { return firstField(row, ["Contenu", "Fait_marquant", "Travail_realise", "Commentaire", "Prochaine_etape", "Difficulte_blocage", "Decision_attendue", "Point_vigilance"]); }
-function journalDateLabel(row) { const date = formatDate(row.Date_MAJ || row.Date); const time = formatTime(row.Cree_le); return [date, time].filter(Boolean).join(" · "); }
+function journalContent(row) { return firstField(row, ["Description", "Contenu", "Fait_marquant", "Travail_realise", "Commentaire", "Prochaine_etape", "Difficulte_blocage", "Decision_attendue", "Point_vigilance"]); }
+function journalDateLabel(row) { const date = formatDate(row.Date_evenement || row.Date_MAJ || row.Date); const time = formatTime(row.Date_evenement || row.Cree_le); return [date, time].filter(Boolean).join(" · "); }
 function journalKind(type) { const value = normalizeText(type); if (["deblocage", "vigilance levee", "decision prise", "etape franchie"].includes(value)) return "success"; if (value.includes("blocage")) return "danger"; if (value.includes("vigilance")) return "warning"; if (value.includes("decision")) return "arbitration"; if (value.includes("etape")) return "info"; return "info"; }
 function journalEntryState(row, rows) {
   if (!JOURNAL_RESOLUTION_TYPES[journalType(row)] && journalType(row) !== "Prochaine étape") return "";
@@ -602,7 +602,8 @@ function projectChoiceValues(field) { const metadata = appState.metadata?.choice
 function formField(name,label,type,value){const wrapper=element("label",`form-field${type==="textarea"||type==="choicelist"?" form-field--wide":""}`);wrapper.append(textElement("span",label,"form-field__label"));let control;if(type==="textarea"){control=document.createElement("textarea");control.rows=3;}else if(type==="choice"||type==="choicelist"){control=document.createElement("select");const values=projectChoiceValues(name);if(type==="choice")control.append(option("","Non renseigné"));control.append(...values.map((item)=>option(item,item)));if(type==="choicelist"){control.multiple=true;control.size=Math.min(6,values.length);const selected=new Set(referenceIds(value));[...control.options].forEach(item=>{item.selected=selected.has(item.value)})}}else if(["agent","elu"].includes(type)){control=document.createElement("select");const flag=type==="agent"?"Est_agent_Sanguinet":"Est_elu_Sanguinet";const role=type==="agent"?"agent":"elu",people=(appState.tables.INTERLOCUTEURS||[]).filter((person)=>isTrue(person[flag])||normalizeText(person.Role_interne)===role);control.append(option("","Non renseigné"),...people.map((p)=>option(p.id,textOr(p.Nom_complet,`Interlocuteur ${p.id}`))));}else{control=document.createElement("input");control.type=type;if(type==="number"){control.min=2000;control.max=2200;}}control.className="form-field__control";control.name=name;if(type!=="choicelist")control.value=type==="date"?dateInputValue(value):displayValue(value);wrapper.append(control);return wrapper;}
 function dateInputValue(value){if(!hasValue(value))return "";const d=new Date(typeof value==="number"?value*1000:value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10);}
 function valuesFromForm(form, allowed){const data=new FormData(form),values={};for(const [name,raw] of data.entries()){if(!allowed.includes(name)||name==="Thematiques")continue;if(["Responsable","Agent_pilote","Elu_pilote"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else if(["Annee_lancement","Annee_objectif"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else values[name]=String(raw).trim();}if(allowed.includes("Thematiques"))values.Thematiques=["L",...data.getAll("Thematiques").filter(hasValue)];return values;}
-async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn),values=valuesFromForm(ui.editForm,allowed),next={...appState.selectedProject,...values},message=ui.editDialog.querySelector(".form-message"),errors=window.PilotageV3Rules?.projectErrors(next)||[];if(errors.length){message.textContent=errors[0];return}await writeChanges(ui.editDialog,[["UpdateRecord","PROJETS",appState.selectedProject.id,values]],"Projet mis à jour.");}
+async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn),values=valuesFromForm(ui.editForm,allowed),next={...appState.selectedProject,...values},message=ui.editDialog.querySelector(".form-message"),errors=window.PilotageV3Rules?.projectErrors(next)||[],changes=window.PilotageV3Rules?.projectJournalChanges(appState.selectedProject,next)||[];if(errors.length){message.textContent=errors[0];return}try{const actions=[["UpdateRecord","PROJETS",appState.selectedProject.id,values]];if(changes.length){const schema=journalSchema(),now=Math.floor(Date.now()/1000);for(const change of changes)actions.push(["AddRecord","AVANCEMENTS",null,automaticJournalValues(schema,change,appState.selectedProject,next,now)])}await writeChanges(ui.editDialog,actions,changes.length?"Projet mis à jour et changement tracé dans le Journal.":"Projet mis à jour.")}catch(error){message.textContent=`Modification impossible — ${exactError(error)}`}}
+function automaticJournalValues(schema,change,before,after,now){const labels={Elu_pilote:"Élu pilote",Agent_pilote:"Agent pilote",Trimestre_objectif:"Trimestre objectif",Annee_objectif:"Année objectif"},value=(field,project)=>["Elu_pilote","Agent_pilote"].includes(field)?personValue(project[field]??(field==="Agent_pilote"?project.Responsable:null)):textOr(project[field],"non renseigné"),details=change.fields.map(field=>`${labels[field]} : ${value(field,before)} → ${value(field,after)}`).join(" ; "),row={[schema.project]:before.id,[schema.date]:now,[schema.type]:change.type,[schema.content]:details};if(schema.title)row[schema.title]=change.type;if(schema.createdAt)row[schema.createdAt]=now;if(schema.automatic)row[schema.automatic]=true;return row}
 
 const DECISION_FIELDS = [
   ["Sujet", "Sujet", "text"], ["Contexte", "Contexte", "textarea"], ["Question_a_trancher", "Question à trancher", "textarea"],
@@ -730,22 +731,24 @@ function journalSchema() {
   const schema = {
     writable,
     project: namedProject || (projectRefs.length === 1 ? projectRefs[0].colId : null),
-    date: namedDate || (dateColumns.length === 1 ? dateColumns[0].colId : null),
+    date: pick("Date_evenement") || namedDate || (dateColumns.length === 1 ? dateColumns[0].colId : null),
     type: pick("Type_entree", "Type"),
-    content: pick("Contenu", "Fait_marquant", "Travail_realise", "Commentaire"),
+    content: pick("Description", "Contenu", "Fait_marquant", "Travail_realise", "Commentaire"),
+    title: pick("Titre"),
     parent: pick("Entree_parent"),
     state: pick("Etat_entree"),
     decisionMaker: pick("Decisionnaire"),
     createdAt: pick("Cree_le"),
+    automatic: pick("Automatique"),
   };
   if (!schema.project) {
     const refs = details ? [...details.values()].filter((column) => String(column.type || "").startsWith("Ref")).map((column) => `${column.colId} (${column.type}${isWritableColumn(column) ? ", éditable" : ", calculée"})`) : [];
     throw new Error(`AVANCEMENTS : aucune référence éditable unique vers PROJETS détectée${refs.length ? `. Références trouvées : ${refs.join(", ")}` : ". Aucune colonne Ref trouvée dans les métadonnées"}.`);
   }
-  if (!schema.date) throw new Error(`AVANCEMENTS : aucune date éditable reconnue${dateColumns.length > 1 ? `. Dates trouvées : ${dateColumns.map((column) => column.colId).join(", ")}` : " (attendu : Date_MAJ)"}.`);
+  if (!schema.date) throw new Error(`AVANCEMENTS : aucune date éditable reconnue${dateColumns.length > 1 ? `. Dates trouvées : ${dateColumns.map((column) => column.colId).join(", ")}` : " (attendu : Date_evenement)"}.`);
   if (!schema.type) throw new Error("AVANCEMENTS : créez la colonne éditable Type_entree (Choix) pour utiliser le journal métier.");
   if (!schema.content) throw new Error("AVANCEMENTS : aucune colonne de contenu éditable reconnue. Créez Contenu (Texte).");
-  if (!schema.createdAt) throw new Error("AVANCEMENTS : créez la colonne éditable Cree_le (Date et heure) pour garantir l’ordre chronologique.");
+  if (!schema.createdAt && !schema.date) throw new Error("AVANCEMENTS : créez Date_evenement ou Cree_le pour garantir l’ordre chronologique.");
   return schema;
 }
 async function saveJournal(event) {
@@ -765,7 +768,7 @@ async function saveJournal(event) {
       await writeChanges(ui.trackingDialog, [["UpdateRecord", "AVANCEMENTS", appState.editingJournalId, { [schema.date]: entryDate, [schema.content]: content }]], "Entrée du journal modifiée."); return;
     }
     const createdAt = Math.floor(Date.now() / 1000);
-    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: content, [schema.type]: type, [schema.createdAt]: createdAt };
+    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: content, [schema.type]: type }; if(schema.createdAt)values[schema.createdAt]=createdAt;
     if (type === "Vigilance" && schema.writable.has("Point_vigilance")) values.Point_vigilance = content;
     if (type === "Blocage" && schema.writable.has("Difficulte_blocage")) values.Difficulte_blocage = content;
     if (type === "Décision attendue" && schema.writable.has("Decision_attendue")) values.Decision_attendue = content;
@@ -788,7 +791,7 @@ async function saveJournal(event) {
     if (type === "Prochaine étape") {
       const legacy = legacyNextStep(appState.selectedProject, (appState.tables.AVANCEMENTS || []).filter((row) => isLinkedToProject(row, appState.selectedProject.id) && journalType(row) === "Prochaine étape"));
       if (legacy) {
-        const migrated = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: legacy.Contenu, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert", [schema.createdAt]: createdAt - 1 };
+        const migrated = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: legacy.Contenu, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert" }; if(schema.createdAt)migrated[schema.createdAt]=createdAt-1;
         if (hasValue(legacy.Date_prochaine_etape)) migrated.Date_prochaine_etape = legacy.Date_prochaine_etape;
         actions.unshift(["AddRecord", "AVANCEMENTS", null, migrated]);
       }
@@ -809,7 +812,7 @@ async function saveJournal(event) {
         if (newStep || hasValue(newStepDate)) {
           if (!newStep || !hasValue(newStepDate)) throw new Error("Pour ajouter une étape suivante, renseignez son texte et sa date.");
           if (!schema.writable.has("Date_prochaine_etape")) throw new Error("AVANCEMENTS.Date_prochaine_etape doit être éditable pour ajouter une étape suivante.");
-          const nextValues = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: newStep, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert", [schema.createdAt]: createdAt, Date_prochaine_etape: new Date(`${newStepDate}T00:00:00`).getTime() / 1000 };
+          const nextValues = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: newStep, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert", Date_prochaine_etape: new Date(`${newStepDate}T00:00:00`).getTime() / 1000 }; if(schema.createdAt)nextValues[schema.createdAt]=createdAt;
           actions.push(["AddRecord", "AVANCEMENTS", null, nextValues]); remaining.push({ Contenu: newStep, Date_prochaine_etape: nextValues.Date_prochaine_etape });
         }
         const earliest = remaining.sort((a, b) => dateValue(a.Date_prochaine_etape) - dateValue(b.Date_prochaine_etape))[0];
