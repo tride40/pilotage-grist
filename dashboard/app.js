@@ -5,6 +5,7 @@ const TABLE_NAMES = [
   "PROJETS", "INTERLOCUTEURS", "REUNIONS", "ACTIONS",
   "CONSIGNES_POLITIQUES", "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
+const OPTIONAL_TABLE_NAMES = ["BLOCAGES", "VIGILANCES"];
 
 const PROJECT_CHOICE_FIELDS = ["Thematiques", "Statut"];
 const PROJECT_FORM_FIELDS = [
@@ -54,7 +55,7 @@ async function initializeGristConnection() {
 }
 
 async function fetchDocumentData(tableNames) {
-  const requestedTables = TABLE_NAMES.filter((tableName) => tableNames.includes(tableName));
+  const requestedTables = [...TABLE_NAMES, ...OPTIONAL_TABLE_NAMES].filter((tableName) => tableNames.includes(tableName));
   const tables = await Promise.all(requestedTables.map(async (tableName) => {
     const columns = await window.grist.docApi.fetchTable(tableName);
     return [tableName, columnarToRecords(columns)];
@@ -153,10 +154,10 @@ function referenceIds(value) {
 function calculateKpis(tables, projects) {
   return [
     { key: "active", label: "Projets actifs", value: projects.length },
-    { key: "arbitration", label: "Décisions à prendre", value: tables.ARBITRAGES_DECISIONS.filter((row) => ["a preparer", "a decider", "reportee"].includes(normalizeText(row.Statut))).length },
+    { key: "arbitration", label: "Décisions à prendre", value: tables.ARBITRAGES_DECISIONS.filter(isOpenDecision).length },
     { key: "late", label: "Actions en retard", value: tables.ACTIONS.filter((row) => isTrue(row.En_retard)).length },
     { key: "check", label: "Consignes à contrôler", value: tables.CONSIGNES_POLITIQUES.filter((row) => isTrue(row.A_controler)).length },
-    { key: "watch", label: "Projets à surveiller", value: tables.PROJETS.filter(isProjectToWatch).length },
+    { key: "watch", label: "Projets à surveiller", value: projects.filter(isProjectToWatch).length },
   ];
 }
 
@@ -170,17 +171,36 @@ function buildProjectMetrics(tables) {
   });
   tables.ARBITRAGES_DECISIONS.forEach((row) => {
     const item = getMetricForLinkedProject(metrics, row);
-    if (item && ["a preparer", "a decider", "reportee"].includes(normalizeText(row.Statut))) item.arbitrations += 1;
+    if (item && isOpenDecision(row)) item.arbitrations += 1;
   });
   tables.CONSIGNES_POLITIQUES.forEach((row) => {
     const item = getMetricForLinkedProject(metrics, row);
     if (item && isTrue(row.A_controler)) item.instructions += 1;
   });
+  (tables.BLOCAGES || []).filter(isOpenPilotageObject).forEach((row) => {
+    const item = getMetricForLinkedProject(metrics, row);
+    if (item) item.blockages += 1;
+  });
+  (tables.VIGILANCES || []).filter(isOpenPilotageObject).forEach((row) => {
+    const item = getMetricForLinkedProject(metrics, row);
+    if (item) item.vigilances += 1;
+  });
   return metrics;
 }
 
 function emptyMetrics() {
-  return { openActions: 0, lateActions: 0, arbitrations: 0, instructions: 0 };
+  return { openActions: 0, lateActions: 0, arbitrations: 0, instructions: 0, blockages: 0, vigilances: 0 };
+}
+
+function isOpenPilotageObject(row) {
+  return !hasValue(row.Date_resolution || row.Date_levee)
+    && !["leve", "levee", "resolu", "resolue", "clos", "close", "archive", "archivee"].includes(normalizeText(row.Statut));
+}
+
+function isOpenDecision(row) {
+  const status = normalizeText(row.Statut);
+  return ["demandee", "en instruction", "a preparer", "a decider", "reportee"].includes(status)
+    || (!["prise", "sans suite", "decidee", "decide"].includes(status) && !isTrue(row.Transmis));
 }
 
 function getMetricForLinkedProject(metrics, row) {
@@ -203,7 +223,7 @@ function isActiveProject(project) {
 }
 
 function isProjectToWatch(project) {
-  return hasValue(project.Point_vigilance) || normalizeText(project.Statut) === "bloque";
+  return project.metrics.blockages > 0 || project.metrics.vigilances > 0;
 }
 
 function isOpenAction(action) {
@@ -218,18 +238,12 @@ function getFilteredProjects() {
     const matchesSearch = normalizeText(project.Nom_projet).includes(normalizeText(state.search));
     const matchesFilter = {
       all: true,
-      priority: isPriority(project.Priorite),
       watch: isProjectToWatch(project),
       arbitration: project.metrics.arbitrations > 0,
       late: project.metrics.lateActions > 0,
     }[state.activeFilter];
     return matchesSearch && Boolean(matchesFilter);
   });
-}
-
-function isPriority(value) {
-  if (isTrue(value)) return true;
-  return ["haute", "elevee", "prioritaire", "urgent", "urgente", "critique"].includes(normalizeText(value));
 }
 
 function bindFilters() {
@@ -299,11 +313,9 @@ function createProjectCard(project) {
   card.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openProject(project); }
   });
-  setOptionalText(card.querySelector(".project-card__category"), project.Categorie);
+  setOptionalText(card.querySelector(".project-card__category"), project.Thematiques);
   renderBadges(card.querySelector(".project-card__badges"), project);
-  renderProgress(card.querySelector(".project-card__progress"), project.Avancement);
   renderDetails(card.querySelector(".project-card__details"), project);
-  renderVigilance(card.querySelector(".project-card__vigilance"), project.Point_vigilance);
   renderMetrics(card.querySelector(".project-card__footer"), project.metrics);
   return card;
 }
@@ -319,31 +331,6 @@ function renderBadges(container, project) {
     container.append(badge);
   });
   if (badges.length === 0) container.remove();
-}
-
-function renderProgress(container, rawValue) {
-  const percentage = parseProgress(rawValue);
-  if (percentage === null) return container.remove();
-  const heading = document.createElement("div");
-  heading.className = "progress-heading";
-  const label = document.createElement("span");
-  const value = document.createElement("strong");
-  label.textContent = "Avancement";
-  value.textContent = `${percentage} %`;
-  heading.append(label, value);
-  const progress = document.createElement("div");
-  progress.className = "progress";
-  progress.setAttribute("role", "progressbar");
-  progress.setAttribute("aria-label", `Avancement de ${percentage} %`);
-  progress.setAttribute("aria-valuemin", "0");
-  progress.setAttribute("aria-valuemax", "100");
-  progress.setAttribute("aria-valuenow", String(percentage));
-  const bar = document.createElement("span");
-  bar.className = "progress__bar";
-  bar.style.width = `${percentage}%`;
-  bar.dataset.level = percentage >= 100 ? "complete" : percentage >= 60 ? "good" : percentage >= 30 ? "medium" : "start";
-  progress.append(bar);
-  container.append(heading, progress);
 }
 
 function renderDetails(container, project) {
@@ -364,22 +351,14 @@ function renderDetails(container, project) {
   if (details.length === 0) container.remove();
 }
 
-function renderVigilance(container, value) {
-  if (!hasValue(value)) return;
-  const label = document.createElement("strong");
-  const content = document.createElement("span");
-  label.textContent = "Point de vigilance";
-  content.textContent = displayValue(value);
-  container.append(label, content);
-  container.hidden = false;
-}
-
 function renderMetrics(container, metrics) {
   const items = [
     [metrics.openActions, "action ouverte", "actions ouvertes", "info"],
     [metrics.lateActions, "action en retard", "actions en retard", "danger"],
     [metrics.arbitrations, "décision à prendre", "décisions à prendre", "arbitration"],
     [metrics.instructions, "consigne à contrôler", "consignes à contrôler", "warning"],
+    [metrics.blockages, "blocage ouvert", "blocages ouverts", "danger"],
+    [metrics.vigilances, "vigilance ouverte", "vigilances ouvertes", "warning"],
   ].filter(([count]) => count > 0);
   items.forEach(([count, singular, plural, kind]) => {
     const item = document.createElement("span");
@@ -428,14 +407,6 @@ function textOr(value, fallback) {
 function setOptionalText(element, value) {
   if (hasValue(value)) element.textContent = displayValue(value);
   else element.remove();
-}
-
-function parseProgress(value) {
-  if (!hasValue(value)) return null;
-  const numericValue = Number(String(value).replace("%", "").replace(",", "."));
-  if (!Number.isFinite(numericValue)) return null;
-  const percentage = numericValue > 0 && numericValue <= 1 ? numericValue * 100 : numericValue;
-  return Math.round(Math.min(100, Math.max(0, percentage)));
 }
 
 function formatDate(value) {
@@ -526,7 +497,7 @@ async function createProject(event) {
     } else {
       const result = await window.grist.docApi.applyUserActions([["AddRecord", "PROJETS", null, fields]]);
       createdId = result?.retValues?.[0] ?? result?.[0]?.rowId ?? null;
-      state.tables = await fetchDocumentData(TABLE_NAMES);
+      state.tables = await fetchDocumentData(Object.keys(state.tables));
     }
     state.projects = prepareDashboardData(state.tables); renderKpis(calculateKpis(state.tables, state.projects)); renderProjects();
     elements.dialog.close(); showFeedback("Projet créé et relu depuis PROJETS.");

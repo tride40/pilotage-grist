@@ -7,11 +7,11 @@
     <title>Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=9">
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="style.css?v=7">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="demo-data.js?v=5" defer></script>
     <script src="../commun/context.js?v=2" defer></script>
-    <script src="app.js?v=9" defer></script>
+    <script src="app.js?v=10" defer></script>
   </head>
   <body>
     <header class="dashboard-header app-header">
@@ -43,7 +43,6 @@
         <div class="dashboard-toolbar" aria-label="Filtres des projets">
           <div class="filter-list" id="filter-list" role="group" aria-label="Afficher les projets">
             <button class="filter-button is-active" type="button" data-filter="all" aria-pressed="true">Tous</button>
-            <button class="filter-button" type="button" data-filter="priority" aria-pressed="false">Prioritaires</button>
             <button class="filter-button" type="button" data-filter="watch" aria-pressed="false">À surveiller</button>
             <button class="filter-button" type="button" data-filter="arbitration" aria-pressed="false">Décisions</button>
             <button class="filter-button" type="button" data-filter="late" aria-pressed="false">Retards</button>
@@ -98,9 +97,7 @@
           <div class="project-card__identity"><p class="project-card__category"></p><h3 class="project-card__title"></h3></div>
           <div class="project-card__badges"></div>
         </header>
-        <div class="project-card__progress"></div>
         <dl class="project-card__details"></dl>
-        <div class="project-card__vigilance" hidden></div>
         <footer class="project-card__footer"></footer>
       </article>
     </template>

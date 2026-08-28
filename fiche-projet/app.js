@@ -257,7 +257,6 @@ function renderProject(view) {
   renderHeroPeople(project);
   renderObjective(project);
   renderProgress(project);
-  renderVigilance(project.Point_vigilance, project.Statut);
   renderUpdates(view.updates);
   renderInstructions(view.instructions);
   renderMeetings(view.meetings);
@@ -332,14 +331,6 @@ function legacyNextStep(project, stored = []) {
   return same ? null : { id: "legacy", Projet: project.id, Type_entree: "Prochaine étape", Contenu: project.Prochaine_etape, Date_prochaine_etape: project.Date_prochaine_etape, Etat_entree: "Ouvert", legacy: true };
 }
 
-function renderVigilance(value, status) {
-  ui.vigilance.replaceChildren();
-  if (!hasValue(value)) return void (ui.vigilance.hidden = true);
-  ui.vigilance.classList.toggle("vigilance-panel--danger", ["bloque", "retard", "en retard"].includes(normalizeText(status)));
-  ui.vigilance.append(textElement("strong", "Point de vigilance"), textElement("span", value));
-  ui.vigilance.hidden = false;
-}
-
 /* ---------- Rendu des sections liées ---------- */
 function renderUpdates(rows) {
   fillJournalTypeFilter(rows);
@@ -411,9 +402,7 @@ function renderInstructions(rows) {
 function renderMeetings(rows) {
   renderCollection(ui.meetings, rows, "Aucune réunion liée à ce projet.", (row) => {
     const card = makeItemCard(textOr(row.Objet, "Réunion"), row.Date_reunion);
-    appendBadges(card.meta, [[row.Type_reunion, "info"]]);
-    appendFields(card.body, [["Participants", personValue(row.Participants)], ["Points clés", row.Points_cles], ["Décisions prises", row.Decisions_prises]]);
-    if (hasValue(row.Arbitrage_attendu)) card.body.append(makeCallout("Décision à prendre", row.Arbitrage_attendu));
+    appendFields(card.body, [["Participants", personValue(row.Participants)], ["Points clés", row.Points_cles], ["Compte rendu", row.Compte_rendu]]);
     return card.root;
   });
 }
