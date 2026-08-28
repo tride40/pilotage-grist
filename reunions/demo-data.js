@@ -21,7 +21,7 @@ window.MEETINGS_DEMO_DATA = {
     ACTIONS: [{id:401,Projet:1,Reunion_origine:301,Action:"Préparer une note",Attribuee_a:10,Echeance:"2026-09-10",Statut:"À faire"}],
     ARBITRAGES_DECISIONS: [{id:601,Projet:1,Reunion_origine:301,Sujet:"Organisation du stationnement",Question_a_trancher:"Quel scénario retenir ?",Echeance_decision:"2026-09-12",Statut:"Demandée"}],
     JALONS: [{id:701,Projet:1,Reunion_origine:302,Jalon:"Valider le plan-guide",Ordre:2,Date_prevue:"2026-10-15",Franchi:false}],
-    BLOCAGES: [], VIGILANCES: [], ATTENTES_EXTERNES: [],
+    BLOCAGES: [], VIGILANCES: [], ATTENTES_EXTERNES: [], REUNIONS_VERSIONS: [],
   },
   columnMeta: {
     ACTIONS: { Projet: { type: "Ref:PROJETS" }, Reunion_origine: { type: "Ref:REUNIONS" }, Action:{type:"Text"}, Attribuee_a:{type:"Ref:INTERLOCUTEURS"}, Echeance:{type:"Date"}, Statut: { type: "Choice", choices: ["À attribuer", "À faire", "En cours", "Réalisée", "Non aboutie"] } },
@@ -30,5 +30,6 @@ window.MEETINGS_DEMO_DATA = {
     BLOCAGES: { Projet: { type: "Ref:PROJETS" }, Reunion_origine: { type: "Ref:REUNIONS" }, Blocage:{type:"Text"}, Date_apparition:{type:"Date"}, Actif:{type:"Bool"} },
     VIGILANCES: { Projet: { type: "Ref:PROJETS" }, Reunion_origine: { type: "Ref:REUNIONS" }, Vigilance:{type:"Text"}, Date_apparition:{type:"Date"}, Active:{type:"Bool"} },
     ATTENTES_EXTERNES: { Projet: { type: "Ref:PROJETS" }, Reunion_origine: { type: "Ref:REUNIONS" }, Attente:{type:"Text"}, Date_attendue:{type:"Date"}, Statut: { type: "Choice", choices: ["En attente", "Reçue", "Sans suite"] } },
+    REUNIONS_VERSIONS: { Reunion:{type:"Ref:REUNIONS"}, Numero_version:{type:"Int"}, Compte_rendu:{type:"Text"}, Points_cles:{type:"Text"}, Auteur:{type:"Ref:INTERLOCUTEURS"}, Date_version:{type:"DateTime"}, Motif_modification:{type:"Text"}, Demandeur:{type:"Ref:INTERLOCUTEURS"}, Approbateur:{type:"Ref:INTERLOCUTEURS"}, Statut_demande:{type:"Choice",choices:["Approuvée"]} },
   },
 };

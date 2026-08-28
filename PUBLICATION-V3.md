@@ -36,6 +36,10 @@ Cette compatibilité sert uniquement à accompagner la migration. Elle ne valide
 
 ## Recette bloquante avant fusion
 
+- [ ] Depuis une réunion ayant déjà un compte rendu, enregistrer une modification exceptionnelle avec un motif, un demandeur et un approbateur distincts.
+- [ ] Vérifier que la version initiale et la nouvelle version sont présentes dans `REUNIONS_VERSIONS`, puis que seule la version approuvée est affichée dans `REUNIONS`.
+- [ ] Vérifier que la modification est refusée si le demandeur et l'approbateur sont identiques.
+
 - [ ] Créer un projet avec son seul nom : statut obtenu `À venir`.
 - [ ] Refuser le passage à `En cours` sans Élu pilote et Agent pilote.
 - [ ] Changer chaque pilote et vérifier la trace automatique au Journal.
