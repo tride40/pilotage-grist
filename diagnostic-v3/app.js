@@ -10,8 +10,8 @@ const EXPECTED={
   JALONS:{Projet:"Ref:PROJETS",Jalon:"Text",Ordre:"Int",Date_prevue:"Date",Franchi:"Bool",Date_reelle:"Date",A_retenir:"Text",Reunion_origine:"Ref:REUNIONS"},
   BLOCAGES:{Projet:"Ref:PROJETS",Blocage:"Text",Date_apparition:"DateTime",Actif:"Bool",Date_resolution:"DateTime",Explication_resolution:"Text",Reunion_origine:"Ref:REUNIONS"},
   VIGILANCES:{Projet:"Ref:PROJETS",Vigilance:"Text",Date_apparition:"DateTime",Active:"Bool",Date_resolution:"DateTime",Explication_resolution:"Text",Reunion_origine:"Ref:REUNIONS"},
-  ATTENTES_EXTERNES:{Projet:"Ref:PROJETS",Attente:"Text",Date_attendue:"Date",Statut:"Choice",Reunion_origine:"Ref:REUNIONS"},
-  RELANCES_ATTENTES:{Attente:"Ref:ATTENTES_EXTERNES",Date_relance:"Date",Commentaire:"Text"},
+  ATTENTES_EXTERNES:{Projet:"Ref:PROJETS",Attente:"Text",Tiers:"Ref:INTERLOCUTEURS",Date_attendue:"Date",Statut:{type:"Choice",choices:["En attente","Reçue","Sans suite"]},Date_fin:"DateTime",Resultat:"Text",Blocage:"Ref:BLOCAGES",Reunion_origine:"Ref:REUNIONS"},
+  RELANCES_ATTENTES:{Attente:"Ref:ATTENTES_EXTERNES",Date_relance:"DateTime",Note:"Text"},
   REUNIONS_VERSIONS:{Reunion:"Ref:REUNIONS",Numero_version:"Int",Compte_rendu:"Text",Points_cles:"Text",Auteur:"Ref:INTERLOCUTEURS",Date_version:"DateTime",Motif_modification:"Text",Demandeur:"Ref:INTERLOCUTEURS",Approbateur:"Ref:INTERLOCUTEURS",Statut_demande:"Choice"}
   ,AVANCEMENTS:{Projet:"Ref:PROJETS",Date_evenement:"DateTime",Type_entree:"Choice",Titre:"Text",Description:"Text",Source_table:"Text",Source_id:"Int",Automatique:"Bool"}
 };
