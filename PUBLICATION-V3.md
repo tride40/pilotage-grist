@@ -1,0 +1,61 @@
+# Publication de la V3
+
+État : **candidate en cours de recette sur la branche `refonte-v3` - ne pas fusionner dans `main` avant validation du schéma Grist**.
+
+## Périmètre validé
+
+La V3 applique les arbitrages n°1 à n°55. L'arbitrage n°56 n'est pas intégré. Le détail du modèle cible et des dépendances figure dans `AUDIT-SCHEMA-GRIST-V3.md`.
+
+## Compatibilité progressive
+
+- `PROJETS.Agent_pilote` utilise temporairement `PROJETS.Responsable` si la nouvelle colonne n'existe pas.
+- `ACTIONS.Attribuee_a` utilise temporairement `ACTIONS.Responsable` si nécessaire.
+- `ACTIONS.Date_fin` utilise temporairement `Date_realisation`.
+- `ACTIONS.Raison_non_aboutie` utilise temporairement `Commentaire`.
+- Les anciens identifiants de réunion d'origine restent lisibles ; les nouvelles écritures doivent converger vers `Reunion_origine`.
+- Les nouvelles tables de pilotage sont facultatives à la lecture tant qu'elles ne sont pas créées ; leur rubrique apparaît vide dans Mon pilotage.
+
+Cette compatibilité sert uniquement à accompagner la migration. Elle ne valide pas la conservation durable des anciennes colonnes.
+
+## Colonnes minimales avant recette Grist
+
+- `PROJETS` : `Nom_projet`, `Statut`, `Elu_pilote` et `Agent_pilote` (ou ancien `Responsable` pendant la migration).
+- `ACTIONS` : `Projet`, `Action`, `Statut`, `Demandee_par`, `Attribuee_a`, `Service_destinataire`, `Echeance`, `Date_fin`, `Resultat`, `Raison_non_aboutie`.
+- `CONSIGNES_POLITIQUES` : `Projet`, `Consigne`, `Emetteur`, `Destinataires`, `Statut`, `Date_emission`, `Date_archivage`, `Motif_archivage`.
+- `INTERLOCUTEURS` : identité, `Interne_Mairie`, `Role_interne`, `Actif`.
+
+## Tables nécessaires pour la V3 complète
+
+- `SERVICES`
+- `JALONS`
+- `BLOCAGES`
+- `VIGILANCES`
+- `ATTENTES_EXTERNES`
+- `RELANCES_ATTENTES`
+- `REUNIONS_VERSIONS`
+
+## Recette bloquante avant fusion
+
+- [ ] Créer un projet avec son seul nom : statut obtenu `À venir`.
+- [ ] Refuser le passage à `En cours` sans Élu pilote et Agent pilote.
+- [ ] Changer chaque pilote et vérifier la trace automatique au Journal.
+- [ ] Créer une action attribuée à une personne.
+- [ ] Créer une action adressée à un service : statut `À attribuer`.
+- [ ] Terminer une action sans résultat, puis classer une autre `Non aboutie` avec raison obligatoire.
+- [ ] Créer et archiver une consigne sans priorité, échéance ni contrôle.
+- [ ] Vérifier que Mon pilotage agrège décisions, blocages, vigilances, attentes, jalons, actions et consignes.
+- [ ] Vérifier qu'un projet Terminé ou Abandonné disparaît de Mon pilotage sans altérer ses objets.
+- [ ] Créer une réunion et vérifier que ses conséquences sont de vrais objets liés.
+- [ ] Vérifier le verrouillage et la version du compte rendu.
+- [ ] Tester à 320 px, 768 px et 1440 px sans commande flottante ni contenu masqué.
+- [ ] Vérifier les droits dans Grist avec un administrateur, un élu pilote, un agent pilote et un utilisateur associé.
+
+## Déploiement
+
+1. Valider la recette sur une copie du document Grist.
+2. Mettre à jour les versions de ressources restantes.
+3. Committer la candidate sur `refonte-v3`.
+4. Fusionner `refonte-v3` dans `main` sans réécriture de l'historique.
+5. Pousser `main` vers `origin` ; le workflow GitHub Pages publie automatiquement.
+6. Vérifier les URLs GitHub Pages puis chaque widget intégré dans Grist.
+7. Conserver un plan de retour vers le commit V2 précédent pendant la période d'observation.

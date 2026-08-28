@@ -6,12 +6,12 @@
     <meta name="description" content="Tableau de bord du pilotage des projets">
     <title>Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
-    <link rel="stylesheet" href="../commun/components.css?v=8">
+    <link rel="stylesheet" href="../commun/components.css?v=9">
     <link rel="stylesheet" href="style.css?v=6">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="demo-data.js?v=5" defer></script>
     <script src="../commun/context.js?v=2" defer></script>
-    <script src="app.js?v=8" defer></script>
+    <script src="app.js?v=9" defer></script>
   </head>
   <body>
     <header class="dashboard-header app-header">
@@ -71,13 +71,14 @@
           <label class="form-field form-field--wide"><span class="form-field__label">Nom du projet *</span><input class="form-field__control" name="Nom_projet" required maxlength="250"></label>
           <label class="form-field form-field--wide"><span class="form-field__label">Description</span><textarea class="form-field__control" name="Description" rows="3"></textarea></label>
           <label class="form-field form-field--wide"><span class="form-field__label">Objectif politique</span><textarea class="form-field__control" name="Objectif_politique" rows="3"></textarea></label>
-          <label class="form-field"><span class="form-field__label">Catégorie</span><select class="form-field__control" name="Categorie"></select></label>
+          <label class="form-field"><span class="form-field__label">Thématique(s)</span><select class="form-field__control" name="Thematiques" multiple size="5"></select></label>
           <label class="form-field"><span class="form-field__label">Statut</span><select class="form-field__control" name="Statut"></select></label>
-          <label class="form-field"><span class="form-field__label">Priorité</span><select class="form-field__control" name="Priorite"></select></label>
-          <label class="form-field"><span class="form-field__label">Agent pilote</span><select class="form-field__control" name="Responsable"></select></label>
+          <label class="form-field"><span class="form-field__label">Agent pilote</span><select class="form-field__control" name="Agent_pilote"></select></label>
           <label class="form-field"><span class="form-field__label">Élu pilote</span><select class="form-field__control" name="Elu_pilote"></select></label>
-          <label class="form-field"><span class="form-field__label">Date de début</span><input class="form-field__control" name="Date_debut" type="date"></label>
-          <label class="form-field"><span class="form-field__label">Échéance</span><input class="form-field__control" name="Echeance" type="date"></label>
+          <label class="form-field"><span class="form-field__label">Mois de lancement</span><select class="form-field__control" name="Mois_lancement"><option value="">Non renseigné</option><option>Janvier</option><option>Février</option><option>Mars</option><option>Avril</option><option>Mai</option><option>Juin</option><option>Juillet</option><option>Août</option><option>Septembre</option><option>Octobre</option><option>Novembre</option><option>Décembre</option></select></label>
+          <label class="form-field"><span class="form-field__label">Année de lancement</span><input class="form-field__control" name="Annee_lancement" type="number" min="2000" max="2200"></label>
+          <label class="form-field"><span class="form-field__label">Trimestre objectif</span><select class="form-field__control" name="Trimestre_objectif"><option value="">Non renseigné</option><option>T1</option><option>T2</option><option>T3</option><option>T4</option></select></label>
+          <label class="form-field"><span class="form-field__label">Année objectif</span><input class="form-field__control" name="Annee_objectif" type="number" min="2000" max="2200"></label>
         </div>
         <p class="form-message" id="project-form-message" aria-live="polite"></p>
         <div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Créer le projet</button></div>

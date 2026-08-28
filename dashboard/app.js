@@ -6,16 +6,14 @@ const TABLE_NAMES = [
   "CONSIGNES_POLITIQUES", "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
 
-const PROJECT_CHOICE_FIELDS = ["Categorie", "Statut", "Priorite"];
+const PROJECT_CHOICE_FIELDS = ["Thematiques", "Statut"];
 const PROJECT_FORM_FIELDS = [
-  "Nom_projet", "Description", "Objectif_politique", "Categorie", "Statut", "Priorite",
-  "Responsable", "Elu_pilote", "Date_debut", "Echeance", "Avancement",
-  "Prochaine_etape", "Date_prochaine_etape", "Point_vigilance",
+  "Nom_projet", "Description", "Objectif_politique", "Thematiques", "Statut",
+  "Agent_pilote", "Responsable", "Elu_pilote", "Mois_lancement", "Annee_lancement", "Trimestre_objectif", "Annee_objectif",
 ];
 const PROJECT_CHOICE_FALLBACKS = {
-  Categorie: ["Urbanisme", "Aménagement", "Habitat", "Mobilités", "Bâtiments", "Environnement", "Littoral", "Foncier", "Autre"],
-  Statut: ["À lancer", "En cours", "En attente", "Bloqué", "Terminé", "Abandonné"],
-  Priorite: ["Faible", "Normale", "Haute", "Prioritaire"],
+  Thematiques: ["Finances & Fiscalité", "Sécurité & Tranquillité publique", "Voirie & Mobilités", "Concertation & Participation citoyenne", "Solidarités & Intergénérationnel", "Enfance, Jeunesse & Éducation", "Travaux & Patrimoine bâti", "Urbanisme & Cadre de vie", "Environnement & Transition écologique", "Culture, Vie associative & Festivités", "Vie économique & Tourisme", "Sport"],
+  Statut: ["À venir", "En cours", "Terminé", "Abandonné"],
 };
 
 const state = { projects: [], activeFilter: "all", search: "", tables: null, writable: null, projectChoices: null, demo: false, busy: false };
@@ -131,7 +129,7 @@ function prepareDashboardData(tables) {
   const metrics = buildProjectMetrics(tables);
   return tables.PROJETS.filter(isActiveProject).map((project) => ({
     ...project,
-    Responsable_affiche: personValue(project.Responsable, tables.INTERLOCUTEURS),
+    Responsable_affiche: personValue(project.Agent_pilote || project.Responsable, tables.INTERLOCUTEURS),
     Elu_pilote_affiche: personValue(project.Elu_pilote, tables.INTERLOCUTEURS),
     metrics: metrics.get(String(project.id)) ?? emptyMetrics(),
   }));
@@ -313,7 +311,6 @@ function createProjectCard(project) {
 function renderBadges(container, project) {
   const badges = [
     { value: project.Statut, modifier: statusModifier(project.Statut), prefix: "" },
-    { value: project.Priorite, modifier: "priority", prefix: "" },
   ].filter((badge) => hasValue(badge.value));
   badges.forEach(({ value, modifier, prefix }) => {
     const badge = document.createElement("span");
@@ -353,8 +350,7 @@ function renderDetails(container, project) {
   const details = [
     ["Agent pilote", project.Responsable_affiche],
     ["Élu pilote", project.Elu_pilote_affiche],
-    ["Prochaine étape", project.Prochaine_etape],
-    ["Échéance", formatDate(project.Echeance)],
+    ["Objectif de réalisation", [project.Trimestre_objectif, project.Annee_objectif].filter(hasValue).join(" ")],
   ].filter(([, value]) => hasValue(value));
   details.forEach(([label, value]) => {
     const wrapper = document.createElement("div");
@@ -483,13 +479,13 @@ function fillSelect(field, placeholder) {
 function openProjectForm() {
   elements.form.reset(); elements.formMessage.classList.remove("is-error"); elements.formMessage.textContent = "";
   const metadataFields = PROJECT_CHOICE_FIELDS.filter((field) => fillSelect(field, "Sélectionner…"));
-  elements.form.elements.Statut.value = "En cours";
+  elements.form.elements.Statut.value = "À venir";
   if (!state.demo && metadataFields.length < PROJECT_CHOICE_FIELDS.length) {
     const fallbackFields = PROJECT_CHOICE_FIELDS.filter((field) => !metadataFields.includes(field));
     elements.formMessage.textContent = `Choix Grist indisponibles pour ${fallbackFields.join(", ")} : les valeurs par défaut et existantes sont proposées.`;
   }
   const people = state.tables?.INTERLOCUTEURS || [];
-  fillPersonSelect(elements.form.elements.Responsable, people.filter((person) => isTrue(person.Est_agent_Sanguinet)));
+  fillPersonSelect(elements.form.elements.Agent_pilote, people.filter((person) => isTrue(person.Est_agent_Sanguinet) || normalizeText(person.Role_interne)==="agent"));
   fillPersonSelect(elements.form.elements.Elu_pilote, people.filter((person) => isTrue(person.Est_elu_Sanguinet)));
   elements.dialog.showModal(); elements.form.elements.Nom_projet.focus();
 }
@@ -504,21 +500,22 @@ function fillPersonSelect(control, people) {
 function cleanFormValues(formData) {
   const values = {};
   for (const [name, raw] of formData.entries()) {
+    if (name === "Thematiques") continue;
     if (!hasValue(raw)) continue;
-    if (["Responsable", "Elu_pilote"].includes(name)) values[name] = Number(raw);
-    else if (name === "Avancement") values[name] = Number(raw);
-    else if (["Date_debut", "Echeance", "Date_prochaine_etape"].includes(name)) values[name] = new Date(`${raw}T00:00:00`).getTime() / 1000;
+    if (["Agent_pilote", "Elu_pilote"].includes(name)) values[name] = Number(raw);
+    else if (["Annee_lancement", "Annee_objectif"].includes(name)) values[name] = Number(raw);
     else values[name] = String(raw).trim();
   }
+  const themes=formData.getAll("Thematiques").filter(hasValue);if(themes.length)values.Thematiques=["L",...themes];
   const available = state.demo ? new Set(Object.keys(state.tables?.PROJETS?.[0] || values)) : state.writable?.PROJETS;
   if (!available) throw new Error("Impossible de vérifier les colonnes éditables de PROJETS.");
-  return Object.fromEntries(Object.entries(values).filter(([name]) => available.has(name)));
+  return Object.fromEntries(Object.entries(values).filter(([name]) => available.has(name) || (name === "Agent_pilote" && available.has("Responsable"))));
 }
 
 async function createProject(event) {
   event.preventDefault(); if (state.busy) return;
   const fields = cleanFormValues(new FormData(elements.form));
-  if (state.demo || state.writable?.PROJETS?.has("Avancement")) fields.Avancement = 0;
+  if (!state.writable?.PROJETS?.has("Agent_pilote") && state.writable?.PROJETS?.has("Responsable") && fields.Agent_pilote) { fields.Responsable = fields.Agent_pilote; delete fields.Agent_pilote; }
   if (!fields.Nom_projet) return;
   state.busy = true; setFormBusy(true); elements.formMessage.textContent = "Enregistrement en cours…";
   try {

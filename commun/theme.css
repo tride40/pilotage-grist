@@ -57,6 +57,10 @@
     "Segoe UI", sans-serif;
   --line-height: 1.5;
   --touch-target: 44px;
+  --control-height: 44px;
+  --header-min-height: 7.5rem;
+  --card-padding: var(--space-4);
+  --section-gap: var(--space-5);
   --content-width: 1200px;
   --progress: 0%;
 }

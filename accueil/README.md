@@ -10,7 +10,7 @@ Pour chaque page à relier :
 2. Copier l’adresse complète affichée par le navigateur. Elle contient l’identifiant du document et celui de la page.
 3. Ouvrir `accueil/app.js` et coller cette adresse dans la valeur correspondante de `PAGE_URLS`, entre les guillemets.
 
-Correspondances : `dashboard` = Tableau de bord, `project` = Fiche projet, `meetings` = Réunions, `instructions` = Consignes, `actions` = Actions, `contacts` = Interlocuteurs et `weekly` = Point hebdomadaire.
+Correspondances : `dashboard` = Tableau de bord, `project` = Fiche projet, `meetings` = Réunions, `instructions` = Consignes, `actions` = Actions, `contacts` = Interlocuteurs et `weekly` = Mon pilotage.
 
 Exemple fictif :
 

@@ -15,7 +15,7 @@ Les fichiers `demo-data.js` ne sont activés que sur `localhost`, hors iframe, a
 
 - `commun/` : thème et composants visuels partagés.
 - `dashboard/`, `fiche-projet/` et `reunions/` : widgets fonctionnels, séparés en HTML, CSS et JavaScript.
-- `interlocuteurs/`, `consignes/`, `actions/`, `point-hebdomadaire/` : emplacements réservés aux futurs widgets.
+- `interlocuteurs/`, `consignes/`, `actions/`, `point-hebdomadaire/` : widgets de gestion et de synthèse ; le dossier historique `point-hebdomadaire/` affiche désormais « Mon pilotage » afin de préserver son URL Grist.
 - `index.html` : accueil technique des widgets publiés.
 
 La configuration des sept liens de l'accueil est expliquée dans [`accueil/README.md`](accueil/README.md).

@@ -6,8 +6,8 @@ const state = { projects: [], instructions: [], people: [], columns: new Set(), 
 const ui = {
   interfaceState: document.querySelector("#interface-state"), content: document.querySelector("#instructions-content"), feedback: document.querySelector("#feedback"),
   projectSelector: document.querySelector("#project-selector"), contextLabel: document.querySelector("#context-label"), contextProject: document.querySelector("#context-project"), openCreate: document.querySelector("#open-create"), dialog: document.querySelector("#instruction-dialog"), form: document.querySelector("#instruction-form"),
-  followList: document.querySelector("#follow-list"), checkList: document.querySelector("#check-list"), historyList: document.querySelector("#history-list"),
-  followCount: document.querySelector("#follow-count"), checkCount: document.querySelector("#check-count"), historyCount: document.querySelector("#history-count"),
+  followList: document.querySelector("#follow-list"), historyList: document.querySelector("#history-list"),
+  followCount: document.querySelector("#follow-count"), historyCount: document.querySelector("#history-count"),
 };
 
 async function initialize() {
@@ -59,11 +59,10 @@ function render() {
   ui.contextLabel.textContent = window.PilotageContext?.isProjectMode ? "Projet imposé" : "Vue globale";
   ui.contextProject.textContent = textOr(state.project.Nom_projet, "Projet");
   const rows = state.instructions.filter((row) => referenceIds(row.Projet).includes(String(state.project.id)));
-  const groups = { follow: [], check: [], history: [] };
+  const groups = { follow: [], history: [] };
   rows.forEach((row) => groups[classify(row)].push(row));
-  groups.follow.sort(compareDueDates); groups.check.sort(compareDueDates); groups.history.sort((a, b) => dateValue(b.Date_MAJ || b.Echeance) - dateValue(a.Date_MAJ || a.Echeance));
+  groups.follow.sort((a,b)=>dateValue(b.Date_emission||b.Date_MAJ)-dateValue(a.Date_emission||a.Date_MAJ)); groups.history.sort((a, b) => dateValue(b.Date_archivage || b.Date_MAJ) - dateValue(a.Date_archivage || a.Date_MAJ));
   renderGroup(ui.followList, ui.followCount, groups.follow, "Aucune consigne à suivre.", "follow");
-  renderGroup(ui.checkList, ui.checkCount, groups.check, "Aucune consigne n’attend de contrôle.", "check");
   renderGroup(ui.historyList, ui.historyCount, groups.history, "Aucune consigne dans l’historique.", "history");
   ui.interfaceState.hidden = true; ui.content.hidden = false; ui.openCreate.disabled = state.busy;
 }
@@ -79,36 +78,24 @@ function renderCard(row, group) {
   const header = element("header", "instruction-card__header");
   header.append(textElement("h3", textOr(row.Consigne, "Consigne sans intitulé"), "instruction-card__title"));
   const badges = element("div", "instruction-card__badges");
-  badges.append(makeBadge(textOr(row.Priorite, "Priorité normale"), priorityKind(row.Priorite)), makeBadge(textOr(row.Statut, statusLabel(group)), group === "history" ? "success" : group === "check" ? "arbitration" : "info"));
-  if (overdue) badges.append(makeBadge("En retard", "danger")); header.append(badges); card.append(header);
+  badges.append(makeBadge(textOr(row.Statut, statusLabel(group)), group === "history" ? "success" : "info")); header.append(badges); card.append(header);
   const meta = element("dl", "instruction-card__meta");
-  if (hasValue(row.Echeance)) appendDefinition(meta, "Échéance", formatDate(row.Echeance)); if (hasValue(row.Emetteur)) appendDefinition(meta, "Émetteur", personValue(row.Emetteur)); if (hasValue(row.Destinataires || row.Responsable)) appendDefinition(meta, "Destinataire(s)", personValue(row.Destinataires || row.Responsable)); card.append(meta);
-  appendNote(card, "Retour attendu", row.Retour_attendu);
-  appendNote(card, "Retour du service", row.Retour_service || "Aucun retour saisi.");
-  if (hasValue(row.Controle_elu)) appendNote(card, "Contrôle élu", row.Controle_elu);
+  if (hasValue(row.Date_emission)) appendDefinition(meta, "Émise le", formatDate(row.Date_emission)); if (hasValue(row.Emetteur)) appendDefinition(meta, "Émetteur", personValue(row.Emetteur)); if (hasValue(row.Destinataires || row.Responsable)) appendDefinition(meta, "Destinataire(s)", personValue(row.Destinataires || row.Responsable)); if(group==="history"&&hasValue(row.Date_archivage))appendDefinition(meta,"Archivée le",formatDate(row.Date_archivage)); card.append(meta);
+  if(group==="history")appendNote(card,"Motif d’archivage",row.Motif_archivage);
   if (group !== "history") card.append(renderEditor(row, group));
   return card;
 }
 
-function renderEditor(row, group) {
-  const editor = element("div", "instruction-card__editor");
-  const returnLabel = element("label", "form-field"); returnLabel.append(textElement("span", "Retour du service", "form-field__label"));
-  const returnInput = element("textarea", "form-field__control"); returnInput.value = displayValue(row.Retour_service); returnInput.placeholder = "Décrivez la réponse ou l’avancement…"; returnLabel.append(returnInput); editor.append(returnLabel);
-  const actions = element("div", "instruction-card__actions");
-  actions.append(actionButton("Enregistrer le retour", "secondary", () => saveServiceReturn(row, returnInput.value)));
-  if (group === "check") {
-    const controlLabel = element("label", "form-field"); controlLabel.append(textElement("span", "Commentaire de contrôle (facultatif)", "form-field__label"));
-    const controlInput = element("textarea", "form-field__control"); controlInput.value = displayValue(row.Controle_elu); controlLabel.append(controlInput); editor.append(controlLabel);
-    actions.append(actionButton("Valider", "primary", () => controlInstruction(row, true, controlInput.value)), actionButton("À reprendre", "secondary", () => controlInstruction(row, false, controlInput.value)));
-  }
-  editor.append(actions); return editor;
-}
+function renderEditor(row) {const editor=element("div","instruction-card__editor"),reasonLabel=element("label","form-field");reasonLabel.append(textElement("span","Motif d’archivage (facultatif)","form-field__label"));const reason=element("textarea","form-field__control");reason.placeholder="Précisez pourquoi la consigne est archivée";reasonLabel.append(reason);const actions=element("div","instruction-card__actions");actions.append(actionButton("Archiver","secondary",()=>archiveInstruction(row,reason.value)));editor.append(reasonLabel,actions);return editor}
 
 async function createInstruction(formData) {
   const recipients = formData.getAll("Destinataires").filter(hasValue).map(Number);
-  const fields = writableFields({ Projet: Number(state.project.id), Consigne: formData.get("Consigne").trim(), Emetteur: optionalNumber(formData.get("Emetteur")), Destinataires: recipients.length ? ["L", ...recipients] : null, Responsable: recipients[0] || null, Retour_attendu: formData.get("Retour_attendu").trim(), Controle_requis: formData.get("Controle_requis") === "on", Priorite: formData.get("Priorite"), Echeance: gristDate(formData.get("Echeance")), Statut: "En cours", Date_MAJ: nowGrist() });
-  requireFields(fields, ["Projet", "Consigne"]); await writeAction(["AddRecord", TABLE, null, fields], "Consigne créée."); ui.form.reset(); ui.dialog.close();
+  if(!recipients.length)throw new Error("Choisissez au moins un destinataire.");
+  const fields = writableFields({ Projet: Number(state.project.id), Consigne: formData.get("Consigne").trim(), Emetteur: optionalNumber(formData.get("Emetteur")), Destinataires: ["L", ...recipients], Responsable: state.columns.has("Destinataires")?undefined:recipients[0], Date_emission: nowGrist(), Statut: "Active", Date_MAJ: nowGrist() });
+  requireFields(fields, ["Projet", "Consigne", "Emetteur"]); await writeAction(["AddRecord", TABLE, null, fields], "Consigne créée."); ui.form.reset(); ui.dialog.close();
 }
+
+async function archiveInstruction(row,reason){const fields=writableFields({Statut:"Archivée",Date_archivage:nowGrist(),Motif_archivage:reason.trim(),Date_MAJ:nowGrist()});requireFields(fields,["Statut"]);await writeAction(["UpdateRecord",TABLE,row.id,fields],"Consigne archivée.")}
 
 async function saveServiceReturn(row, value) {
   if (!value.trim()) { showFeedback("Le retour du service ne peut pas être vide.", true); return; }
@@ -145,7 +132,7 @@ function bindControls() {
   ui.form.addEventListener("submit", async (event) => { event.preventDefault(); if (!ui.form.reportValidity()) return; try { await createInstruction(new FormData(ui.form)); } catch (error) { showFeedback(exactError(error), true); } });
 }
 
-function classify(row) { if (isTrue(row.Validee) || ["validee", "terminee", "archivee"].includes(normalizeText(row.Statut))) return "history"; if (isTrue(row.A_controler) || normalizeText(row.Statut).includes("control")) return "check"; return "follow"; }
+function classify(row) { return ["validee", "terminee", "archivee"].includes(normalizeText(row.Statut)) ? "history" : "follow"; }
 function writableFields(values) { return Object.fromEntries(Object.entries(values).filter(([key, value]) => state.columns.has(key) && value !== "" && value !== null && value !== undefined)); }
 function requireFields(fields, names) { const missing = names.filter((name) => !Object.hasOwn(fields, name)); if (missing.length) throw new Error(`Colonnes obligatoires absentes : ${missing.join(", ")}.`); }
 function firstActiveProject() { return state.projects.find((project) => !isTrue(project.Archive) && !["termine", "abandonne"].includes(normalizeText(project.Statut))) || state.projects[0] || null; }
@@ -155,7 +142,7 @@ function referenceIds(value) { const values = Array.isArray(value) ? value : [va
 function isOverdue(row) { const due = dateValue(row.Echeance); return isTrue(row.En_retard) || (due > 0 && due < startOfToday()); }
 function compareDueDates(a, b) { return (dateValue(a.Echeance) || Infinity) - (dateValue(b.Echeance) || Infinity); }
 function priorityKind(value) { const text = normalizeText(value); return text.includes("urgent") ? "danger" : text.includes("haut") ? "warning" : "info"; }
-function statusLabel(group) { return group === "check" ? "À contrôler" : group === "history" ? "Validée" : "En cours"; }
+function statusLabel(group) { return group === "history" ? "Archivée" : "Active"; }
 function appendDefinition(container, label, value) { const wrapper = element("div"); wrapper.append(textElement("dt", label), textElement("dd", value)); container.append(wrapper); }
 function appendNote(container, label, value) { const note = element("section", "instruction-card__note"); note.append(textElement("strong", label), textElement("p", value)); container.append(note); }
 function makeBadge(value, kind) { return textElement("span", value, `badge badge--${kind}`); }
