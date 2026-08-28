@@ -52,9 +52,10 @@ test("la fiche projet bloque l’écriture si les règles V3 ne sont pas chargé
   assert.doesNotMatch(source, /PilotageV3Rules\?\.projectErrors\(next\)\|\|\[\]/);
 });
 
-test("le formulaire masque le type externe pour un interlocuteur interne", () => {
+test("le formulaire utilise un seul champ Fonction pour tous les interlocuteurs", () => {
   const html = fs.readFileSync(path.join(root, "interlocuteurs/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "interlocuteurs/app.js"), "utf8");
-  assert.match(html, /id="external-type-field"/);
-  assert.match(source, /querySelector\("#external-type-field"\)\.hidden=internal/);
+  assert.equal((html.match(/>Fonction</g) || []).length, 1);
+  assert.doesNotMatch(html, /Type externe/);
+  assert.doesNotMatch(source, /formData\.get\("Type_interlocuteur"\)/);
 });
