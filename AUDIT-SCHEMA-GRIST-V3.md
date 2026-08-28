@@ -74,7 +74,7 @@ Règles : seul `Nom_projet` est obligatoire à la création ; statut initial `À
 | 2 | Nom | `Nom` | Text | obligatoire, OBS | C |
 | 3 | Nom complet | `Nom_complet` | Formula Text | prénom + nom ; OBS en lecture | C/A |
 | 4 | Interne à la Mairie | `Interne_Mairie` | Bool | renommer `Interne_Sanguinet` observé | M |
-| 5 | Rôle interne | `Role_interne` | Choice | Agent; Élu | N/M depuis `Type_interlocuteur` |
+| 5 | Rôle interne | `Role_interne` | Choice | Agent; Élu | C |
 | 6 | Services | `Services` | RefList:SERVICES | relation inverse via SERVICES_MEMBRES si nécessaire | N |
 | 7 | Organisme | `Organisme` | Text | requis seulement pour externe ; OBS | C |
 | 8 | Fonction | `Fonction` | Text | libre ; OBS | C |
@@ -82,7 +82,7 @@ Règles : seul `Nom_projet` est obligatoire à la création ; statut initial `À
 | 10 | Téléphone | `Telephone` | Text | OBS | C |
 | 11 | Notes | `Notes` | Text | OBS | C |
 | 12 | Actif | `Actif` | Bool | défaut vrai ; OBS | C |
-| 13 | Type d'interlocuteur | `Type_interlocuteur` | Choice | migrer vers interne + rôle | R après migration |
+| 13 | Type d'interlocuteur | `Type_interlocuteur` | Choice | — | R : remplacé par `Fonction` et `Role_interne` |
 | 14 | Ancienne taxonomie externe | identifiants à relever | Choice/Text | secteur, catégorie, sous-type… | R après inventaire |
 
 ## 3. SERVICES - nouvelle table
@@ -271,7 +271,7 @@ Après migration, masquer puis retirer les anciens pseudo-objets et leurs colonn
 - `consignes` écrit encore `Retour_service` et les statuts de contrôle : adapter avant retrait.
 - `reunions` peut créer ACTIONS, CONSIGNES et ARBITRAGES et accepte trois identifiants de réunion d'origine : migrer vers un seul.
 - `point-hebdomadaire` dépend explicitement des anciennes priorités, contrôles et `Point_hebdo` : remplacer par Mon pilotage avant retrait.
-- `interlocuteurs` écrit `Type_interlocuteur` et `Interne_Sanguinet` : migrer avant renommage/suppression.
+- `Type_interlocuteur` n'est plus lu ni écrit par les widgets V3 et peut être supprimé après sauvegarde du document.
 - Les démonstrations contiennent encore `Point_vigilance`, `Priorite`, `CR_finalise`, champs de suites de réunion et anciens statuts.
 
 ## 15. Ordre d'exécution manuel conseillé

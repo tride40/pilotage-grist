@@ -59,3 +59,10 @@ test("le formulaire utilise un seul champ Fonction pour tous les interlocuteurs"
   assert.doesNotMatch(html, /Type externe/);
   assert.doesNotMatch(source, /formData\.get\("Type_interlocuteur"\)/);
 });
+
+test("les widgets V3 ne dépendent plus de Type_interlocuteur", () => {
+  for (const file of ["interlocuteurs/app.js", "fiche-projet/app.js", "reunions/app.js"]) {
+    const source = fs.readFileSync(path.join(root, file), "utf8");
+    assert.doesNotMatch(source, /Type_interlocuteur/, file);
+  }
+});

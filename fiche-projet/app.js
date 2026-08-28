@@ -470,7 +470,7 @@ function renderContacts(rows) {
     const avatar = textElement("span", initials(person.Nom_complet), "avatar");
     const details = element("div", "person__details");
     details.append(textElement("p", textOr(person.Nom_complet, "Interlocuteur"), "person__name"));
-    const meta = [person.Fonction, person.Organisme, person.Type_interlocuteur].filter(hasValue).map(displayValue).join(" · ");
+    const meta = [person.Fonction, person.Organisme].filter(hasValue).map(displayValue).join(" · ");
     if (meta) details.append(textElement("p", meta, "person__meta"));
     wrapper.append(avatar, details);
     card.append(wrapper);
