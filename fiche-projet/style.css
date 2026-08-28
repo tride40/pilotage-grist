@@ -1,6 +1,10 @@
 /* Structure générale de la fiche, pensée d'abord pour mobile */
 .project-sheet { padding-block: var(--space-4) var(--space-10); }
 .project-toolbar { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); padding: var(--space-4); }
+.project-toolbar { position: sticky; top: 0; z-index: 20; }
+.project-hub { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); padding: var(--space-3); }
+.project-hub__link { min-height: 48px; display: grid; place-items: center; border-radius: var(--radius-md); background: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; text-decoration: none; }
+.project-hub__link:hover { background: var(--color-primary); color: #fff; }
 .project-toolbar .form-field { flex: 1 1 16rem; }
 .project-toolbar__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 #project-content { display: grid; gap: var(--space-5); }
@@ -111,8 +115,15 @@ dialog form{display:grid;grid-template-rows:auto minmax(0,1fr) auto;max-height:c
 
 @media (max-width:30rem){.dialog-actions{display:grid;grid-template-columns:1fr 1fr}.dialog-actions .button{width:100%;min-height:var(--touch-target)}.project-toolbar__actions{width:100%}.project-toolbar__actions .button{flex:1 1 9rem}.project-toolbar__actions .home-button{flex:1 1 100%;min-height:var(--touch-target)}.journal-card__actions .button{min-height:var(--touch-target)}}
 
+.journal-card[data-kind="warning"]{border-inline-start-color:var(--color-warning)}
+.journal-card[data-kind="danger"]{border-inline-start-color:var(--color-danger)}
+.journal-card[data-kind="success"]{border-inline-start-color:var(--color-success)}
+.journal-card[data-kind="arbitration"]{border-inline-start-color:var(--color-arbitration)}
+.journal-card__text{margin:0;color:var(--color-text-muted);font-size:.96rem;line-height:1.6}
+
 /* Tablette : deux colonnes lorsque l'espace le permet */
 @media (min-width: 48rem) {
+  .project-hub { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .project-sheet { padding-block: var(--space-6) var(--space-12); }
   #project-content { gap: var(--space-6); }
   .project-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, auto); align-items: end; gap: var(--space-6); padding: var(--space-8); }

@@ -5,7 +5,7 @@ const REQUIRED_TABLES = ["PROJETS", TABLE, "INTERLOCUTEURS"];
 const state = { projects: [], instructions: [], people: [], columns: new Set(), project: null, demo: false, busy: false };
 const ui = {
   interfaceState: document.querySelector("#interface-state"), content: document.querySelector("#instructions-content"), feedback: document.querySelector("#feedback"),
-  projectSelector: document.querySelector("#project-selector"), openCreate: document.querySelector("#open-create"), dialog: document.querySelector("#instruction-dialog"), form: document.querySelector("#instruction-form"),
+  projectSelector: document.querySelector("#project-selector"), contextLabel: document.querySelector("#context-label"), contextProject: document.querySelector("#context-project"), openCreate: document.querySelector("#open-create"), dialog: document.querySelector("#instruction-dialog"), form: document.querySelector("#instruction-form"),
   followList: document.querySelector("#follow-list"), checkList: document.querySelector("#check-list"), historyList: document.querySelector("#history-list"),
   followCount: document.querySelector("#follow-count"), checkCount: document.querySelector("#check-count"), historyCount: document.querySelector("#history-count"),
 };
@@ -40,21 +40,24 @@ function applyTables(tables, preferredProjectId) {
   state.projects = tables.PROJETS || []; state.instructions = tables[TABLE] || []; state.people = tables.INTERLOCUTEURS || [];
   if (state.demo) state.columns = new Set(Object.keys(state.instructions[0] || {}));
   populateSelectors();
-  state.project = state.projects.find((item) => String(item.id) === String(preferredProjectId)) || firstActiveProject();
+  state.project = window.PilotageContext?.selectProject(state.projects, preferredProjectId, firstActiveProject) || state.projects.find((item) => String(item.id) === String(preferredProjectId)) || firstActiveProject();
   render();
 }
 
 function populateSelectors() {
   const projects = [...state.projects].sort((a, b) => textOr(a.Nom_projet, "").localeCompare(textOr(b.Nom_projet, ""), "fr"));
   ui.projectSelector.replaceChildren(...projects.map((project) => option(project.id, textOr(project.Nom_projet, "Projet sans nom"))));
-  ui.projectSelector.disabled = projects.length === 0;
-  const personSelect = ui.form.elements.Responsable;
-  personSelect.replaceChildren(option("", "Non attribué"), ...[...state.people].sort((a, b) => personName(a).localeCompare(personName(b), "fr")).map((person) => option(person.id, personName(person))));
+  ui.projectSelector.disabled = projects.length === 0 || Boolean(window.PilotageContext?.isProjectMode);
+  const people = [...state.people].sort((a, b) => personName(a).localeCompare(personName(b), "fr"));
+  ui.form.elements.Emetteur.replaceChildren(option("", "Non renseigné"), ...people.map((person) => option(person.id, personName(person))));
+  ui.form.elements.Destinataires.replaceChildren(...people.map((person) => option(person.id, personName(person))));
 }
 
 function render() {
   if (!state.project) { showFatal("Aucun projet disponible", "Ajoutez un projet dans la table PROJETS."); return; }
   ui.projectSelector.value = String(state.project.id);
+  ui.contextLabel.textContent = window.PilotageContext?.isProjectMode ? "Projet imposé" : "Vue globale";
+  ui.contextProject.textContent = textOr(state.project.Nom_projet, "Projet");
   const rows = state.instructions.filter((row) => referenceIds(row.Projet).includes(String(state.project.id)));
   const groups = { follow: [], check: [], history: [] };
   rows.forEach((row) => groups[classify(row)].push(row));
@@ -79,7 +82,8 @@ function renderCard(row, group) {
   badges.append(makeBadge(textOr(row.Priorite, "Priorité normale"), priorityKind(row.Priorite)), makeBadge(textOr(row.Statut, statusLabel(group)), group === "history" ? "success" : group === "check" ? "arbitration" : "info"));
   if (overdue) badges.append(makeBadge("En retard", "danger")); header.append(badges); card.append(header);
   const meta = element("dl", "instruction-card__meta");
-  appendDefinition(meta, "Échéance", formatDate(row.Echeance) || "Non renseignée"); appendDefinition(meta, "Responsable", personValue(row.Responsable) || "Non attribué"); card.append(meta);
+  if (hasValue(row.Echeance)) appendDefinition(meta, "Échéance", formatDate(row.Echeance)); if (hasValue(row.Emetteur)) appendDefinition(meta, "Émetteur", personValue(row.Emetteur)); if (hasValue(row.Destinataires || row.Responsable)) appendDefinition(meta, "Destinataire(s)", personValue(row.Destinataires || row.Responsable)); card.append(meta);
+  appendNote(card, "Retour attendu", row.Retour_attendu);
   appendNote(card, "Retour du service", row.Retour_service || "Aucun retour saisi.");
   if (hasValue(row.Controle_elu)) appendNote(card, "Contrôle élu", row.Controle_elu);
   if (group !== "history") card.append(renderEditor(row, group));
@@ -101,14 +105,16 @@ function renderEditor(row, group) {
 }
 
 async function createInstruction(formData) {
-  const fields = writableFields({ Projet: Number(state.project.id), Consigne: formData.get("Consigne").trim(), Priorite: formData.get("Priorite"), Echeance: gristDate(formData.get("Echeance")), Responsable: optionalNumber(formData.get("Responsable")), Statut: "En cours", Date_MAJ: nowGrist() });
+  const recipients = formData.getAll("Destinataires").filter(hasValue).map(Number);
+  const fields = writableFields({ Projet: Number(state.project.id), Consigne: formData.get("Consigne").trim(), Emetteur: optionalNumber(formData.get("Emetteur")), Destinataires: recipients.length ? ["L", ...recipients] : null, Responsable: recipients[0] || null, Retour_attendu: formData.get("Retour_attendu").trim(), Controle_requis: formData.get("Controle_requis") === "on", Priorite: formData.get("Priorite"), Echeance: gristDate(formData.get("Echeance")), Statut: "En cours", Date_MAJ: nowGrist() });
   requireFields(fields, ["Projet", "Consigne"]); await writeAction(["AddRecord", TABLE, null, fields], "Consigne créée."); ui.form.reset(); ui.dialog.close();
 }
 
 async function saveServiceReturn(row, value) {
   if (!value.trim()) { showFeedback("Le retour du service ne peut pas être vide.", true); return; }
-  const fields = writableFields({ Retour_service: value.trim(), Statut: "À contrôler", Date_MAJ: nowGrist() });
-  requireFields(fields, ["Retour_service"]); await writeAction(["UpdateRecord", TABLE, row.id, fields], "Retour enregistré : la consigne attend le contrôle de l’élu.");
+  const requiresControl = isTrue(row.Controle_requis);
+  const fields = writableFields({ Retour_service: value.trim(), Statut: requiresControl ? "À contrôler" : "Traitée", Validee: !requiresControl, Date_MAJ: nowGrist() });
+  requireFields(fields, ["Retour_service"]); await writeAction(["UpdateRecord", TABLE, row.id, fields], requiresControl ? "Retour enregistré : la consigne attend le contrôle de l’élu." : "Retour enregistré : consigne traitée.");
 }
 
 async function controlInstruction(row, validated, comment) {

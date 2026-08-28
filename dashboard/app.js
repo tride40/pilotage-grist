@@ -132,6 +132,7 @@ function prepareDashboardData(tables) {
   return tables.PROJETS.filter(isActiveProject).map((project) => ({
     ...project,
     Responsable_affiche: personValue(project.Responsable, tables.INTERLOCUTEURS),
+    Elu_pilote_affiche: personValue(project.Elu_pilote, tables.INTERLOCUTEURS),
     metrics: metrics.get(String(project.id)) ?? emptyMetrics(),
   }));
 }
@@ -351,6 +352,7 @@ function renderProgress(container, rawValue) {
 function renderDetails(container, project) {
   const details = [
     ["Agent pilote", project.Responsable_affiche],
+    ["Élu pilote", project.Elu_pilote_affiche],
     ["Prochaine étape", project.Prochaine_etape],
     ["Échéance", formatDate(project.Echeance)],
   ].filter(([, value]) => hasValue(value));
@@ -479,7 +481,7 @@ function fillSelect(field, placeholder) {
 }
 
 function openProjectForm() {
-  elements.form.reset(); elements.form.elements.Avancement.value = "0"; elements.formMessage.classList.remove("is-error"); elements.formMessage.textContent = "";
+  elements.form.reset(); elements.formMessage.classList.remove("is-error"); elements.formMessage.textContent = "";
   const metadataFields = PROJECT_CHOICE_FIELDS.filter((field) => fillSelect(field, "Sélectionner…"));
   elements.form.elements.Statut.value = "En cours";
   if (!state.demo && metadataFields.length < PROJECT_CHOICE_FIELDS.length) {
@@ -516,6 +518,7 @@ function cleanFormValues(formData) {
 async function createProject(event) {
   event.preventDefault(); if (state.busy) return;
   const fields = cleanFormValues(new FormData(elements.form));
+  if (state.demo || state.writable?.PROJETS?.has("Avancement")) fields.Avancement = 0;
   if (!fields.Nom_projet) return;
   state.busy = true; setFormBusy(true); elements.formMessage.textContent = "Enregistrement en cours…";
   try {
@@ -550,7 +553,9 @@ async function openProject(project) {
   }
   const configured = new URLSearchParams(window.location.search).get("ficheProjetUrl");
   if (configured) {
-    const target = new URL(configured, window.location.href); target.searchParams.set("project", project.id); window.open(target.href, "_top");
+    const target = new URL(configured, window.location.href); target.searchParams.set("projectId", project.id); target.searchParams.set("mode", "project"); window.open(target.href, "_top");
+  } else if (window.PilotageContext) {
+    window.open(window.PilotageContext.url("../fiche-projet/", { projectId: project.id, mode: "project" }), "_top");
   } else {
     showFeedback(`${context.name} sélectionné. Ouvrez la page « Fiche projet » dans Grist.`);
   }

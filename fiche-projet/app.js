@@ -16,7 +16,7 @@ const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance 
 const DECISION_OPEN_STATUSES = new Set(["a preparer", "a decider", "reportee"]);
 const DECISION_CLOSED_STATUSES = new Set(["decidee", "decide", "sans suite"]);
 const DECISION_STATUS_FALLBACKS = ["À préparer", "À décider", "Reportée", "Décidée", "Sans suite"];
-const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "" };
+const appState = { selectedProject: null, tables: null, metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -28,7 +28,7 @@ const ui = {
   progress: document.querySelector("#progress-card"),
   vigilance: document.querySelector("#vigilance-panel"),
   updates: document.querySelector("#updates-list"),
-  journalSearch: document.querySelector("#journal-search"), journalTypeFilter: document.querySelector("#journal-type-filter"), journalStateFilter: document.querySelector("#journal-state-filter"), journalResults: document.querySelector("#journal-results"),
+  journalSearch: document.querySelector("#journal-search"), journalTypeFilter: document.querySelector("#journal-type-filter"), journalStateFilter: document.querySelector("#journal-state-filter"), journalResults: document.querySelector("#journal-results"), showAllJournal: document.querySelector("#show-all-journal"),
   instructions: document.querySelector("#instructions-list"),
   meetings: document.querySelector("#meetings-list"),
   actions: document.querySelector("#actions-list"),
@@ -255,8 +255,15 @@ function renderProject(view) {
   renderActions(view.actions);
   renderArbitrations(view.arbitrations);
   renderContacts(view.contacts);
+  renderHubLinks(project.id);
   ui.state.hidden = true;
   ui.content.hidden = false;
+}
+
+function renderHubLinks(projectId) {
+  const context = window.PilotageContext;
+  const links = [["#hub-actions", "../actions/"], ["#hub-meetings", "../reunions/"], ["#hub-instructions", "../consignes/"]];
+  links.forEach(([selector, path]) => { const link = document.querySelector(selector); if (link) link.href = context?.url(path, { projectId, mode: "project" }) || `${path}?projectId=${encodeURIComponent(projectId)}&mode=project`; });
 }
 
 function renderProjectBadges(project) {
@@ -341,13 +348,19 @@ function renderUpdates(rows) {
     const haystack = normalizeText([type, journalContent(row), personValue(row.Saisi_par), personValue(row.Decisionnaire), row.Prochaine_etape, row.Point_vigilance, row.Difficulte_blocage, row.Decision_attendue].filter(hasValue).join(" "));
     return (!appState.journalSearch || haystack.includes(normalizeText(appState.journalSearch))) && (!appState.journalTypeFilter || type === appState.journalTypeFilter) && (!appState.journalStateFilter || state === appState.journalStateFilter);
   });
+  const hasFilters = Boolean(appState.journalSearch || appState.journalTypeFilter || appState.journalStateFilter);
+  const displayed = appState.showAllJournal || hasFilters ? filtered : filtered.slice(0, 5);
   ui.journalResults.textContent = `${filtered.length} entrée${filtered.length > 1 ? "s" : ""}`;
-  renderCollection(ui.updates, filtered, rows.length ? "Aucune entrée ne correspond à ces filtres." : "Le journal est vide. Ajoutez le premier changement de ce projet.", (row) => {
+  ui.showAllJournal.hidden = filtered.length <= 5 || hasFilters;
+  ui.showAllJournal.textContent = appState.showAllJournal ? "Réduire" : `Tout afficher (${filtered.length})`;
+  renderCollection(ui.updates, displayed, rows.length ? "Aucune entrée ne correspond à ces filtres." : "Le journal est vide. Ajoutez le premier changement de ce projet.", (row) => {
     const content = journalContent(row);
     const type = journalType(row);
-    const card = makeItemCard(content || "Entrée du journal", row.Date_MAJ || row.Date, journalDateLabel(row));
+    const card = makeItemCard(type, row.Date_MAJ || row.Date, journalDateLabel(row));
     card.root.classList.add("journal-card");
-    appendBadges(card.meta, [[type, journalKind(type)], [journalEntryState(row, rows), journalEntryState(row, rows) === "Résolu" ? "success" : "info"]]);
+    card.root.dataset.kind = journalKind(type);
+    appendBadges(card.meta, [[journalEntryState(row, rows), journalEntryState(row, rows) === "Résolu" ? "success" : "info"]]);
+    if (hasValue(content)) card.body.append(textElement("p", content, "journal-card__text"));
     appendFields(card.body, [
       ["Saisi par", personValue(row.Saisi_par)], ["Décisionnaire", personValue(row.Decisionnaire)],
       ["Avancement", type === "Avancement" ? formatProgress(row.Avancement) : ""],
@@ -432,13 +445,31 @@ function renderArbitrations(rows) {
     appendBadges(meta, [[row.Statut, statusKind(row.Statut)], [row.Urgence, "danger"], [isTrue(row.Point_hebdo) ? "Point hebdo" : "", "arbitration"]]);
     const body = element("div", "item-card__body");
     appendFields(body, [["Contexte", row.Contexte], ["Question à trancher", row.Question_a_trancher], ["Options", row.Options], ["Position élue", row.Position_elue], ["Décision prise", row.Decision_prise], ["Date de décision", formatDate(row.Date_decision)], ["Instance", row.Instance_decision], ["Décision par", personValue(row.Decision_par)]]);
-    const edit = textElement("button", isOpenDecision(row) ? "Modifier" : "Consulter / compléter", "button button--secondary"); edit.type = "button"; edit.addEventListener("click", () => openDecisionForm(row)); body.append(edit);
+    const controls = element("div", "journal-card__actions");
+    if (isOpenDecision(row)) {
+      controls.append(decisionWorkflowButton("Reporter", "secondary", () => transitionDecision(row, "Reportée")), decisionWorkflowButton("Décider", "primary", () => openDecisionForm(row, "Décidée")), decisionWorkflowButton("Classer sans suite", "ghost-danger", () => transitionDecision(row, "Sans suite")));
+    } else {
+      controls.append(decisionWorkflowButton("Consulter / compléter", "secondary", () => openDecisionForm(row)));
+    }
+    body.append(controls);
     root.append(header, meta, body);
     list.append(root);
     }); section.append(list); ui.arbitrations.append(section);
   });
 }
 function isOpenDecision(row) { const status = normalizeText(row.Statut); return DECISION_OPEN_STATUSES.has(status) || (!DECISION_CLOSED_STATUSES.has(status) && !isTrue(row.Transmis)); }
+function decisionWorkflowButton(label, kind, handler) { const button = textElement("button", label, `button button--${kind}`); button.type = "button"; button.addEventListener("click", () => Promise.resolve(handler()).catch((error) => showFeedback(`Mise à jour impossible — ${exactError(error)}`))); return button; }
+async function transitionDecision(row, status) {
+  const reason = window.prompt(status === "Reportée" ? "Motif du report :" : "Motif du classement sans suite :", "");
+  if (reason === null) return;
+  if (!reason.trim()) throw new Error("Un motif est nécessaire pour préserver l’historique de la décision.");
+  const timestamp = new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(new Date());
+  const entry = `${timestamp} — ${status} — ${reason.trim()}`;
+  const values = { Statut: status };
+  if (decisionHasColumn("Motif_report") && status === "Reportée") values.Motif_report = reason.trim();
+  if (decisionHasColumn("Historique_evolution")) values.Historique_evolution = [displayValue(row.Historique_evolution), entry].filter(Boolean).join("\n");
+  await writeChanges(ui.decisionDialog, [["UpdateRecord", "ARBITRAGES_DECISIONS", row.id, values]], `Décision ${status.toLocaleLowerCase("fr-FR")}.`);
+}
 
 function renderTimeline(events) {
   ui.timeline.replaceChildren();
@@ -540,10 +571,11 @@ function bindEditing() {
   ui.journalSearch.addEventListener("input", () => { appState.journalSearch = ui.journalSearch.value; renderWhenReady(); });
   ui.journalTypeFilter.addEventListener("change", () => { appState.journalTypeFilter = ui.journalTypeFilter.value; renderWhenReady(); });
   ui.journalStateFilter.addEventListener("change", () => { appState.journalStateFilter = ui.journalStateFilter.value; renderWhenReady(); });
+  ui.showAllJournal.addEventListener("click", () => { appState.showAllJournal = !appState.showAllJournal; renderWhenReady(); });
   try { const channel = new BroadcastChannel("pilotage-grist"); channel.addEventListener("message", (event) => { if (event.data?.type === "select-project") selectProject(event.data.id, true); }); } catch (_) { /* facultatif */ }
 }
 function selectInitialProject(fallback) {
-  const queryId = new URLSearchParams(location.search).get("project"); let stored;
+  const queryId = window.PilotageContext?.projectId || new URLSearchParams(location.search).get("project"); let stored;
   try { stored = JSON.parse(localStorage.getItem("pilotage-grist:selected-project") || "null")?.id; } catch (_) { stored = null; }
   selectProject(queryId || stored || fallback?.id || appState.tables.PROJETS?.[0]?.id, false);
 }
@@ -554,7 +586,7 @@ function selectProject(id, sync) {
   renderWhenReady();
 }
 function renderProjectSelector() {
-  const selected = String(appState.selectedProject?.id || ""); ui.selector.replaceChildren(...(appState.tables.PROJETS || []).map((project) => option(project.id, textOr(project.Nom_projet, `Projet ${project.id}`)))); ui.selector.value = selected;
+  const selected = String(appState.selectedProject?.id || ""); ui.selector.replaceChildren(...(appState.tables.PROJETS || []).map((project) => option(project.id, textOr(project.Nom_projet, `Projet ${project.id}`)))); ui.selector.value = selected; ui.selector.disabled = Boolean(window.PilotageContext?.isProjectMode);
 }
 function option(value,label){const item=document.createElement("option");item.value=value;item.textContent=label;return item;}
 function openProjectForm() {
@@ -594,7 +626,7 @@ function decisionField(name, label, type, value) {
   if (type === "choice") { const select = document.createElement("select"); select.className = "form-field__control"; select.name = name; select.append(option("", "Non renseigné"), ...decisionChoices(name).map((choice) => option(choice, choice))); select.value = displayValue(value); control.replaceWith(select); }
   return wrapper;
 }
-function openDecisionForm(row = null) {
+function openDecisionForm(row = null, forcedStatus = "") {
   appState.editingDecisionId = row?.id ?? null; ui.decisionForm.reset(); ui.decisionFields.replaceChildren();
   ui.decisionDialog.querySelector("#decision-title").textContent = row ? "Modifier la décision" : "Nouvelle décision";
   ui.decisionDialog.querySelector("[type=submit]").textContent = row ? "Enregistrer" : "Créer la décision";
@@ -602,6 +634,7 @@ function openDecisionForm(row = null) {
   ui.decisionFields.append(project, ...DECISION_FIELDS.filter(([name]) => decisionHasColumn(name)).map(([name, label, type]) => decisionField(name, label, type, row?.[name] ?? (name === "Statut" ? "À préparer" : ""))));
   const result = element("div", "decision-result form-grid form-field--wide"); result.append(...DECISION_RESULT_FIELDS.filter(([name]) => decisionHasColumn(name)).map(([name, label, type]) => decisionField(name, label, type, row?.[name]))); ui.decisionFields.append(result);
   const status = ui.decisionForm.elements.Statut; const refresh = () => { result.hidden = normalizeText(status?.value) !== "decidee"; }; if (status) status.addEventListener("change", refresh); refresh();
+  if (status && forcedStatus) { status.value = forcedStatus; refresh(); }
   const subject = ui.decisionForm.elements.Sujet; if (subject) subject.required = true;
   ui.decisionDialog.querySelector(".form-message").textContent = ""; ui.decisionDialog.showModal(); subject?.focus();
 }
