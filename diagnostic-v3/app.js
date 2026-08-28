@@ -13,7 +13,7 @@ const EXPECTED={
   ATTENTES_EXTERNES:{Projet:"Ref:PROJETS",Attente:"Text",Date_attendue:"Date",Statut:"Choice",Reunion_origine:"Ref:REUNIONS"},
   RELANCES_ATTENTES:{Attente:"Ref:ATTENTES_EXTERNES",Date_relance:"Date",Commentaire:"Text"},
   REUNIONS_VERSIONS:{Reunion:"Ref:REUNIONS",Numero_version:"Int",Compte_rendu:"Text",Points_cles:"Text",Auteur:"Ref:INTERLOCUTEURS",Date_version:"DateTime",Motif_modification:"Text",Demandeur:"Ref:INTERLOCUTEURS",Approbateur:"Ref:INTERLOCUTEURS",Statut_demande:"Choice"}
-  ,AVANCEMENTS:{Projet:"Ref:PROJETS",Date_evenement:"DateTime",Type_entree:"Choice",Titre:"Text",Description:"Text",Automatique:"Bool"}
+  ,AVANCEMENTS:{Projet:"Ref:PROJETS",Date_evenement:"DateTime",Type_entree:"Choice",Titre:"Text",Description:"Text",Source_table:"Text",Source_id:"Int",Automatique:"Bool"}
 };
 const LEGACY={PROJETS:["Pourcentage_avancement","Avancement","Priorite","Categorie"],ACTIONS:["Priorite","Type_action","Controle","Commentaire"],CONSIGNES_POLITIQUES:["Priorite","Echeance","Controle","Retour"],REUNIONS:["Type_reunion","CR_finalise","Decisions_prises","Suites","Actions","Engagements","Arbitrage_attendu"]};
 const $=selector=>document.querySelector(selector),ui={state:$("#state"),content:$("#content"),summary:$("#summary"),results:$("#results"),legacy:$("#legacy-list"),run:$("#run"),verdict:document.querySelector(".verdict"),verdictTitle:$("#verdict-title"),verdictText:$("#verdict-text")};

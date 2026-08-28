@@ -642,8 +642,9 @@ async function saveDecision(event) {
       else values[name] = String(raw || "").trim();
     }
     const errors=window.PilotageV3Rules?.decisionErrors(values)||[];if(errors.length)throw new Error(errors[0]);
-    const action = appState.editingDecisionId ? ["UpdateRecord", "ARBITRAGES_DECISIONS", appState.editingDecisionId, values] : ["AddRecord", "ARBITRAGES_DECISIONS", null, values];
-    await writeChanges(ui.decisionDialog, [action], appState.editingDecisionId ? "Décision mise à jour." : "Décision créée et liée au projet.");
+    const before=appState.editingDecisionId?(appState.tables.ARBITRAGES_DECISIONS||[]).find(row=>String(row.id)===String(appState.editingDecisionId))||{}:{},journal=window.PilotageV3Rules?.decisionJournalEntry(before,values),action=appState.editingDecisionId ? ["UpdateRecord", "ARBITRAGES_DECISIONS", appState.editingDecisionId, values] : ["AddRecord", "ARBITRAGES_DECISIONS", null, values],actions=[action];
+    if(journal){if(!appState.editingDecisionId)throw new Error("Créez d’abord la demande de décision avant de l’enregistrer comme prise.");const schema=journalSchema(),now=Math.floor(Date.now()/1000),entry={[schema.project]:appState.selectedProject.id,[schema.date]:now,[schema.type]:journal.type,[schema.content]:journal.description};if(schema.title)entry[schema.title]=journal.title;if(schema.createdAt)entry[schema.createdAt]=now;if(schema.automatic)entry[schema.automatic]=true;if(schema.sourceTable)entry[schema.sourceTable]="ARBITRAGES_DECISIONS";if(schema.sourceId)entry[schema.sourceId]=appState.editingDecisionId;actions.push(["AddRecord","AVANCEMENTS",null,entry])}
+    await writeChanges(ui.decisionDialog, actions, journal?"Décision prise et ajoutée au Journal.":appState.editingDecisionId ? "Décision mise à jour." : "Décision créée et liée au projet.");
   } catch (error) { console.error("Écriture de la décision impossible", error); message.textContent = `Enregistrement impossible — ${exactError(error)}`; }
 }
 
@@ -727,6 +728,8 @@ function journalSchema() {
     decisionMaker: pick("Decisionnaire"),
     createdAt: pick("Cree_le"),
     automatic: pick("Automatique"),
+    sourceTable:pick("Source_table"),
+    sourceId:pick("Source_id"),
   };
   if (!schema.project) {
     const refs = details ? [...details.values()].filter((column) => String(column.type || "").startsWith("Ref")).map((column) => `${column.colId} (${column.type}${isWritableColumn(column) ? ", éditable" : ", calculée"})`) : [];
