@@ -44,3 +44,10 @@ test("l’accueil ne présente plus les indicateurs supprimés de la V3", () => 
   assert.doesNotMatch(html, /avancement de tous les projets/i);
   assert.doesNotMatch(html, /responsables, priorités/i);
 });
+
+test("la fiche projet bloque l’écriture si les règles V3 ne sont pas chargées", () => {
+  const source = fs.readFileSync(path.join(root, "fiche-projet/app.js"), "utf8");
+  assert.match(source, /function projectRules\(\)/);
+  assert.match(source, /Les règles de validation V3 ne sont pas chargées/);
+  assert.doesNotMatch(source, /PilotageV3Rules\?\.projectErrors\(next\)\|\|\[\]/);
+});
