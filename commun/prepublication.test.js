@@ -51,3 +51,10 @@ test("la fiche projet bloque l’écriture si les règles V3 ne sont pas chargé
   assert.match(source, /Les règles de validation V3 ne sont pas chargées/);
   assert.doesNotMatch(source, /PilotageV3Rules\?\.projectErrors\(next\)\|\|\[\]/);
 });
+
+test("le formulaire masque le type externe pour un interlocuteur interne", () => {
+  const html = fs.readFileSync(path.join(root, "interlocuteurs/index.html"), "utf8");
+  const source = fs.readFileSync(path.join(root, "interlocuteurs/app.js"), "utf8");
+  assert.match(html, /id="external-type-field"/);
+  assert.match(source, /querySelector\("#external-type-field"\)\.hidden=internal/);
+});
