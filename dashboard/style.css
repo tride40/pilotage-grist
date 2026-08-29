@@ -18,8 +18,8 @@
 .dashboard-header__subtitle { margin: var(--space-2) 0 0; color: #cbd4e9; }
 .dashboard-date { align-self: flex-start; padding: var(--space-2) var(--space-3); border: 1px solid rgb(255 255 255 / 18%); border-radius: var(--radius-pill); background: rgb(255 255 255 / 8%); color: #eef0ff; font-size: 0.875rem; font-weight: 650; }
 
-/* Le contenu remonte légèrement pour créer de la profondeur */
-.dashboard { position: relative; margin-top: calc(var(--space-6) * -1); padding-top: 0; padding-bottom: var(--space-10); }
+/* Le contenu reste sous le bandeau afin que les indicateurs ne le chevauchent jamais. */
+.dashboard { position: relative; margin-top: 0; padding-top: var(--space-5); padding-bottom: var(--space-10); }
 .kpi-grid { display: grid; grid-auto-columns: minmax(10rem, 78vw); grid-auto-flow: column; gap: var(--space-3); overflow-x: auto; padding: 2px 2px var(--space-3); scroll-snap-type: x proximity; scrollbar-width: thin; }
 .kpi-card { display: flex; min-height: 7.25rem; align-items: flex-start; gap: var(--space-3); scroll-snap-align: start; }
 .kpi-card__marker { width: 0.65rem; height: 0.65rem; margin-top: var(--space-2); border-radius: 50%; background: var(--color-primary); box-shadow: 0 0 0 5px var(--color-primary-soft); }

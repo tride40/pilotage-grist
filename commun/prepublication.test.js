@@ -171,4 +171,6 @@ test("le tableau de bord distingue les données incomplètes des vraies valeurs"
   assert.match(source, /card\.classList\.toggle\("kpi-card--empty"/);
   assert.doesNotMatch(source, /Projet sans nom/);
   assert.match(css, /\.kpi-card--empty/);
+  assert.match(css, /\.dashboard \{[^}]*margin-top: 0/);
+  assert.doesNotMatch(css, /\.dashboard \{[^}]*margin-top:\s*calc\([^}]*-1/);
 });
