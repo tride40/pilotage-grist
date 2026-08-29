@@ -174,7 +174,7 @@ test("le tableau de bord distingue les données incomplètes des vraies valeurs"
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
-  assert.match(html, /app\.js\?v=18/);
+  assert.match(html, /app\.js\?v=19/);
   assert.match(source, /Projet à nommer/);
   assert.match(source, /Informations à compléter/);
   assert.doesNotMatch(source, /function projectObjective/);
@@ -212,13 +212,13 @@ test("les nouveaux jalons utilisent la table dédiée", () => {
   assert.match(dashboardSource, /OPTIONAL_TABLE_NAMES = \["BLOCAGES", "VIGILANCES", "JALONS", "ATTENTES_EXTERNES"\]/);
   assert.match(dashboardSource, /function upcomingMilestones/);
   assert.match(dashboardSource, /milestones\.slice\(0, 3\)/);
-  assert.match(dashboardSource, /Pas de jalon/);
+  assert.match(dashboardSource, /Aucun jalon planifié/);
 });
 
 test("le tableau de bord expose précisément son erreur de chargement", () => {
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
-  assert.match(html, /app\.js\?v=18/);
+  assert.match(html, /app\.js\?v=19/);
   assert.match(source, /let loadingStage = "initialisation"/);
   assert.match(source, /\$\{loadingStage\} — \$\{exactError\(error\)\}/);
 });
@@ -262,9 +262,11 @@ test("le formulaire projet regroupe ses champs et contraint son calendrier", () 
 test("les cartes du tableau de bord conservent une hiérarchie alignée", () => {
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
-  assert.match(css, /\.dashboard-project-card \{[^}]*display: flex[^}]*flex-direction: column/);
-  assert.match(css, /\.project-card__category \{[^}]*min-height: 2\.4em[^}]*-webkit-line-clamp: 2/);
+  assert.match(css, /\.dashboard-project-card \{[^}]*display: grid[^}]*height: 40rem/);
+  assert.match(css, /\.project-card__themes \{[^}]*min-height: 1\.7rem/);
   assert.match(css, /\.project-card__title \{[^}]*min-height: 2\.6em[^}]*-webkit-line-clamp: 2/);
-  assert.match(css, /\.project-card__footer \{[^}]*margin-top: auto/);
-  assert.match(source, /Aucun élément actif/);
+  assert.match(css, /\.project-card__footer \{[^}]*grid-template-columns: repeat\(4/);
+  assert.match(source, /function projectAttention/);
+  assert.match(source, /metric--zero/);
+  assert.doesNotMatch(source, /filter\(\(\[count\]\) => count > 0\)/);
 });

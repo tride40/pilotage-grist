@@ -54,6 +54,15 @@ Prévoir des composants cohérents pour :
 - Alerte
 - Jauge d'avancement
 
+## Formulaires d’ajout et de modification
+
+- Organiser les formulaires longs en catégories visuelles clairement nommées et ordonnées.
+- Chaque catégorie regroupe des champs qui appartiennent au même sujet métier : informations générales, classification, pilotage, calendrier, destinataires, etc.
+- Accompagner si utile le titre de catégorie d’une courte explication, sans alourdir la lecture.
+- Conserver ensemble les champs formant une même information, par exemple mois et année, trimestre et année, agent et élu pilotes.
+- Éviter les longues suites de champs sans séparation visuelle ainsi que les légendes qui chevauchent les bordures.
+- Sur mobile, empiler les groupes et les champs sans perdre leur ordre logique ni tronquer les valeurs usuelles telles que « Non renseigné ».
+
 ## Grist
 
 Le projet s'appuie sur les tables suivantes :

@@ -333,17 +333,44 @@ function createProjectCard(project) {
   card.querySelector(".project-card__title").textContent = title;
   card.setAttribute("aria-label", title);
   card.dataset.projectId = project.id;
+  card.dataset.attention = projectAttention(project.metrics);
   card.addEventListener("click", () => { if (Date.now() >= state.suppressOpenUntil) openProject(project); });
   card.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openProject(project); }
   });
-  card.querySelector(".project-card__category").textContent = hasValue(project.Thematiques) ? displayValue(project.Thematiques) : "";
+  renderThemes(card.querySelector(".project-card__themes"), project.Thematiques);
   renderBadges(card.querySelector(".project-card__badges"), project);
   renderPilots(card.querySelector(".project-card__pilots"), project);
   renderMilestones(card.querySelector(".milestone-list"), project.Jalons_affiches);
   renderMetrics(card.querySelector(".project-card__footer"), project.metrics);
   prepareOrderControls(card, project);
   return card;
+}
+
+function renderThemes(container, value) {
+  const themes = referenceIds(value).map(displayValue).filter((theme) => hasValue(theme) && theme !== "L");
+  const visible = themes.slice(0, 2);
+  if (!visible.length) {
+    const badge = document.createElement("span");
+    badge.className = "theme-chip theme-chip--empty";
+    badge.textContent = "Sans thématique";
+    container.append(badge);
+    return;
+  }
+  visible.forEach((theme) => {
+    const badge = document.createElement("span");
+    badge.className = "theme-chip";
+    badge.textContent = theme;
+    badge.title = theme;
+    container.append(badge);
+  });
+  if (themes.length > visible.length) {
+    const more = document.createElement("span");
+    more.className = "theme-chip theme-chip--more";
+    more.textContent = `+${themes.length - visible.length}`;
+    more.title = themes.slice(visible.length).join(", ");
+    container.append(more);
+  }
 }
 
 function renderBadges(container, project) {
@@ -367,21 +394,32 @@ function renderPilots(container, project) {
   ];
   details.forEach(([label, value]) => {
     const wrapper = document.createElement("div");
+    const avatar = document.createElement("span");
+    const text = document.createElement("div");
     const term = document.createElement("dt");
     const description = document.createElement("dd");
+    avatar.className = "pilot-avatar";
+    avatar.textContent = initials(value);
+    avatar.setAttribute("aria-hidden", "true");
     term.textContent = label;
     description.textContent = displayValue(value);
-    wrapper.append(term, description);
+    text.append(term, description);
+    wrapper.append(avatar, text);
     container.append(wrapper);
   });
   if (details.length === 0) container.remove();
+}
+
+function initials(value) {
+  const words = displayValue(value).split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((word) => word[0]?.toLocaleUpperCase("fr-FR") || "").join("") || "?";
 }
 
 function renderMilestones(container, milestones) {
   if (!milestones.length) {
     const empty = document.createElement("p");
     empty.className = "milestone-empty";
-    empty.textContent = "Pas de jalon";
+    empty.textContent = "Aucun jalon planifié";
     container.append(empty);
     return;
   }
@@ -406,21 +444,32 @@ function renderMilestones(container, milestones) {
 
 function renderMetrics(container, metrics) {
   const items = [
-    [metrics.openActions, "action ouverte", "actions ouvertes", "info"],
-    [metrics.lateActions, "action en retard", "actions en retard", "danger"],
-    [metrics.arbitrations, "décision à prendre", "décisions à prendre", "arbitration"],
-    [metrics.instructions, "consigne à contrôler", "consignes à contrôler", "warning"],
-    [metrics.blockages, "blocage ouvert", "blocages ouverts", "danger"],
-    [metrics.vigilances, "vigilance ouverte", "vigilances ouvertes", "warning"],
-    [metrics.externalWaits, "attente externe", "attentes externes", "warning"],
-  ].filter(([count]) => count > 0);
-  items.forEach(([count, singular, plural, kind]) => {
+    [metrics.openActions, "Actions", "info"],
+    [metrics.lateActions, "Retards", "danger"],
+    [metrics.arbitrations, "Décisions", "arbitration"],
+    [metrics.instructions, "Consignes", "warning"],
+    [metrics.blockages, "Blocages", "danger"],
+    [metrics.vigilances, "Vigilances", "warning"],
+    [metrics.externalWaits, "Attentes", "warning"],
+  ];
+  items.forEach(([count, label, kind]) => {
     const item = document.createElement("span");
     item.className = `metric metric--${kind}`;
-    item.textContent = `${count} ${count > 1 ? plural : singular}`;
+    item.classList.toggle("metric--zero", count === 0);
+    const number = document.createElement("strong");
+    const text = document.createElement("span");
+    number.textContent = String(count);
+    text.textContent = label;
+    item.append(number, text);
     container.append(item);
   });
-  if (items.length === 0) container.setAttribute("aria-label", "Aucun élément actif");
+}
+
+function projectAttention(metrics) {
+  if (metrics.blockages > 0 || metrics.lateActions > 0) return "danger";
+  if (metrics.vigilances > 0 || metrics.externalWaits > 0 || metrics.instructions > 0) return "warning";
+  if (metrics.arbitrations > 0) return "arbitration";
+  return "default";
 }
 
 function showState(kind, title, message) {
@@ -523,6 +572,12 @@ function prepareOrderControls(card, project) {
   up.addEventListener("click", () => moveProject(project.id, -1));
   down.addEventListener("click", () => moveProject(project.id, 1));
   const handle = controls.querySelector(".drag-handle");
+  handle.setAttribute("aria-expanded", "false");
+  handle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = controls.classList.toggle("is-open");
+    handle.setAttribute("aria-expanded", String(open));
+  });
   handle.addEventListener("pointerdown", (event) => startProjectDrag(event, card));
 }
 
