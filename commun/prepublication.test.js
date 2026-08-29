@@ -94,3 +94,15 @@ test("l’annuaire permet de gérer les services municipaux", () => {
   assert.match(html, /<fieldset[^>]+id="person-services-field"/);
   assert.doesNotMatch(html, /Service\(s\) municipal\(aux\)/);
 });
+
+test("l’annuaire identifie le compte Grist via une ligne technique temporaire", () => {
+  const html = fs.readFileSync(path.join(root, "interlocuteurs/index.html"), "utf8");
+  const source = fs.readFileSync(path.join(root, "commun/current-user.js"), "utf8");
+  assert.match(html, /commun\/current-user\.js/);
+  assert.match(html, /id="current-user"/);
+  assert.match(source, /CONTEXTE_UTILISATEUR/);
+  assert.match(source, /\["AddRecord", CONTEXT_TABLE/);
+  assert.match(source, /\["RemoveRecord", CONTEXT_TABLE/);
+  assert.match(source, /Cle_session/);
+  assert.match(source, /Email_Grist/);
+});
