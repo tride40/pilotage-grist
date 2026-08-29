@@ -140,3 +140,22 @@ test("l’annuaire signale les réunions potentiellement dupliquées", () => {
   assert.match(source, /Doublon possible à vérifier/);
   assert.doesNotMatch(source, /Projet inconnu|Projet sans nom/);
 });
+
+test("les actions de désactivation demandent une confirmation", () => {
+  const source = fs.readFileSync(path.join(root, "interlocuteurs/app.js"), "utf8");
+  assert.match(source, /window\.confirm\(`Désactiver \$\{personName\(person\)\}/);
+  assert.match(source, /window\.confirm\(`Désactiver \$\{name\}/);
+  assert.match(source, /function showFormError/);
+  assert.match(source, /setAttribute\("role","alert"\)/);
+});
+
+test("tous les écrans chargent les styles d’accessibilité courants", () => {
+  const pages = ["index.html", "accueil/index.html", "actions/index.html", "consignes/index.html", "dashboard/index.html", "diagnostic-v3/index.html", "fiche-projet/index.html", "interlocuteurs/index.html", "point-hebdomadaire/index.html", "reunions/index.html"];
+  for (const page of pages) {
+    const html = fs.readFileSync(path.join(root, page), "utf8");
+    assert.match(html, /components\.css\?v=12/, page);
+  }
+  const css = fs.readFileSync(path.join(root, "commun/components.css"), "utf8");
+  assert.match(css, /\.button:focus-visible/);
+  assert.match(css, /summary:focus-visible/);
+});
