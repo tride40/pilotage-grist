@@ -553,6 +553,7 @@ async function openProject(project) {
 
 /* ---------- Démarrage du widget ---------- */
 async function initializeDashboard() {
+  let loadingStage = "initialisation";
   const today = new Date();
   elements.date.dateTime = today.toISOString().slice(0, 10);
   elements.date.textContent = new Intl.DateTimeFormat("fr-FR", {
@@ -565,9 +566,12 @@ async function initializeDashboard() {
       tables = window.DASHBOARD_DEMO_DATA;
       state.demo = true;
     } else {
+      loadingStage = "connexion à l’API Grist";
       const tableNames = await initializeGristConnection();
+      loadingStage = "lecture des tables du document";
       tables = await fetchDocumentData(tableNames);
       try {
+        loadingStage = "lecture des métadonnées";
         const metadata = await fetchProjectMetadata();
         state.writable = metadata.writable;
         state.projectChoices = metadata.projectChoices;
@@ -578,15 +582,18 @@ async function initializeDashboard() {
       }
     }
     state.tables = tables;
+    loadingStage = "identification de l’utilisateur";
     if(state.demo)state.currentUser={person:tables.INTERLOCUTEURS?.[0],personId:tables.INTERLOCUTEURS?.[0]?.id};else try{state.currentUser=await window.PilotageCurrentUser.identify({people:tables.INTERLOCUTEURS||[]})}catch(error){console.warn(error)}
+    loadingStage = "calcul des indicateurs";
     state.projects = prepareDashboardData(tables);
     renderKpis(calculateKpis(tables, state.projects));
+    loadingStage = "affichage des projets";
     renderProjects();
   } catch (error) {
     console.error("Impossible de charger le tableau de bord Grist :", error);
     elements.projectGrid.hidden = true;
     elements.resultsCount.textContent = "";
-    showState("error", "Connexion à Grist impossible", "Vérifiez que ce widget est ouvert depuis le document « Pilotage des projets » et qu’il dispose d’un accès en lecture.");
+    showState("error", "Chargement du tableau de bord impossible", `${loadingStage} — ${exactError(error)}`);
   }
 }
 
