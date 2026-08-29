@@ -221,6 +221,7 @@ textarea.form-field__control { min-height: 7rem; resize: vertical; }
 /* Les valeurs vides restent compactes et les cartes s'adaptent à leur contenu. */
 .empty-state,.empty-section{min-height:0!important;padding:var(--space-4)!important}
 .responsive-grid{align-items:start}
+body:has(dialog[open]){overflow:hidden}
 
 /* Titres de section */
 .section-header {

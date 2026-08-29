@@ -121,6 +121,8 @@ dialog form{display:grid;grid-template-rows:auto minmax(0,1fr) auto;max-height:c
 .journal-card[data-kind="success"]{border-inline-start-color:var(--color-success)}
 .journal-card[data-kind="arbitration"]{border-inline-start-color:var(--color-arbitration)}
 .journal-card__text{margin:0;color:var(--color-text-muted);font-size:.96rem;line-height:1.6}
+.journal-card--automatic{gap:var(--space-2);padding-block:var(--space-3);background:var(--color-surface-muted)}
+.journal-card--automatic .item-card__header h3{font-size:1rem}.journal-card--automatic .item-card__body{gap:var(--space-2)}
 
 /* Tablette : deux colonnes lorsque l'espace le permet */
 @media (min-width: 48rem) {

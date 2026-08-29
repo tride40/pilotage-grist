@@ -24,6 +24,10 @@ body:has(.project-selector select:disabled) .widget-context .project-selector{di
 body:has(.project-selector select:disabled) .widget-context{justify-content:flex-start}
 .instruction-list{align-items:start}
 dialog form{grid-template-rows:auto minmax(0,1fr) auto auto;max-height:calc(100dvh - 2rem);overflow:hidden}
+.archive-disclosure{padding-top:var(--space-3);border-top:1px solid var(--color-border)}
+.archive-disclosure summary{width:fit-content;cursor:pointer;color:var(--color-primary);font-weight:800}
+.archive-disclosure[open]{display:grid;gap:var(--space-3)}
+.archive-disclosure[open] summary{margin-bottom:var(--space-1)}
 .dialog-header, .dialog-actions { display: flex; align-items: start; justify-content: space-between; gap: var(--space-3); } .dialog-actions { flex-wrap: wrap; justify-content: end; }
 .icon-button { display: grid; width: var(--touch-target); height: var(--touch-target); place-items: center; border: 0; border-radius: 50%; background: var(--color-surface-muted); cursor: pointer; font-size: 1.6rem; }
 .form-grid { display: grid; gap: var(--space-4); } [hidden] { display: none !important; } @keyframes spin { to { transform: rotate(360deg); } }

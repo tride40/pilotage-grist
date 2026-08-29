@@ -345,12 +345,12 @@ function renderUpdates(rows) {
   const displayed = appState.showAllJournal || hasFilters ? filtered : filtered.slice(0, 5);
   ui.journalResults.textContent = `${filtered.length} entrée${filtered.length > 1 ? "s" : ""}`;
   ui.showAllJournal.hidden = filtered.length <= 5 || hasFilters;
-  ui.showAllJournal.textContent = appState.showAllJournal ? "Réduire" : `Tout afficher (${filtered.length})`;
+  ui.showAllJournal.textContent = appState.showAllJournal ? "Afficher seulement les 5 plus récentes" : `Afficher les ${filtered.length} entrées`;
   renderCollection(ui.updates, displayed, rows.length ? "Aucune entrée ne correspond à ces filtres." : "Le journal est vide. Ajoutez le premier changement de ce projet.", (row) => {
     const content = journalContent(row);
     const type = journalType(row);
     const card = makeItemCard(textOr(row.Titre,type), row.Date_evenement || row.Date_MAJ || row.Date, journalDateLabel(row));
-    card.root.classList.add("journal-card");
+    const automatic=isTrue(row.Automatique);card.root.classList.add("journal-card");if(automatic)card.root.classList.add("journal-card--automatic");
     card.root.dataset.kind = journalKind(type);
     appendBadges(card.meta, [[journalEntryState(row, rows), journalEntryState(row, rows) === "Résolu" ? "success" : "info"]]);
     if (hasValue(content)) card.body.append(textElement("p", content, "journal-card__text"));
@@ -369,7 +369,7 @@ function renderUpdates(rows) {
       const label = type === "Blocage" ? "Marquer comme débloqué" : type === "Vigilance" ? "Lever la vigilance" : "Exprimer la décision";
       const resolve = textElement("button", label, "button button--primary"); resolve.type = "button"; resolve.addEventListener("click", () => openJournalResolution(row, resolutionType)); actions.append(resolve);
     }
-    actions.append(edit, remove); card.body.append(actions);
+    if(!automatic)actions.append(edit, remove);if(actions.childElementCount)card.body.append(actions);
     return card.root;
   });
 }
@@ -382,7 +382,7 @@ function fillJournalTypeFilter(rows) {
 function journalType(row) { return textOr(row.Type_entree || row.Type, inferJournalType(row)); }
 function inferJournalType(row) { if (hasValue(row.Decision_attendue)) return "Décision attendue"; if (hasValue(row.Difficulte_blocage)) return "Blocage"; if (hasValue(row.Point_vigilance)) return "Vigilance"; if (hasValue(row.Avancement)) return "Avancement"; return "Information"; }
 function journalContent(row) { return firstField(row, ["Description", "Contenu", "Fait_marquant", "Travail_realise", "Commentaire", "Prochaine_etape", "Difficulte_blocage", "Decision_attendue", "Point_vigilance"]); }
-function journalDateLabel(row) { const date = formatDate(row.Date_evenement || row.Date_MAJ || row.Date); const time = formatTime(row.Date_evenement || row.Cree_le); return [date, time].filter(Boolean).join(" · "); }
+function journalDateLabel(row) { const value=row.Date_evenement || row.Cree_le || row.Date_MAJ || row.Date,date = formatDate(value), time = formatTime(value); return [date,time&&time!=="00:00"?time:""].filter(Boolean).join(" · "); }
 function journalKind(type) { const value = normalizeText(type); if (["deblocage", "vigilance levee", "decision prise", "etape franchie"].includes(value)) return "success"; if (value.includes("blocage")) return "danger"; if (value.includes("vigilance")) return "warning"; if (value.includes("decision")) return "arbitration"; if (value.includes("etape")) return "info"; return "info"; }
 function journalEntryState(row, rows) {
   if (!JOURNAL_RESOLUTION_TYPES[journalType(row)] && journalType(row) !== "Prochaine étape") return "";
@@ -396,7 +396,7 @@ function renderInstructions(rows) {
     if (isTrue(row.En_retard)) card.root.classList.add("item-card--danger");
     else if (isTrue(row.A_controler)) card.root.classList.add("item-card--warning");
     appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)]]);
-    appendFields(card.body, [["Émetteur", personValue(row.Emetteur)], ["Destinataire(s)", personValue(row.Destinataires || row.Responsable)]]);
+    appendFields(card.body, [["Émetteur", personValue(row.Emetteur)], ["Destinataires", personValue(row.Destinataires || row.Responsable)]]);
     return card.root;
   });
 }

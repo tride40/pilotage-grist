@@ -87,7 +87,7 @@ function renderCard(row, group) {
   return card;
 }
 
-function renderEditor(row) {const editor=element("div","instruction-card__editor"),reasonLabel=element("label","form-field");reasonLabel.append(textElement("span","Motif d’archivage (facultatif)","form-field__label"));const reason=element("textarea","form-field__control");reason.placeholder="Précisez pourquoi la consigne est archivée";reasonLabel.append(reason);const actions=element("div","instruction-card__actions");actions.append(actionButton("Archiver","secondary",()=>archiveInstruction(row,reason.value)));editor.append(reasonLabel,actions);return editor}
+function renderEditor(row) {const editor=element("details","instruction-card__editor archive-disclosure"),summary=textElement("summary","Archiver cette consigne");const reasonLabel=element("label","form-field");reasonLabel.append(textElement("span","Motif d’archivage (facultatif)","form-field__label"));const reason=element("textarea","form-field__control");reason.placeholder="Précisez pourquoi la consigne est archivée";reason.rows=3;reasonLabel.append(reason);const actions=element("div","instruction-card__actions");actions.append(actionButton("Confirmer l’archivage","secondary",()=>archiveInstruction(row,reason.value)));editor.append(summary,reasonLabel,actions);return editor}
 
 async function createInstruction(formData) {
   const author=window.PilotageCurrentUser.requirePersonId(state.currentUser);
