@@ -96,7 +96,7 @@
 .person__meta { margin: 2px 0 0; color: var(--color-text-muted); font-size: .8rem; overflow-wrap: anywhere; }
 
 /* États généraux de la fiche */
-.interface-state { display: flex; min-height: 17rem; align-items: center; justify-content: center; gap: var(--space-4); padding: var(--space-6); border: 1px dashed var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text-muted); }
+.interface-state { display: flex; min-height: 8rem; align-items: center; justify-content: center; gap: var(--space-4); padding: var(--space-5); border: 1px dashed var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text-muted); }
 .interface-state[hidden] { display: none; }
 .interface-state strong { color: var(--color-text); }
 .interface-state p { margin: var(--space-1) 0 0; }

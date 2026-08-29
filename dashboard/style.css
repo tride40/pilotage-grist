@@ -59,7 +59,7 @@
 
 /* Cartes projet et hiérarchie des informations */
 .project-grid { display:grid;grid-template-columns:1fr;align-items:stretch;max-width:72rem;margin-inline:auto; }
-.dashboard-project-card { position: relative; min-height:29rem; align-content: start; padding: var(--space-5); cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast); }
+.dashboard-project-card { position: relative; min-height:0; align-content: start; padding: var(--space-5); cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast); }
 .dashboard-project-card:focus-visible { border-color: var(--color-primary); box-shadow: 0 0 0 4px var(--color-primary-soft), var(--shadow-md); outline: none; }
 .dashboard-project-card:active { transform: translateY(1px); }
 .project-card__header { display: flex; align-items: flex-start; flex-direction: column; gap: var(--space-3); }
@@ -117,5 +117,5 @@ textarea.form-field__control { resize: vertical; }
 
 @media (min-width: 64rem) {
   .kpi-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .dashboard-project-card { min-height: 100%; }
+  .dashboard-project-card { min-height: 0; }
 }

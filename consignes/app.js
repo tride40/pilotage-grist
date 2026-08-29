@@ -81,7 +81,7 @@ function renderCard(row, group) {
   const badges = element("div", "instruction-card__badges");
   badges.append(makeBadge(textOr(row.Statut, statusLabel(group)), group === "history" ? "success" : "info")); header.append(badges); card.append(header);
   const meta = element("dl", "instruction-card__meta");
-  if (hasValue(row.Date_emission)) appendDefinition(meta, "Émise le", formatDate(row.Date_emission)); if (hasValue(row.Emetteur)) appendDefinition(meta, "Émetteur", personValue(row.Emetteur)); if (hasValue(row.Destinataires || row.Responsable)) appendDefinition(meta, "Personne(s)", personValue(row.Destinataires || row.Responsable));if(hasValue(row.Services_destinataires))appendDefinition(meta,"Service(s)",serviceValue(row.Services_destinataires)); if(group==="history"&&hasValue(row.Date_archivage))appendDefinition(meta,"Archivée le",formatDate(row.Date_archivage)); card.append(meta);
+  if (hasValue(row.Date_emission)) appendDefinition(meta, "Émise le", formatDate(row.Date_emission)); if (referenceIds(row.Emetteur).length) appendDefinition(meta, "Émetteur", personValue(row.Emetteur)); if (referenceIds(row.Destinataires || row.Responsable).length) appendDefinition(meta, "Destinataires", personValue(row.Destinataires || row.Responsable));if(referenceIds(row.Services_destinataires).length)appendDefinition(meta,"Services",serviceValue(row.Services_destinataires)); if(group==="history"&&hasValue(row.Date_archivage))appendDefinition(meta,"Archivée le",formatDate(row.Date_archivage)); card.append(meta);
   if(group==="history")appendNote(card,"Motif d’archivage",row.Motif_archivage);
   if (group !== "history") card.append(renderEditor(row, group));
   return card;
@@ -125,10 +125,10 @@ function classify(row) { return ["validee", "terminee", "archivee"].includes(nor
 function writableFields(values) { return Object.fromEntries(Object.entries(values).filter(([key, value]) => state.columns.has(key) && value !== "" && value !== null && value !== undefined)); }
 function requireFields(fields, names) { const missing = names.filter((name) => !Object.hasOwn(fields, name)); if (missing.length) throw new Error(`Colonnes obligatoires absentes : ${missing.join(", ")}.`); }
 function firstActiveProject() { return state.projects.find((project) => !isTrue(project.Archive) && !["termine", "abandonne"].includes(normalizeText(project.Statut))) || state.projects[0] || null; }
-function personValue(value) { return referenceIds(value).map((id) => personName(state.people.find((person) => String(person.id) === id)) || id).join(", "); }
+function personValue(value) { return referenceIds(value).map((id) => personName(state.people.find((person) => String(person.id) === id)) || "Non renseigné").filter((name)=>name!=="Non renseigné").join(", ") || "Non renseigné"; }
 function personName(person) { return person ? textOr(person.Nom_complet || [person.Prenom, person.Nom].filter(hasValue).join(" "), "Interlocuteur sans nom") : ""; }
 function serviceName(service){return service?textOr(service.Nom_service||service.Nom,"Service sans nom"):""}function serviceValue(value){return referenceIds(value).map(id=>serviceName(state.services.find(service=>String(service.id)===id))||id).join(", ")}
-function referenceIds(value) { const values = Array.isArray(value) ? value : [value]; return values.filter((item) => item !== "L" && hasValue(item)).map(String); }
+function referenceIds(value) { const values = Array.isArray(value) ? value : [value]; return values.filter((item) => item !== "L" && item !== 0 && item !== "0" && hasValue(item)).map(String); }
 function statusLabel(group) { return group === "history" ? "Archivée" : "Active"; }
 function appendDefinition(container, label, value) { const wrapper = element("div"); wrapper.append(textElement("dt", label), textElement("dd", value)); container.append(wrapper); }
 function appendNote(container, label, value) { const note = element("section", "instruction-card__note"); note.append(textElement("strong", label), textElement("p", value)); container.append(note); }

@@ -109,7 +109,11 @@
   body{padding-bottom:0}
 }
 
-dialog form,dialog .dialog-content{overflow:auto}dialog .dialog-header{position:sticky;z-index:3;top:0;padding-block:var(--space-2);background:var(--color-surface)}dialog .dialog-actions{position:sticky;z-index:3;bottom:0;padding-block:var(--space-2);background:var(--color-surface)}
+dialog form,dialog .dialog-content{display:grid;max-height:calc(100dvh - 1.5rem);overflow:hidden}
+dialog .dialog-header{position:relative;z-index:3;padding-block:var(--space-2);background:var(--color-surface)}
+dialog .form-scroll{min-height:0;overflow:auto;overscroll-behavior:contain}
+dialog form>.form-grid,dialog .dialog-content>#detail-body,dialog .dialog-content>.service-list{min-height:0;overflow:auto;overscroll-behavior:contain}
+dialog .dialog-actions{position:relative;z-index:3;bottom:auto;padding-block:var(--space-2);border-top:1px solid var(--color-border);background:var(--color-surface);box-shadow:0 -6px 16px rgb(15 23 42 / 6%)}
 
 @media (max-width: 47.99rem) {
   .app-header .app-header__inner { min-height: 0; padding: var(--space-5) var(--space-4); align-items: stretch; flex-direction: column; }
@@ -213,6 +217,10 @@ dialog form,dialog .dialog-content{overflow:auto}dialog .dialog-header{position:
 
 textarea.form-field__control { min-height: 7rem; resize: vertical; }
 .form-field__control:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+
+/* Les valeurs vides restent compactes et les cartes s'adaptent à leur contenu. */
+.empty-state,.empty-section{min-height:0!important;padding:var(--space-4)!important}
+.responsive-grid{align-items:start}
 
 /* Titres de section */
 .section-header {

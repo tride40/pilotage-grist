@@ -19,6 +19,11 @@ h1, h2, h3, p { margin-block-start: 0; } h1 { margin-block-end: var(--space-3); 
 .interface-state { display: flex; align-items: center; justify-content: center; gap: var(--space-3); min-height: 10rem; } .feedback { position: sticky; z-index: 4; top: var(--space-2); border-style: solid; background: var(--color-info-soft); color: var(--color-info); } .feedback--error { border-color: var(--color-danger); background: var(--color-danger-soft); color: var(--color-danger); }
 .loader { width: 1.5rem; height: 1.5rem; border: 3px solid var(--color-border); border-top-color: var(--color-primary); border-radius: 50%; animation: spin .8s linear infinite; }
 dialog { width: min(calc(100% - 2rem), 42rem); max-height: calc(100dvh - 2rem); padding: 0; border: 0; border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-md); } dialog::backdrop { background: rgb(9 14 29 / 65%); } dialog form { display: grid; gap: var(--space-4); padding: var(--space-5); }
+
+body:has(.project-selector select:disabled) .widget-context .project-selector{display:none}
+body:has(.project-selector select:disabled) .widget-context{justify-content:flex-start}
+.instruction-list{align-items:start}
+dialog form{grid-template-rows:auto minmax(0,1fr) auto auto;max-height:calc(100dvh - 2rem);overflow:hidden}
 .dialog-header, .dialog-actions { display: flex; align-items: start; justify-content: space-between; gap: var(--space-3); } .dialog-actions { flex-wrap: wrap; justify-content: end; }
 .icon-button { display: grid; width: var(--touch-target); height: var(--touch-target); place-items: center; border: 0; border-radius: 50%; background: var(--color-surface-muted); cursor: pointer; font-size: 1.6rem; }
 .form-grid { display: grid; gap: var(--space-4); } [hidden] { display: none !important; } @keyframes spin { to { transform: rotate(360deg); } }
