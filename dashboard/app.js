@@ -337,7 +337,7 @@ function createProjectCard(project) {
   card.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openProject(project); }
   });
-  setOptionalText(card.querySelector(".project-card__category"), project.Thematiques);
+  card.querySelector(".project-card__category").textContent = hasValue(project.Thematiques) ? displayValue(project.Thematiques) : "";
   renderBadges(card.querySelector(".project-card__badges"), project);
   renderPilots(card.querySelector(".project-card__pilots"), project);
   renderMilestones(card.querySelector(".milestone-list"), project.Jalons_affiches);
@@ -420,7 +420,7 @@ function renderMetrics(container, metrics) {
     item.textContent = `${count} ${count > 1 ? plural : singular}`;
     container.append(item);
   });
-  if (items.length === 0) container.remove();
+  if (items.length === 0) container.setAttribute("aria-label", "Aucun élément actif");
 }
 
 function showState(kind, title, message) {

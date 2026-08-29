@@ -255,4 +255,16 @@ test("le formulaire projet regroupe ses champs et contraint son calendrier", () 
   assert.match(source, /new Date\(\)\.getFullYear\(\)/);
   assert.match(source, /elements\.form\.elements\[field\]\.min = String\(currentYear\)/);
   assert.match(source, /\["null", "undefined"\]/);
+  assert.doesNotMatch(html, /<fieldset class="calendar-group"/);
+  assert.match(html, /<section class="calendar-group"/);
+});
+
+test("les cartes du tableau de bord conservent une hiérarchie alignée", () => {
+  const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
+  assert.match(css, /\.dashboard-project-card \{[^}]*display: flex[^}]*flex-direction: column/);
+  assert.match(css, /\.project-card__category \{[^}]*min-height: 2\.4em[^}]*-webkit-line-clamp: 2/);
+  assert.match(css, /\.project-card__title \{[^}]*min-height: 2\.6em[^}]*-webkit-line-clamp: 2/);
+  assert.match(css, /\.project-card__footer \{[^}]*margin-top: auto/);
+  assert.match(source, /Aucun élément actif/);
 });
