@@ -159,3 +159,16 @@ test("tous les écrans chargent les styles d’accessibilité courants", () => {
   assert.match(css, /\.button:focus-visible/);
   assert.match(css, /summary:focus-visible/);
 });
+
+test("le tableau de bord distingue les données incomplètes des vraies valeurs", () => {
+  const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
+  const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
+  assert.match(html, /app\.js\?v=13/);
+  assert.match(source, /Projet à nommer/);
+  assert.match(source, /Informations à compléter/);
+  assert.match(source, /function projectObjective/);
+  assert.match(source, /card\.classList\.toggle\("kpi-card--empty"/);
+  assert.doesNotMatch(source, /Projet sans nom/);
+  assert.match(css, /\.kpi-card--empty/);
+});

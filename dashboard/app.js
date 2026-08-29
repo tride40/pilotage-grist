@@ -274,6 +274,7 @@ function renderKpis(kpis) {
   kpis.forEach((kpi) => {
     const card = template.content.firstElementChild.cloneNode(true);
     card.dataset.kind = kpi.key;
+    card.classList.toggle("kpi-card--empty", Number(kpi.value) === 0);
     card.querySelector(".kpi-card__label").textContent = kpi.label;
     card.querySelector(".kpi-card__value").textContent = new Intl.NumberFormat("fr-FR").format(kpi.value);
     fragment.append(card);
@@ -305,7 +306,7 @@ function renderProjects() {
 
 function createProjectCard(project) {
   const card = document.querySelector("#project-template").content.firstElementChild.cloneNode(true);
-  const title = textOr(project.Nom_projet, "Projet sans nom");
+  const title = textOr(project.Nom_projet, "Projet à nommer");
   card.querySelector(".project-card__title").textContent = title;
   card.setAttribute("aria-label", title);
   card.dataset.projectId = project.id;
@@ -323,6 +324,7 @@ function createProjectCard(project) {
 function renderBadges(container, project) {
   const badges = [
     { value: project.Statut, modifier: statusModifier(project.Statut), prefix: "" },
+    { value: hasValue(project.Nom_projet) ? "" : "Informations à compléter", modifier: "warning", prefix: "" },
   ].filter((badge) => hasValue(badge.value));
   badges.forEach(({ value, modifier, prefix }) => {
     const badge = document.createElement("span");
@@ -337,7 +339,7 @@ function renderDetails(container, project) {
   const details = [
     ["Agent pilote", project.Responsable_affiche],
     ["Élu pilote", project.Elu_pilote_affiche],
-    ["Objectif de réalisation", [project.Trimestre_objectif, project.Annee_objectif].filter(hasValue).join(" ")],
+    ["Objectif de réalisation", projectObjective(project)],
   ].filter(([, value]) => hasValue(value));
   details.forEach(([label, value]) => {
     const wrapper = document.createElement("div");
@@ -349,6 +351,12 @@ function renderDetails(container, project) {
     container.append(wrapper);
   });
   if (details.length === 0) container.remove();
+}
+
+function projectObjective(project) {
+  const quarter = displayValue(project.Trimestre_objectif).toUpperCase();
+  const year = Number(project.Annee_objectif);
+  return /^T[1-4]$/.test(quarter) && Number.isInteger(year) && year >= 2000 ? `${quarter} ${year}` : "";
 }
 
 function renderMetrics(container, metrics) {
