@@ -74,3 +74,11 @@ test("les actions proposent deux recherches de personnes indépendantes", () => 
   assert.match(source, /function renderPersonPicker/);
   assert.doesNotMatch(html, /name="people_search"/);
 });
+
+test("l’annuaire permet de gérer les services municipaux", () => {
+  const html = fs.readFileSync(path.join(root, "interlocuteurs/index.html"), "utf8");
+  const source = fs.readFileSync(path.join(root, "interlocuteurs/app.js"), "utf8");
+  for (const id of ["open-services", "services-dialog", "service-form", "service-agents"]) assert.match(html, new RegExp(`id="${id}"`));
+  assert.match(source, /SERVICE_TABLE="SERVICES"/);
+  assert.match(source, /function saveService/);
+});
