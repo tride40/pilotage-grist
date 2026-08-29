@@ -265,7 +265,7 @@ test("les cartes du tableau de bord conservent une hiérarchie alignée", () => 
   const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
   assert.match(css, /\.dashboard-project-card \{[^}]*display: grid[^}]*height: 40rem/);
   assert.match(css, /\.project-card__themes \{[^}]*min-height: 1\.7rem/);
-  assert.match(css, /\.project-card__title \{[^}]*min-height: 2\.6em[^}]*-webkit-line-clamp: 2/);
+  assert.match(css, /\.project-card__title \{[^}]*font-size: 1\.2rem[^}]*font-weight: 800[^}]*letter-spacing: -0\.04em[^}]*-webkit-line-clamp: 2/);
   assert.match(css, /\.project-card__footer \{[^}]*grid-template-columns: repeat\(4/);
   assert.match(source, /function projectAttention/);
   assert.match(source, /metric--zero/);
