@@ -85,7 +85,11 @@ test("l’annuaire permet de gérer les services municipaux", () => {
   assert.match(source, /function serviceMembershipActions/);
   assert.doesNotMatch(source, /function personServicesSection/);
   assert.match(source, /\["Services",personServiceNames\(person\)\]/);
+  assert.match(source, /function isMunicipalAgent/);
+  assert.match(source, /ui\.personServicesField\.hidden=!agent/);
+  assert.match(source, /async function createPerson/);
   assert.doesNotMatch(source, /Service\(s\) municipal\(aux\)/);
   assert.match(html, /id="person-services-field"/);
+  assert.match(html, /id="person-services" name="Services_municipaux" multiple/);
   assert.doesNotMatch(html, /Service\(s\) municipal\(aux\)/);
 });
