@@ -7,7 +7,7 @@
     <title>Fiche projet</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=11">
-    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="style.css?v=18">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="demo-data.js?v=12" defer></script>
@@ -20,7 +20,7 @@
       <div class="app-header__inner"><div><p class="section-kicker">Pilotage des projets</p><h1>Fiche projet</h1><p class="header-copy">Situation actuelle, calendrier et mémoire du projet sélectionné.</p></div></div>
     </header>
     <main class="app-shell project-sheet">
-      <div class="project-toolbar card"><label class="form-field"><span class="form-field__label">Projet</span><select class="form-field__control" id="project-selector" aria-label="Choisir un projet"></select></label><div class="project-toolbar__actions"><a class="button button--secondary home-button" href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16" target="_top" aria-label="Revenir à l’accueil"><span class="home-button__icon" aria-hidden="true">⌂</span>Accueil</a><button class="button button--primary" id="update-tracking" type="button">+ Ajouter au journal</button><button class="button button--secondary" id="edit-project" type="button">Modifier le projet</button></div></div>
+      <div class="project-toolbar card"><label class="form-field"><span class="form-field__label">Projet</span><select class="form-field__control" id="project-selector" aria-label="Choisir un projet"></select></label><div class="project-toolbar__actions"><a class="button button--secondary home-button" href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16" target="_top" aria-label="Revenir à l’accueil"><span class="home-button__icon" aria-hidden="true">⌂</span>Accueil</a><button class="button button--primary" id="update-tracking" type="button">+ Nouvelle entrée du journal</button><button class="button button--secondary" id="edit-project" type="button">Modifier le projet</button></div></div>
       <div class="interface-state" id="interface-state" role="status" aria-live="polite">
         <span class="loader" aria-hidden="true"></span>
         <div><strong>Chargement de la fiche projet</strong><p>Lecture des données Grist en cours…</p></div>
@@ -36,7 +36,7 @@
           <dl class="hero-people" id="hero-people"></dl>
         </header>
 
-        <nav class="project-hub card" aria-label="Outils de ce projet"><a class="project-hub__link" id="hub-actions">Actions</a><a class="project-hub__link" id="hub-meetings">Réunions</a><a class="project-hub__link" id="hub-instructions">Consignes</a><a class="project-hub__link" href="#arbitrations-title">Décisions</a></nav>
+        <nav class="project-hub card" aria-label="Outils de ce projet"><a class="project-hub__link" id="hub-actions">Ouvrir les actions</a><a class="project-hub__link" id="hub-meetings">Ouvrir les réunions</a><a class="project-hub__link" id="hub-instructions">Ouvrir les consignes</a><a class="project-hub__link" href="#arbitrations-title">Voir les décisions</a></nav>
 
         <section class="top-grid">
           <article class="political-objective card" id="objective-card"></article>
@@ -47,7 +47,7 @@
 
         <div class="content-grid">
           <section class="sheet-section span-full" aria-labelledby="updates-title">
-            <div class="section-header"><div><p class="section-kicker">Suivi vivant</p><h2 class="section-header__title" id="updates-title">Journal du projet</h2></div><button class="button button--primary" id="add-journal-inline" type="button">+ Ajouter</button></div>
+            <div class="section-header"><div><p class="section-kicker">Suivi vivant</p><h2 class="section-header__title" id="updates-title">Journal du projet</h2></div><button class="button button--primary" id="add-journal-inline" type="button">+ Nouvelle entrée</button></div>
             <div class="journal-tools" role="search"><label class="form-field journal-tools__search"><span class="form-field__label">Rechercher</span><input class="form-field__control" id="journal-search" type="search" placeholder="Texte, personne, étape…"></label><label class="form-field"><span class="form-field__label">Type</span><select class="form-field__control" id="journal-type-filter"><option value="">Tous les types</option></select></label><label class="form-field"><span class="form-field__label">État</span><select class="form-field__control" id="journal-state-filter"><option value="">Tous les états</option><option value="Ouvert">Ouvert</option><option value="Résolu">Résolu</option></select></label><p class="journal-tools__results" id="journal-results" aria-live="polite"></p></div>
             <div class="stack-list" id="updates-list"></div><button class="button button--secondary section-action" id="show-all-journal" type="button">Tout afficher</button>
           </section>
@@ -58,7 +58,7 @@
             <button class="button button--secondary section-action" type="button" aria-disabled="true">Voir toutes les consignes</button>
           </section>
 
-          <section class="sheet-section" aria-labelledby="meetings-title">
+          <section class="sheet-section span-full" aria-labelledby="meetings-title">
             <div class="section-header"><div><p class="section-kicker">Échanges</p><h2 class="section-header__title" id="meetings-title">Réunions récentes</h2></div></div>
             <div class="stack-list" id="meetings-list"></div>
           </section>
@@ -73,7 +73,7 @@
             <div class="stack-list" id="arbitrations-list"></div>
           </section>
 
-          <section class="sheet-section" aria-labelledby="contacts-title">
+          <section class="sheet-section span-full" aria-labelledby="contacts-title">
             <div class="section-header"><div><p class="section-kicker">Équipe</p><h2 class="section-header__title" id="contacts-title">Interlocuteurs</h2></div></div>
             <div class="contacts-grid" id="contacts-list"></div>
           </section>
