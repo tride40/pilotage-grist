@@ -90,6 +90,7 @@ test("l’annuaire permet de gérer les services municipaux", () => {
   assert.match(source, /async function createPerson/);
   assert.doesNotMatch(source, /Service\(s\) municipal\(aux\)/);
   assert.match(html, /id="person-services-field"/);
-  assert.match(html, /id="person-services" name="Services_municipaux" multiple/);
+  assert.match(source, /input\.type="checkbox";input\.name="Services_municipaux"/);
+  assert.match(html, /<fieldset[^>]+id="person-services-field"/);
   assert.doesNotMatch(html, /Service\(s\) municipal\(aux\)/);
 });
