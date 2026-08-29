@@ -5,7 +5,7 @@ const TABLE_NAMES = [
   "PROJETS", "INTERLOCUTEURS", "REUNIONS", "ACTIONS",
   "CONSIGNES_POLITIQUES", "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
-const OPTIONAL_TABLE_NAMES = ["BLOCAGES", "VIGILANCES"];
+const OPTIONAL_TABLE_NAMES = ["BLOCAGES", "VIGILANCES", "JALONS"];
 
 const PROJECT_CHOICE_FIELDS = ["Thematiques", "Statut"];
 const PROJECT_FORM_FIELDS = [
@@ -132,8 +132,15 @@ function prepareDashboardData(tables) {
     ...project,
     Responsable_affiche: personValue(project.Agent_pilote || project.Responsable, tables.INTERLOCUTEURS),
     Elu_pilote_affiche: personValue(project.Elu_pilote, tables.INTERLOCUTEURS),
+    Prochain_jalon_affiche: nextMilestoneValue(project.id, tables.JALONS || []),
     metrics: metrics.get(String(project.id)) ?? emptyMetrics(),
   }));
+}
+
+function nextMilestoneValue(projectId, milestones) {
+  const row = milestones.filter((milestone) => referenceIds(milestone.Projet).some((id) => String(id) === String(projectId)) && !isTrue(milestone.Franchi)).sort((a, b) => (dateValue(a.Date_prevue) || Infinity) - (dateValue(b.Date_prevue) || Infinity))[0];
+  if (!row) return "";
+  return [formatDate(row.Date_prevue), textOr(row.Jalon, "Jalon à préciser")].filter(hasValue).join(" — ");
 }
 
 function personValue(value, people) {
@@ -340,6 +347,7 @@ function renderDetails(container, project) {
     ["Agent pilote", project.Responsable_affiche],
     ["Élu pilote", project.Elu_pilote_affiche],
     ["Objectif de réalisation", projectObjective(project)],
+    ["Prochain jalon", project.Prochain_jalon_affiche],
   ].filter(([, value]) => hasValue(value));
   details.forEach(([label, value]) => {
     const wrapper = document.createElement("div");

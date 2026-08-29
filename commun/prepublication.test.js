@@ -164,7 +164,7 @@ test("le tableau de bord distingue les données incomplètes des vraies valeurs"
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
-  assert.match(html, /app\.js\?v=13/);
+  assert.match(html, /app\.js\?v=14/);
   assert.match(source, /Projet à nommer/);
   assert.match(source, /Informations à compléter/);
   assert.match(source, /function projectObjective/);
@@ -181,4 +181,19 @@ test("la sélection directe utilise le libellé Projet", () => {
     assert.doesNotMatch(source, /Projet imposé/, page);
     assert.match(source, /isProjectMode\s*\?\s*"Projet"\s*:\s*"Vue globale"/, page);
   }
+});
+
+test("les nouveaux jalons utilisent la table dédiée", () => {
+  const html = fs.readFileSync(path.join(root, "fiche-projet/index.html"), "utf8");
+  const projectSource = fs.readFileSync(path.join(root, "fiche-projet/app.js"), "utf8");
+  const dashboardSource = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
+  assert.match(html, /id="milestone-dialog"/);
+  assert.match(projectSource, /\+ Nouveau jalon/);
+  assert.match(projectSource, /function openMilestoneForm/);
+  assert.match(projectSource, /function saveMilestone/);
+  assert.match(projectSource, /openMilestoneForm\(row\)/);
+  assert.match(projectSource, /\["AddRecord","JALONS"/);
+  assert.match(projectSource, /const JOURNAL_TYPES = \["Avancement", "Information"\]/);
+  assert.match(dashboardSource, /OPTIONAL_TABLE_NAMES = \["BLOCAGES", "VIGILANCES", "JALONS"\]/);
+  assert.match(dashboardSource, /\["Prochain jalon", project\.Prochain_jalon_affiche\]/);
 });
