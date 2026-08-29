@@ -7,7 +7,7 @@
     <title>Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
-    <link rel="stylesheet" href="style.css?v=15">
+    <link rel="stylesheet" href="style.css?v=16">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="demo-data.js?v=5" defer></script>
@@ -38,15 +38,11 @@
             <p class="section-kicker">Portefeuille</p>
             <h2 class="section-header__title" id="projects-title">Projets actifs</h2>
           </div>
-          <div class="projects-heading__actions"><p class="results-count" id="results-count" aria-live="polite"></p></div>
-        </div>
-
-        <div class="dashboard-toolbar">
-          <label class="search-field" for="project-search">
+          <div class="projects-heading__actions"><p class="results-count" id="results-count" aria-live="polite"></p><label class="search-field" for="project-search">
             <span class="visually-hidden">Rechercher un projet par son nom</span>
             <span class="search-field__icon" aria-hidden="true">⌕</span>
             <input id="project-search" type="search" placeholder="Rechercher un projet…" autocomplete="off">
-          </label>
+          </label></div>
         </div>
 
         <div class="interface-state" id="interface-state" role="status" aria-live="polite">

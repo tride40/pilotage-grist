@@ -260,6 +260,7 @@ test("le formulaire projet regroupe ses champs et contraint son calendrier", () 
 });
 
 test("les cartes du tableau de bord conservent une hiérarchie alignée", () => {
+  const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
   assert.match(css, /\.dashboard-project-card \{[^}]*display: grid[^}]*height: 40rem/);
@@ -269,4 +270,6 @@ test("les cartes du tableau de bord conservent une hiérarchie alignée", () => 
   assert.match(source, /function projectAttention/);
   assert.match(source, /metric--zero/);
   assert.doesNotMatch(source, /filter\(\(\[count\]\) => count > 0\)/);
+  assert.doesNotMatch(html, /class="dashboard-toolbar"/);
+  assert.match(css, /grid-template-rows: 5\.25rem 4\.5rem 1fr 8\.5rem/);
 });

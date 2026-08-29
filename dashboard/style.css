@@ -35,10 +35,9 @@
 /* Recherche */
 .projects-section { margin-top: var(--space-8); }
 .projects-heading { align-items: flex-end; }
-.projects-heading__actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); }
+.projects-heading__actions { display: grid; width: min(100%, 21rem); justify-items: stretch; gap: var(--space-2); }
 .section-kicker { color: var(--color-primary); }
-.results-count { margin: 0; color: var(--color-text-muted); font-size: 0.875rem; }
-.dashboard-toolbar { display: flex; justify-content: flex-end; margin-bottom: var(--space-5); }
+.results-count { margin: 0; color: var(--color-text-muted); font-size: 0.875rem; text-align: right; }
 .search-field { position: relative; display: block; width: min(100%, 21rem); }
 .search-field__icon { position: absolute; top: 50%; left: var(--space-4); color: var(--color-text-muted); font-size: 1.4rem; transform: translateY(-52%); pointer-events: none; }
 .search-field input { width: 100%; min-height: var(--touch-target); padding: var(--space-2) var(--space-4) var(--space-2) var(--space-10); border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text); transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
@@ -160,10 +159,16 @@ textarea.form-field__control { resize: vertical; }
   .dashboard-date { align-self: auto; }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row; overflow: visible; }
   .project-card__header { flex-direction: row; justify-content: space-between; }
+  .dashboard-project-card { grid-template-rows: 5.25rem 4.5rem 1fr 8.5rem; }
   .project-card__badges { flex: 0 0 auto; justify-content: flex-end; }
   .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .form-field--wide { grid-column: 1 / -1; }
   .calendar-group .form-grid { grid-template-columns: minmax(12rem, 1.4fr) minmax(8rem, .8fr); }
+}
+
+@media (max-width: 39.99rem) {
+  .projects-heading__actions { width: 100%; }
+  .results-count { text-align: left; }
 }
 
 @media (max-width: 39.99rem) {
