@@ -28,6 +28,9 @@ dialog form{grid-template-rows:auto minmax(0,1fr) auto auto;max-height:calc(100d
 .archive-disclosure summary{width:fit-content;cursor:pointer;color:var(--color-primary);font-weight:800}
 .archive-disclosure[open]{display:grid;gap:var(--space-3)}
 .archive-disclosure[open] summary{margin-bottom:var(--space-1)}
+.recipient-panel{margin:var(--space-4) 0 0;padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md)}
+.recipient-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(13rem,100%),1fr));gap:var(--space-2);margin-top:var(--space-2)}
+.recipient-option{display:flex;align-items:flex-start;gap:var(--space-2);min-height:var(--touch-target);padding:var(--space-2);border-radius:var(--radius-sm);background:var(--color-surface-muted);cursor:pointer}.recipient-option:has(input:checked){background:var(--color-primary-soft);color:var(--color-primary)}.recipient-option input{flex:0 0 auto;width:1.2rem;height:1.2rem;margin-top:.1rem;accent-color:var(--color-primary)}.recipient-option span,.recipient-option strong,.recipient-option small{display:block}.recipient-option small{margin-top:.15rem;color:var(--color-text-muted);font-size:.75rem;font-weight:400}
 .dialog-header, .dialog-actions { display: flex; align-items: start; justify-content: space-between; gap: var(--space-3); } .dialog-actions { flex-wrap: wrap; justify-content: end; }
 .icon-button { display: grid; width: var(--touch-target); height: var(--touch-target); place-items: center; border: 0; border-radius: 50%; background: var(--color-surface-muted); cursor: pointer; font-size: 1.6rem; }
 .form-grid { display: grid; gap: var(--space-4); } [hidden] { display: none !important; } @keyframes spin { to { transform: rotate(360deg); } }

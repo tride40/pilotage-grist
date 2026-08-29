@@ -7,12 +7,12 @@
     <title>Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=11">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="demo-data.js?v=5" defer></script>
     <script src="../commun/context.js?v=2" defer></script>
-    <script src="app.js?v=11" defer></script>
+    <script src="app.js?v=12" defer></script>
   </head>
   <body>
     <header class="dashboard-header app-header">
@@ -71,7 +71,7 @@
           <label class="form-field form-field--wide"><span class="form-field__label">Nom du projet *</span><input class="form-field__control" name="Nom_projet" required maxlength="250"></label>
           <label class="form-field form-field--wide"><span class="form-field__label">Description</span><textarea class="form-field__control" name="Description" rows="3"></textarea></label>
           <label class="form-field form-field--wide"><span class="form-field__label">Objectif politique</span><textarea class="form-field__control" name="Objectif_politique" rows="3"></textarea></label>
-          <label class="form-field"><span class="form-field__label">Thématiques</span><select class="form-field__control" name="Thematiques" multiple size="5"></select><small>Maintenez Ctrl (Windows) ou Cmd (Mac) pour en sélectionner plusieurs.</small></label>
+          <fieldset class="form-field form-field--wide choice-panel"><legend class="form-field__label">Thématiques</legend><div class="choice-grid" id="theme-choices"></div><small>Sélectionnez une ou plusieurs thématiques.</small></fieldset>
           <label class="form-field"><span class="form-field__label">Statut</span><select class="form-field__control" name="Statut"></select></label>
           <label class="form-field"><span class="form-field__label">Agent pilote</span><select class="form-field__control" name="Agent_pilote"></select></label>
           <label class="form-field"><span class="form-field__label">Élu pilote</span><select class="form-field__control" name="Elu_pilote"></select></label>

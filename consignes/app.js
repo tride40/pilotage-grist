@@ -51,9 +51,11 @@ function populateSelectors() {
   ui.projectSelector.replaceChildren(...projects.map((project) => option(project.id, textOr(project.Nom_projet, "Projet sans nom"))));
   ui.projectSelector.disabled = projects.length === 0 || Boolean(window.PilotageContext?.isProjectMode);
   const people = [...state.people].sort((a, b) => personName(a).localeCompare(personName(b), "fr"));
-  ui.form.elements.Destinataires.replaceChildren(...people.map((person) => option(person.id, personName(person))));
-  const services=ui.form.elements.Services_destinataires,serviceField=document.querySelector("#services-field");if(services){services.replaceChildren(...state.services.filter(service=>!Object.hasOwn(service,"Actif")||isTrue(service.Actif)).sort((a,b)=>serviceName(a).localeCompare(serviceName(b),"fr")).map(service=>option(service.id,serviceName(service))));serviceField.hidden=!state.includeServices||!state.columns.has("Services_destinataires")}
+  document.querySelector("#recipient-choices").replaceChildren(...people.map((person) => checkboxOption("Destinataires",person.id,personName(person),[person.Fonction,person.Organisme].filter(hasValue).join(" · "))));
+  const serviceField=document.querySelector("#services-field"),services=state.services.filter(service=>!Object.hasOwn(service,"Actif")||isTrue(service.Actif)).sort((a,b)=>serviceName(a).localeCompare(serviceName(b),"fr"));document.querySelector("#service-choices").replaceChildren(...services.map(service=>checkboxOption("Services_destinataires",service.id,serviceName(service))));serviceField.hidden=!state.includeServices||!state.columns.has("Services_destinataires");
 }
+
+function checkboxOption(name,value,label,meta=""){const optionLabel=element("label","recipient-option"),input=element("input");input.type="checkbox";input.name=name;input.value=String(value);const copy=element("span");copy.append(textElement("strong",label));if(hasValue(meta))copy.append(textElement("small",meta));optionLabel.append(input,copy);return optionLabel}
 
 function render() {
   if (!state.project) { showFatal("Aucun projet disponible", "Ajoutez un projet dans la table PROJETS."); return; }

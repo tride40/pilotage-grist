@@ -447,9 +447,15 @@ function fillSelect(field, placeholder) {
   return Boolean(state.projectChoices?.[field]?.length);
 }
 
+function renderThemeChoices() {
+  const container=document.querySelector("#theme-choices");
+  container.replaceChildren(...projectChoiceValues("Thematiques").map((value)=>{const label=document.createElement("label");label.className="choice-option";const input=document.createElement("input");input.type="checkbox";input.name="Thematiques";input.value=value;label.append(input,document.createTextNode(value));return label}));
+  return Boolean(state.projectChoices?.Thematiques?.length);
+}
+
 function openProjectForm() {
   elements.form.reset(); elements.formMessage.classList.remove("is-error"); elements.formMessage.textContent = "";
-  const metadataFields = PROJECT_CHOICE_FIELDS.filter((field) => fillSelect(field, "Sélectionner…"));
+  const metadataFields = [renderThemeChoices()?"Thematiques":"",fillSelect("Statut", "Sélectionner…")?"Statut":""].filter(Boolean);
   elements.form.elements.Statut.value = "À venir";
   if (!state.demo && metadataFields.length < PROJECT_CHOICE_FIELDS.length) {
     const fallbackFields = PROJECT_CHOICE_FIELDS.filter((field) => !metadataFields.includes(field));
