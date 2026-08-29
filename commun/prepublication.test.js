@@ -81,4 +81,5 @@ test("l’annuaire permet de gérer les services municipaux", () => {
   for (const id of ["open-services", "services-dialog", "service-form", "service-agents"]) assert.match(html, new RegExp(`id="${id}"`));
   assert.match(source, /SERVICE_TABLE="SERVICES"/);
   assert.match(source, /function saveService/);
+  assert.match(source, /function personServiceNames/);
 });
