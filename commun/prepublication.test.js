@@ -87,4 +87,5 @@ test("l’annuaire permet de gérer les services municipaux", () => {
   assert.match(source, /detailSection\("Services"\)/);
   assert.doesNotMatch(source, /Service\(s\) municipal\(aux\)/);
   assert.match(html, /id="person-services-field"/);
+  assert.doesNotMatch(html, /Service\(s\) municipal\(aux\)/);
 });
