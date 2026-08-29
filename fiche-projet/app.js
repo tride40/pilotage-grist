@@ -16,7 +16,7 @@ const JOURNAL_RESOLUTION_TYPES = { Blocage: "Déblocage", Vigilance: "Vigilance 
 const DECISION_OPEN_STATUSES = new Set(["demandee", "en instruction", "a preparer", "a decider", "reportee"]);
 const DECISION_CLOSED_STATUSES = new Set(["prise", "sans suite", "decidee", "decide"]);
 const DECISION_STATUS_FALLBACKS = ["Demandée", "En instruction", "Prise", "Sans suite"];
-const appState = { selectedProject: null, tables: null, tableNames: [], metadata: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
+const appState = { selectedProject: null, tables: null, tableNames: [], metadata: null, currentUser: null, demo: false, busy: false, editingJournalId: null, editingDecisionId: null, journalActionSource: null, deletingJournalId: null, journalSearch: "", journalTypeFilter: "", journalStateFilter: "", showAllJournal: false };
 const ui = {
   state: document.querySelector("#interface-state"),
   content: document.querySelector("#project-content"),
@@ -50,6 +50,7 @@ async function initialize() {
       appState.demo = true;
       appState.tables = window.PROJECT_SHEET_DEMO.tables;
       if (!appState.tables.PROJETS?.length) appState.tables.PROJETS = [window.PROJECT_SHEET_DEMO.project];
+      appState.currentUser={personId:appState.tables.INTERLOCUTEURS?.[0]?.id};
       selectInitialProject(window.PROJECT_SHEET_DEMO.project);
       renderWhenReady();
       return;
@@ -63,6 +64,7 @@ async function initialize() {
     });
     appState.tables = await fetchRelatedTables();
     appState.metadata = await fetchMetadata();
+    try{appState.currentUser=await window.PilotageCurrentUser.identify({people:appState.tables.INTERLOCUTEURS||[]})}catch(error){console.warn(error)}
     selectInitialProject();
     renderWhenReady();
   } catch (error) {
@@ -580,16 +582,18 @@ function dateInputValue(value){if(!hasValue(value))return "";const d=new Date(ty
 function valuesFromForm(form, allowed){const data=new FormData(form),values={},lists=["Thematiques","Agents_associes","Elus_associes","Interlocuteurs_externes","Services_concernes"];for(const [name,raw] of data.entries()){if(!allowed.includes(name)||lists.includes(name))continue;if(["Responsable","Agent_pilote","Elu_pilote"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else if(["Annee_lancement","Annee_objectif"].includes(name))values[name]=hasValue(raw)?Number(raw):null;else values[name]=String(raw).trim();}for(const name of lists)if(allowed.includes(name))values[name]=["L",...data.getAll(name).filter(hasValue).map(value=>name==="Thematiques"?value:Number(value))];return values;}
 function projectRules(){const rules=window.PilotageV3Rules;if(!rules||typeof rules.projectErrors!=="function"||typeof rules.projectJournalChanges!=="function"||typeof rules.isProjectActive!=="function")throw new Error("Les règles de validation V3 ne sont pas chargées. Rechargez le widget avant de modifier le projet.");return rules}
 async function saveProject(event){event.preventDefault();const allowed=PROJECT_FIELDS.map(([name])=>name).filter(projectHasColumn),values=valuesFromForm(ui.editForm,allowed),next={...appState.selectedProject,...values},message=ui.editDialog.querySelector(".form-message");let rules;try{rules=projectRules()}catch(error){message.textContent=exactError(error);return}const errors=rules.projectErrors(next),changes=rules.projectJournalChanges(appState.selectedProject,next);if(errors.length){message.textContent=errors[0];return}try{const now=Math.floor(Date.now()/1000),statusChanged=normalizeText(appState.selectedProject.Statut)!==normalizeText(next.Statut);if(statusChanged&&projectHasColumn("Date_cloture"))values.Date_cloture=rules.isProjectActive(next)?null:now;const actions=[["UpdateRecord","PROJETS",appState.selectedProject.id,values]];if(changes.length){const schema=journalSchema();for(const change of changes)actions.push(["AddRecord","AVANCEMENTS",null,automaticJournalValues(schema,change,appState.selectedProject,next,now)])}await writeChanges(ui.editDialog,actions,changes.length?"Projet mis à jour et changement tracé dans le Journal.":"Projet mis à jour.")}catch(error){message.textContent=`Modification impossible — ${exactError(error)}`}}
-function automaticJournalValues(schema,change,before,after,now){const labels={Elu_pilote:"Élu pilote",Agent_pilote:"Agent pilote",Trimestre_objectif:"Trimestre objectif",Annee_objectif:"Année objectif",Statut:"Statut"},value=(field,project)=>["Elu_pilote","Agent_pilote"].includes(field)?personValue(project[field]??(field==="Agent_pilote"?project.Responsable:null)):textOr(project[field],"non renseigné"),details=change.fields.map(field=>`${labels[field]} : ${value(field,before)} → ${value(field,after)}`).join(" ; "),row={[schema.project]:before.id,[schema.date]:now,[schema.type]:change.type,[schema.content]:details};if(schema.title)row[schema.title]=change.type;if(schema.createdAt)row[schema.createdAt]=now;if(schema.automatic)row[schema.automatic]=true;return row}
+function currentPersonId(){return window.PilotageCurrentUser.requirePersonId(appState.currentUser)}
+function authoredJournalValues(schema,row){if(schema.author)row[schema.author]=currentPersonId();return row}
+function automaticJournalValues(schema,change,before,after,now){const labels={Elu_pilote:"Élu pilote",Agent_pilote:"Agent pilote",Trimestre_objectif:"Trimestre objectif",Annee_objectif:"Année objectif",Statut:"Statut"},value=(field,project)=>["Elu_pilote","Agent_pilote"].includes(field)?personValue(project[field]??(field==="Agent_pilote"?project.Responsable:null)):textOr(project[field],"non renseigné"),details=change.fields.map(field=>`${labels[field]} : ${value(field,before)} → ${value(field,after)}`).join(" ; "),row={[schema.project]:before.id,[schema.date]:now,[schema.type]:change.type,[schema.content]:details};if(schema.title)row[schema.title]=change.type;if(schema.createdAt)row[schema.createdAt]=now;if(schema.automatic)row[schema.automatic]=true;return authoredJournalValues(schema,row)}
 function tableWritable(table,name){return appState.demo?(appState.tables?.[table]||[]).some(row=>Object.hasOwn(row,name)):Boolean(appState.metadata?.writable?.[table]?.has(name))}
-async function resolvePilotageObject(table,row){const config=table==="JALONS"?{state:"Franchi",date:"Date_reelle",type:"Jalon franchi",label:row.Jalon,explanation:false}:table==="BLOCAGES"?{state:"Actif",date:"Date_resolution",type:"Blocage levé",label:row.Blocage,explanation:true}:{state:"Active",date:"Date_resolution",type:"Vigilance levée",label:row.Vigilance,explanation:true};try{for(const column of [config.state,config.date])if(!tableWritable(table,column))throw new Error(`${table}.${column} doit être une colonne modifiable.`);let explanation="";if(config.explanation){explanation=window.prompt(`Expliquez brièvement pourquoi « ${displayValue(config.label)} » peut être levé :`,"")?.trim()||"";if(!explanation)return}const now=Math.floor(Date.now()/1000),update={[config.state]:table==="JALONS",[config.date]:now};if(explanation){if(!tableWritable(table,"Explication_resolution"))throw new Error(`${table}.Explication_resolution doit être une colonne modifiable.`);update.Explication_resolution=explanation}const schema=journalSchema(),entry={[schema.project]:appState.selectedProject.id,[schema.date]:now,[schema.type]:config.type,[schema.content]:explanation||displayValue(config.label)};if(schema.title)entry[schema.title]=displayValue(config.label);if(schema.createdAt)entry[schema.createdAt]=now;if(schema.automatic)entry[schema.automatic]=true;if(schema.sourceTable)entry[schema.sourceTable]=table;if(schema.sourceId)entry[schema.sourceId]=row.id;await writeObjectChanges([["UpdateRecord",table,row.id,update],["AddRecord","AVANCEMENTS",null,entry]],`${config.type} et ajouté au Journal.`)}catch(error){showFeedback(`Mise à jour impossible — ${exactError(error)}`)}}
+async function resolvePilotageObject(table,row){const config=table==="JALONS"?{state:"Franchi",date:"Date_reelle",type:"Jalon franchi",label:row.Jalon,explanation:false}:table==="BLOCAGES"?{state:"Actif",date:"Date_resolution",type:"Blocage levé",label:row.Blocage,explanation:true}:{state:"Active",date:"Date_resolution",type:"Vigilance levée",label:row.Vigilance,explanation:true};try{for(const column of [config.state,config.date])if(!tableWritable(table,column))throw new Error(`${table}.${column} doit être une colonne modifiable.`);let explanation="";if(config.explanation){explanation=window.prompt(`Expliquez brièvement pourquoi « ${displayValue(config.label)} » peut être levé :`,"")?.trim()||"";if(!explanation)return}const now=Math.floor(Date.now()/1000),update={[config.state]:table==="JALONS",[config.date]:now};if(explanation){if(!tableWritable(table,"Explication_resolution"))throw new Error(`${table}.Explication_resolution doit être une colonne modifiable.`);update.Explication_resolution=explanation}const schema=journalSchema(),entry={[schema.project]:appState.selectedProject.id,[schema.date]:now,[schema.type]:config.type,[schema.content]:explanation||displayValue(config.label)};if(schema.title)entry[schema.title]=displayValue(config.label);if(schema.createdAt)entry[schema.createdAt]=now;if(schema.automatic)entry[schema.automatic]=true;if(schema.sourceTable)entry[schema.sourceTable]=table;if(schema.sourceId)entry[schema.sourceId]=row.id;authoredJournalValues(schema,entry);await writeObjectChanges([["UpdateRecord",table,row.id,update],["AddRecord","AVANCEMENTS",null,entry]],`${config.type} et ajouté au Journal.`)}catch(error){showFeedback(`Mise à jour impossible — ${exactError(error)}`)}}
 async function writeObjectChanges(actions,message){if(appState.busy)return;appState.busy=true;try{if(appState.demo)applyDemoActions(actions);else await window.grist.docApi.applyUserActions(actions);if(!appState.demo)appState.tables=await fetchRelatedTables();selectProject(appState.selectedProject.id,false);showFeedback(message)}finally{appState.busy=false}}
-async function relaunchExpectation(row){try{for(const column of ["Attente","Date_relance"])if(!tableWritable("RELANCES_ATTENTES",column))throw new Error(`RELANCES_ATTENTES.${column} doit être une colonne modifiable.`);const note=window.prompt(`Note facultative pour la relance de « ${displayValue(row.Attente)} » :`,"");if(note===null)return;const values={Attente:row.id,Date_relance:Math.floor(Date.now()/1000)};if(note.trim()){if(!tableWritable("RELANCES_ATTENTES","Note"))throw new Error("RELANCES_ATTENTES.Note doit être une colonne modifiable pour enregistrer ce texte.");values.Note=note.trim()}await writeObjectChanges([["AddRecord","RELANCES_ATTENTES",null,values]],"Relance enregistrée sans changer le statut de l’attente.")}catch(error){showFeedback(`Relance impossible — ${exactError(error)}`)}}
+async function relaunchExpectation(row){try{for(const column of ["Attente","Date_relance"])if(!tableWritable("RELANCES_ATTENTES",column))throw new Error(`RELANCES_ATTENTES.${column} doit être une colonne modifiable.`);const note=window.prompt(`Note facultative pour la relance de « ${displayValue(row.Attente)} » :`,"");if(note===null)return;const values={Attente:row.id,Date_relance:Math.floor(Date.now()/1000)},authorColumn=appState.metadata?.details?.RELANCES_ATTENTES?.get("Par");if(tableWritable("RELANCES_ATTENTES","Par")&&String(authorColumn?.type||"").startsWith("Ref:INTERLOCUTEURS"))values.Par=currentPersonId();if(note.trim()){if(!tableWritable("RELANCES_ATTENTES","Note"))throw new Error("RELANCES_ATTENTES.Note doit être une colonne modifiable pour enregistrer ce texte.");values.Note=note.trim()}await writeObjectChanges([["AddRecord","RELANCES_ATTENTES",null,values]],"Relance enregistrée sans changer le statut de l’attente.")}catch(error){showFeedback(`Relance impossible — ${exactError(error)}`)}}
 async function closeExpectation(row,status){try{for(const column of ["Statut","Date_fin"])if(!tableWritable("ATTENTES_EXTERNES",column))throw new Error(`ATTENTES_EXTERNES.${column} doit être une colonne modifiable.`);const result=window.prompt(status==="Reçue"?"Résultat reçu (facultatif) :":"Motif du classement sans suite (facultatif) :","");if(result===null)return;const values={Statut:status,Date_fin:Math.floor(Date.now()/1000)};if(result.trim()){if(!tableWritable("ATTENTES_EXTERNES","Resultat"))throw new Error("ATTENTES_EXTERNES.Resultat doit être une colonne modifiable pour enregistrer ce texte.");values.Resultat=result.trim()}await writeObjectChanges([["UpdateRecord","ATTENTES_EXTERNES",row.id,values]],`Attente classée « ${status} ».`)}catch(error){showFeedback(`Clôture impossible — ${exactError(error)}`)}}
 
 const DECISION_FIELDS = [
   ["Sujet", "Sujet", "text"], ["Contexte", "Contexte", "textarea"], ["Question_a_trancher", "Question à trancher", "textarea"],
-  ["Options", "Options", "textarea"], ["Position_elue", "Position élue", "textarea"], ["Demandee_par", "Demandée par", "person"],
+  ["Options", "Options", "textarea"], ["Position_elue", "Position élue", "textarea"],
   ["Echeance_decision", "Date nécessaire", "date"], ["Statut", "Statut", "choice"],
 ];
 const DECISION_RESULT_FIELDS = [
@@ -628,17 +632,17 @@ async function saveDecision(event) {
   try {
     if (!decisionHasColumn("Projet")) throw new Error("ARBITRAGES_DECISIONS.Projet doit être une référence éditable vers PROJETS.");
     const allowed = new Set([...DECISION_FIELDS, ...DECISION_RESULT_FIELDS].map(([name]) => name).filter(decisionHasColumn));
-    const values = { Projet: appState.selectedProject.id }; const data = new FormData(ui.decisionForm);
+    const values = { Projet: appState.selectedProject.id }; if(!appState.editingDecisionId&&decisionHasColumn("Demandee_par"))values.Demandee_par=currentPersonId(); const data = new FormData(ui.decisionForm);
     for (const name of allowed) {
       if (name === "Projet") continue; const raw = data.get(name);
       if (["Echeance_decision", "Date_decision"].includes(name)) values[name] = hasValue(raw) ? new Date(`${raw}T00:00:00`).getTime() / 1000 : null;
       else if (name === "Point_hebdo") values[name] = data.has(name);
-      else if (["Decision_par","Demandee_par"].includes(name)) values[name] = hasValue(raw) ? Number(raw) : null;
+      else if (name==="Decision_par") values[name] = hasValue(raw) ? Number(raw) : null;
       else values[name] = String(raw || "").trim();
     }
     const errors=window.PilotageV3Rules?.decisionErrors(values)||[];if(errors.length)throw new Error(errors[0]);
     const before=appState.editingDecisionId?(appState.tables.ARBITRAGES_DECISIONS||[]).find(row=>String(row.id)===String(appState.editingDecisionId))||{}:{},journal=window.PilotageV3Rules?.decisionJournalEntry(before,values),action=appState.editingDecisionId ? ["UpdateRecord", "ARBITRAGES_DECISIONS", appState.editingDecisionId, values] : ["AddRecord", "ARBITRAGES_DECISIONS", null, values],actions=[action];
-    if(journal){if(!appState.editingDecisionId)throw new Error("Créez d’abord la demande de décision avant de l’enregistrer comme prise.");const schema=journalSchema(),now=Math.floor(Date.now()/1000),entry={[schema.project]:appState.selectedProject.id,[schema.date]:now,[schema.type]:journal.type,[schema.content]:journal.description};if(schema.title)entry[schema.title]=journal.title;if(schema.createdAt)entry[schema.createdAt]=now;if(schema.automatic)entry[schema.automatic]=true;if(schema.sourceTable)entry[schema.sourceTable]="ARBITRAGES_DECISIONS";if(schema.sourceId)entry[schema.sourceId]=appState.editingDecisionId;actions.push(["AddRecord","AVANCEMENTS",null,entry])}
+    if(journal){if(!appState.editingDecisionId)throw new Error("Créez d’abord la demande de décision avant de l’enregistrer comme prise.");const schema=journalSchema(),now=Math.floor(Date.now()/1000),entry={[schema.project]:appState.selectedProject.id,[schema.date]:now,[schema.type]:journal.type,[schema.content]:journal.description};if(schema.title)entry[schema.title]=journal.title;if(schema.createdAt)entry[schema.createdAt]=now;if(schema.automatic)entry[schema.automatic]=true;if(schema.sourceTable)entry[schema.sourceTable]="ARBITRAGES_DECISIONS";if(schema.sourceId)entry[schema.sourceId]=appState.editingDecisionId;actions.push(["AddRecord","AVANCEMENTS",null,authoredJournalValues(schema,entry)])}
     await writeChanges(ui.decisionDialog, actions, journal?"Décision prise et ajoutée au Journal.":appState.editingDecisionId ? "Décision mise à jour." : "Décision créée et liée au projet.");
   } catch (error) { console.error("Écriture de la décision impossible", error); message.textContent = `Enregistrement impossible — ${exactError(error)}`; }
 }
@@ -721,6 +725,7 @@ function journalSchema() {
     parent: pick("Entree_parent"),
     state: pick("Etat_entree"),
     decisionMaker: pick("Decisionnaire"),
+    author: pick("Saisi_par", "Auteur"),
     createdAt: pick("Cree_le"),
     automatic: pick("Automatique"),
     sourceTable:pick("Source_table"),
@@ -753,7 +758,7 @@ async function saveJournal(event) {
       await writeChanges(ui.trackingDialog, [["UpdateRecord", "AVANCEMENTS", appState.editingJournalId, { [schema.date]: entryDate, [schema.content]: content }]], "Entrée du journal modifiée."); return;
     }
     const createdAt = Math.floor(Date.now() / 1000);
-    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: content, [schema.type]: type }; if(schema.createdAt)values[schema.createdAt]=createdAt;
+    const values = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: content, [schema.type]: type }; if(schema.createdAt)values[schema.createdAt]=createdAt;authoredJournalValues(schema,values);
     if (type === "Vigilance" && schema.writable.has("Point_vigilance")) values.Point_vigilance = content;
     if (type === "Blocage" && schema.writable.has("Difficulte_blocage")) values.Difficulte_blocage = content;
     if (type === "Décision attendue" && schema.writable.has("Decision_attendue")) values.Decision_attendue = content;
@@ -776,7 +781,7 @@ async function saveJournal(event) {
     if (type === "Prochaine étape") {
       const legacy = legacyNextStep(appState.selectedProject, (appState.tables.AVANCEMENTS || []).filter((row) => isLinkedToProject(row, appState.selectedProject.id) && journalType(row) === "Prochaine étape"));
       if (legacy) {
-        const migrated = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: legacy.Contenu, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert" }; if(schema.createdAt)migrated[schema.createdAt]=createdAt-1;
+        const migrated = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: legacy.Contenu, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert" }; if(schema.createdAt)migrated[schema.createdAt]=createdAt-1;authoredJournalValues(schema,migrated);
         if (hasValue(legacy.Date_prochaine_etape)) migrated.Date_prochaine_etape = legacy.Date_prochaine_etape;
         actions.unshift(["AddRecord", "AVANCEMENTS", null, migrated]);
       }
@@ -797,7 +802,7 @@ async function saveJournal(event) {
         if (newStep || hasValue(newStepDate)) {
           if (!newStep || !hasValue(newStepDate)) throw new Error("Pour ajouter une étape suivante, renseignez son texte et sa date.");
           if (!schema.writable.has("Date_prochaine_etape")) throw new Error("AVANCEMENTS.Date_prochaine_etape doit être éditable pour ajouter une étape suivante.");
-          const nextValues = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: newStep, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert", Date_prochaine_etape: new Date(`${newStepDate}T00:00:00`).getTime() / 1000 }; if(schema.createdAt)nextValues[schema.createdAt]=createdAt;
+          const nextValues = { [schema.project]: appState.selectedProject.id, [schema.date]: entryDate, [schema.content]: newStep, [schema.type]: "Prochaine étape", [schema.state]: "Ouvert", Date_prochaine_etape: new Date(`${newStepDate}T00:00:00`).getTime() / 1000 }; if(schema.createdAt)nextValues[schema.createdAt]=createdAt;authoredJournalValues(schema,nextValues);
           actions.push(["AddRecord", "AVANCEMENTS", null, nextValues]); remaining.push({ Contenu: newStep, Date_prochaine_etape: nextValues.Date_prochaine_etape });
         }
         const earliest = remaining.sort((a, b) => dateValue(a.Date_prochaine_etape) - dateValue(b.Date_prochaine_etape))[0];

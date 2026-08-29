@@ -67,12 +67,29 @@ test("les widgets V3 ne dépendent plus de Type_interlocuteur", () => {
   }
 });
 
-test("les actions proposent deux recherches de personnes indépendantes", () => {
+test("les actions conservent seulement la recherche de l’attributaire", () => {
   const html = fs.readFileSync(path.join(root, "actions/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "actions/app.js"), "utf8");
-  assert.equal((html.match(/data-person-picker=/g) || []).length, 2);
+  assert.equal((html.match(/data-person-picker=/g) || []).length, 1);
+  assert.doesNotMatch(html, /name="Demandee_par"/);
+  assert.match(source, /Demandee_par:author/);
   assert.match(source, /function renderPersonPicker/);
   assert.doesNotMatch(html, /name="people_search"/);
+});
+
+test("les auteurs des créations sont déterminés silencieusement", () => {
+  const instructionsHtml = fs.readFileSync(path.join(root, "consignes/index.html"), "utf8");
+  const instructionsSource = fs.readFileSync(path.join(root, "consignes/app.js"), "utf8");
+  const meetingsSource = fs.readFileSync(path.join(root, "reunions/app.js"), "utf8");
+  const projectSource = fs.readFileSync(path.join(root, "fiche-projet/app.js"), "utf8");
+  assert.doesNotMatch(instructionsHtml, /name="Emetteur"/);
+  assert.match(instructionsSource, /Emetteur: author/);
+  assert.doesNotMatch(meetingsSource, /\["Saisi_par","Saisi par","person"\]/);
+  assert.doesNotMatch(meetingsSource, /\["Demandeur","Modification demandée par"/);
+  assert.match(meetingsSource, /values\.Demandeur=author/);
+  assert.doesNotMatch(projectSource, /\["Demandee_par", "Demandée par", "person"\]/);
+  assert.match(projectSource, /values\.Demandee_par=currentPersonId\(\)/);
+  assert.match(projectSource, /author: pick\("Saisi_par", "Auteur"\)/);
 });
 
 test("l’annuaire permet de gérer les services municipaux", () => {

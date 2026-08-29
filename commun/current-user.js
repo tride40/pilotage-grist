@@ -50,6 +50,11 @@
 
   function text(value) { return value === null || value === undefined ? "" : String(value).trim(); }
   function normalize(value) { return text(value).toLocaleLowerCase("fr-FR"); }
+  function requirePersonId(identity) {
+    const id = Number(identity?.personId ?? identity?.person?.id);
+    if (!Number.isFinite(id) || id <= 0) throw new Error("Votre compte Grist n’est associé à aucun interlocuteur.");
+    return id;
+  }
 
-  global.PilotageCurrentUser = Object.freeze({ identify });
+  global.PilotageCurrentUser = Object.freeze({ identify, requirePersonId });
 })(window);

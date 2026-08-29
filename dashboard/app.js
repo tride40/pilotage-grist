@@ -17,7 +17,7 @@ const PROJECT_CHOICE_FALLBACKS = {
   Statut: ["À venir", "En cours", "Terminé", "Abandonné"],
 };
 
-const state = { projects: [], activeFilter: "all", search: "", tables: null, writable: null, projectChoices: null, demo: false, busy: false };
+const state = { projects: [], activeFilter: "all", search: "", tables: null, writable: null, projectChoices: null, currentUser: null, demo: false, busy: false };
 const elements = {
   date: document.querySelector("#current-date"),
   filters: document.querySelector("#filter-list"),
@@ -457,7 +457,10 @@ function openProjectForm() {
   }
   const people = state.tables?.INTERLOCUTEURS || [];
   fillPersonSelect(elements.form.elements.Agent_pilote, people.filter((person) => isTrue(person.Est_agent_Sanguinet) || normalizeText(person.Role_interne)==="agent"));
-  fillPersonSelect(elements.form.elements.Elu_pilote, people.filter((person) => isTrue(person.Est_elu_Sanguinet)));
+  fillPersonSelect(elements.form.elements.Elu_pilote, people.filter((person) => isTrue(person.Est_elu_Sanguinet) || normalizeText(person.Role_interne)==="elu"));
+  const current=state.currentUser?.person,role=normalizeText(current?.Role_interne);
+  if(current&&role==="agent"&&[...elements.form.elements.Agent_pilote.options].some(item=>item.value===String(current.id)))elements.form.elements.Agent_pilote.value=String(current.id);
+  if(current&&role==="elu"&&[...elements.form.elements.Elu_pilote.options].some(item=>item.value===String(current.id)))elements.form.elements.Elu_pilote.value=String(current.id);
   elements.dialog.showModal(); elements.form.elements.Nom_projet.focus();
 }
 
@@ -553,6 +556,7 @@ async function initializeDashboard() {
       }
     }
     state.tables = tables;
+    if(state.demo)state.currentUser={person:tables.INTERLOCUTEURS?.[0],personId:tables.INTERLOCUTEURS?.[0]?.id};else try{state.currentUser=await window.PilotageCurrentUser.identify({people:tables.INTERLOCUTEURS||[]})}catch(error){console.warn(error)}
     state.projects = prepareDashboardData(tables);
     renderKpis(calculateKpis(tables, state.projects));
     renderProjects();

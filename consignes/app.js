@@ -2,7 +2,7 @@
 
 const TABLE = "CONSIGNES_POLITIQUES";
 const REQUIRED_TABLES = ["PROJETS", TABLE, "INTERLOCUTEURS"];
-const state = { projects: [], instructions: [], people: [], services: [], columns: new Set(), project: null, demo: false, busy: false, includeServices: false };
+const state = { projects: [], instructions: [], people: [], services: [], columns: new Set(), project: null, currentUser: null, demo: false, busy: false, includeServices: false };
 const ui = {
   interfaceState: document.querySelector("#interface-state"), content: document.querySelector("#instructions-content"), feedback: document.querySelector("#feedback"),
   projectSelector: document.querySelector("#project-selector"), contextLabel: document.querySelector("#context-label"), contextProject: document.querySelector("#context-project"), openCreate: document.querySelector("#open-create"), dialog: document.querySelector("#instruction-dialog"), form: document.querySelector("#instruction-form"),
@@ -13,7 +13,7 @@ const ui = {
 async function initialize() {
   bindControls();
   try {
-    if (isDemoMode()) { state.demo = true; state.includeServices=true; applyTables(window.INSTRUCTIONS_DEMO_DATA.tables); return; }
+    if (isDemoMode()) { state.demo = true; state.includeServices=true; applyTables(window.INSTRUCTIONS_DEMO_DATA.tables); state.currentUser={personId:state.people[0]?.id}; return; }
     if (!window.grist?.docApi) throw new Error("L’API Grist n’est pas disponible.");
     await withTimeout(Promise.resolve(window.grist.ready({ requiredAccess: "full" })), "initialisation de l’API Grist");
     const tableNames = normalizeTableNames(await withTimeout(window.grist.docApi.listTables(), "détection des tables"));
@@ -21,6 +21,7 @@ async function initialize() {
     if (missing.length) throw new Error(`Tables Grist introuvables : ${missing.join(", ")}.`);
     state.includeServices=tableNames.includes("SERVICES");
     await reloadTables();
+    try{state.currentUser=await withTimeout(window.PilotageCurrentUser.identify({people:state.people}),"identification de l’auteur")}catch(error){console.warn(error)}
     window.grist.onRecord((record) => {
       const project = record && state.projects.find((item) => String(item.id) === String(record.id));
       if (project) { state.project = project; ui.projectSelector.value = String(project.id); render(); }
@@ -50,7 +51,6 @@ function populateSelectors() {
   ui.projectSelector.replaceChildren(...projects.map((project) => option(project.id, textOr(project.Nom_projet, "Projet sans nom"))));
   ui.projectSelector.disabled = projects.length === 0 || Boolean(window.PilotageContext?.isProjectMode);
   const people = [...state.people].sort((a, b) => personName(a).localeCompare(personName(b), "fr"));
-  ui.form.elements.Emetteur.replaceChildren(option("", "Non renseigné"), ...people.map((person) => option(person.id, personName(person))));
   ui.form.elements.Destinataires.replaceChildren(...people.map((person) => option(person.id, personName(person))));
   const services=ui.form.elements.Services_destinataires,serviceField=document.querySelector("#services-field");if(services){services.replaceChildren(...state.services.filter(service=>!Object.hasOwn(service,"Actif")||isTrue(service.Actif)).sort((a,b)=>serviceName(a).localeCompare(serviceName(b),"fr")).map(service=>option(service.id,serviceName(service))));serviceField.hidden=!state.includeServices||!state.columns.has("Services_destinataires")}
 }
@@ -90,9 +90,10 @@ function renderCard(row, group) {
 function renderEditor(row) {const editor=element("div","instruction-card__editor"),reasonLabel=element("label","form-field");reasonLabel.append(textElement("span","Motif d’archivage (facultatif)","form-field__label"));const reason=element("textarea","form-field__control");reason.placeholder="Précisez pourquoi la consigne est archivée";reasonLabel.append(reason);const actions=element("div","instruction-card__actions");actions.append(actionButton("Archiver","secondary",()=>archiveInstruction(row,reason.value)));editor.append(reasonLabel,actions);return editor}
 
 async function createInstruction(formData) {
+  const author=window.PilotageCurrentUser.requirePersonId(state.currentUser);
   const recipients = formData.getAll("Destinataires").filter(hasValue).map(Number);
   const services=formData.getAll("Services_destinataires").filter(hasValue).map(Number),candidate={Destinataires:["L",...recipients],Services_destinataires:["L",...services]},errors=window.PilotageV3Rules?.instructionErrors(candidate)||[];if(errors.length)throw new Error(errors[0]);
-  const fields = writableFields({ Projet: Number(state.project.id), Consigne: formData.get("Consigne").trim(), Emetteur: optionalNumber(formData.get("Emetteur")), Destinataires: recipients.length?["L", ...recipients]:undefined, Services_destinataires:services.length?["L",...services]:undefined, Responsable: state.columns.has("Destinataires")?undefined:recipients[0], Date_emission: nowGrist(), Statut: "Active", Date_MAJ: nowGrist() });
+  const fields = writableFields({ Projet: Number(state.project.id), Consigne: formData.get("Consigne").trim(), Emetteur: author, Destinataires: recipients.length?["L", ...recipients]:undefined, Services_destinataires:services.length?["L",...services]:undefined, Responsable: state.columns.has("Destinataires")?undefined:recipients[0], Date_emission: nowGrist(), Statut: "Active", Date_MAJ: nowGrist() });
   requireFields(fields, ["Projet", "Consigne", "Emetteur"]); await writeAction(["AddRecord", TABLE, null, fields], "Consigne créée."); ui.form.reset(); ui.dialog.close();
 }
 
