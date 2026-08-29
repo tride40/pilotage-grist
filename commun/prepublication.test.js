@@ -174,7 +174,7 @@ test("le tableau de bord distingue les données incomplètes des vraies valeurs"
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
-  assert.match(html, /app\.js\?v=17/);
+  assert.match(html, /app\.js\?v=18/);
   assert.match(source, /Projet à nommer/);
   assert.match(source, /Informations à compléter/);
   assert.doesNotMatch(source, /function projectObjective/);
@@ -218,7 +218,7 @@ test("les nouveaux jalons utilisent la table dédiée", () => {
 test("le tableau de bord expose précisément son erreur de chargement", () => {
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
-  assert.match(html, /app\.js\?v=17/);
+  assert.match(html, /app\.js\?v=18/);
   assert.match(source, /let loadingStage = "initialisation"/);
   assert.match(source, /\$\{loadingStage\} — \$\{exactError\(error\)\}/);
 });
@@ -242,4 +242,17 @@ test("le tableau de bord audited propose filtres KPI, ordre persistant et formul
   assert.match(html, /class="form-scroll"/);
   assert.match(css, /\.form-scroll \{[^}]*overflow-y: auto/);
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+});
+
+test("le formulaire projet regroupe ses champs et contraint son calendrier", () => {
+  const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
+  const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
+  for (const title of ["Informations générales", "Classification", "Pilotage", "Calendrier", "Lancement", "Objectif de réalisation"]) {
+    assert.match(html, new RegExp(title));
+  }
+  assert.match(html, /select class="form-field__control" name="Mois_lancement"/);
+  assert.match(html, /select class="form-field__control" name="Trimestre_objectif"/);
+  assert.match(source, /new Date\(\)\.getFullYear\(\)/);
+  assert.match(source, /elements\.form\.elements\[field\]\.min = String\(currentYear\)/);
+  assert.match(source, /\["null", "undefined"\]/);
 });

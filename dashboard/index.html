@@ -7,12 +7,12 @@
     <title>Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="demo-data.js?v=5" defer></script>
     <script src="../commun/context.js?v=2" defer></script>
-    <script src="app.js?v=17" defer></script>
+    <script src="app.js?v=18" defer></script>
   </head>
   <body>
     <header class="dashboard-header app-header">
@@ -61,18 +61,24 @@
     <dialog id="project-dialog" aria-labelledby="project-form-title">
       <form id="project-form">
         <div class="dialog-header"><div><p class="section-kicker">Portefeuille</p><h2 id="project-form-title">Nouveau projet</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div>
-        <div class="form-scroll"><div class="form-grid">
-          <label class="form-field form-field--wide"><span class="form-field__label">Nom du projet *</span><input class="form-field__control" name="Nom_projet" required maxlength="250"></label>
-          <label class="form-field form-field--wide"><span class="form-field__label">Description</span><textarea class="form-field__control" name="Description" rows="3"></textarea></label>
-          <label class="form-field form-field--wide"><span class="form-field__label">Objectif politique</span><textarea class="form-field__control" name="Objectif_politique" rows="3"></textarea></label>
-          <fieldset class="form-field form-field--wide choice-panel"><legend class="form-field__label">Thématiques</legend><div class="choice-grid" id="theme-choices"></div><small>Sélectionnez une ou plusieurs thématiques.</small></fieldset>
-          <label class="form-field"><span class="form-field__label">Statut</span><select class="form-field__control" name="Statut"></select></label>
-          <label class="form-field"><span class="form-field__label">Agent pilote</span><select class="form-field__control" name="Agent_pilote"></select></label>
-          <label class="form-field"><span class="form-field__label">Élu pilote</span><select class="form-field__control" name="Elu_pilote"></select></label>
-          <label class="form-field"><span class="form-field__label">Mois de lancement</span><select class="form-field__control" name="Mois_lancement"><option value="">Non renseigné</option><option>Janvier</option><option>Février</option><option>Mars</option><option>Avril</option><option>Mai</option><option>Juin</option><option>Juillet</option><option>Août</option><option>Septembre</option><option>Octobre</option><option>Novembre</option><option>Décembre</option></select></label>
-          <label class="form-field"><span class="form-field__label">Année de lancement</span><input class="form-field__control" name="Annee_lancement" type="number" min="2000" max="2200"></label>
-          <label class="form-field"><span class="form-field__label">Trimestre de l’objectif</span><select class="form-field__control" name="Trimestre_objectif"><option value="">Non renseigné</option><option>T1</option><option>T2</option><option>T3</option><option>T4</option></select></label>
-          <label class="form-field"><span class="form-field__label">Année de l’objectif</span><input class="form-field__control" name="Annee_objectif" type="number" min="2000" max="2200"></label>
+        <div class="form-scroll"><div class="form-sections">
+          <section class="form-section" aria-labelledby="project-information-title"><div class="form-section__heading"><p>1</p><div><h3 id="project-information-title">Informations générales</h3><span>Identité et finalité du projet</span></div></div><div class="form-grid">
+            <label class="form-field form-field--wide"><span class="form-field__label">Nom du projet *</span><input class="form-field__control" name="Nom_projet" required maxlength="250"></label>
+            <label class="form-field form-field--wide"><span class="form-field__label">Description</span><textarea class="form-field__control" name="Description" rows="3"></textarea></label>
+            <label class="form-field form-field--wide"><span class="form-field__label">Objectif politique</span><textarea class="form-field__control" name="Objectif_politique" rows="3"></textarea></label>
+          </div></section>
+          <section class="form-section" aria-labelledby="project-classification-title"><div class="form-section__heading"><p>2</p><div><h3 id="project-classification-title">Classification</h3><span>Statut et domaines concernés</span></div></div><div class="form-grid">
+            <label class="form-field form-field--wide form-field--compact"><span class="form-field__label">Statut</span><select class="form-field__control" name="Statut"></select></label>
+            <fieldset class="form-field form-field--wide choice-panel"><legend class="form-field__label">Thématiques</legend><div class="choice-grid" id="theme-choices"></div><small>Sélectionnez une ou plusieurs thématiques.</small></fieldset>
+          </div></section>
+          <section class="form-section" aria-labelledby="project-pilots-title"><div class="form-section__heading"><p>3</p><div><h3 id="project-pilots-title">Pilotage</h3><span>Responsables administratif et politique</span></div></div><div class="form-grid">
+            <label class="form-field"><span class="form-field__label">Agent pilote</span><select class="form-field__control" name="Agent_pilote"></select></label>
+            <label class="form-field"><span class="form-field__label">Élu pilote</span><select class="form-field__control" name="Elu_pilote"></select></label>
+          </div></section>
+          <section class="form-section" aria-labelledby="project-calendar-title"><div class="form-section__heading"><p>4</p><div><h3 id="project-calendar-title">Calendrier</h3><span>Lancement et objectif de réalisation</span></div></div><div class="calendar-groups">
+            <fieldset class="calendar-group"><legend>Lancement</legend><div class="form-grid"><label class="form-field"><span class="form-field__label">Mois</span><select class="form-field__control" name="Mois_lancement"><option value="">Non renseigné</option><option>Janvier</option><option>Février</option><option>Mars</option><option>Avril</option><option>Mai</option><option>Juin</option><option>Juillet</option><option>Août</option><option>Septembre</option><option>Octobre</option><option>Novembre</option><option>Décembre</option></select></label><label class="form-field"><span class="form-field__label">Année</span><input class="form-field__control" name="Annee_lancement" type="number" max="2200" inputmode="numeric"></label></div></fieldset>
+            <fieldset class="calendar-group"><legend>Objectif de réalisation</legend><div class="form-grid"><label class="form-field"><span class="form-field__label">Trimestre</span><select class="form-field__control" name="Trimestre_objectif"><option value="">Non renseigné</option><option value="T1">T1 — janvier à mars</option><option value="T2">T2 — avril à juin</option><option value="T3">T3 — juillet à septembre</option><option value="T4">T4 — octobre à décembre</option></select></label><label class="form-field"><span class="form-field__label">Année</span><input class="form-field__control" name="Annee_objectif" type="number" max="2200" inputmode="numeric"></label></div></fieldset>
+          </div></section>
         </div>
         <p class="form-message" id="project-form-message" aria-live="polite"></p></div>
         <div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Créer le projet</button></div>

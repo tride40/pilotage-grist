@@ -108,7 +108,9 @@ function extractChoiceValues(column) {
   for (const rawOptions of [column.widgetOptions, column.options]) {
     const options = decodeMetadataOptions(rawOptions);
     const choices = options?.choices ?? options?.choiceValues ?? options?.values;
-    if (Array.isArray(choices)) return choices.filter((value) => value !== "L" && hasValue(value)).map(displayValue);
+    if (Array.isArray(choices)) return choices
+      .filter((value) => value !== "L" && hasValue(value) && !["null", "undefined"].includes(normalizeText(value)))
+      .map(displayValue);
   }
   return [];
 }
@@ -480,7 +482,12 @@ function statusModifier(status) {
 
 /* ---------- Création et transmission du contexte projet ---------- */
 function distinctValues(field) {
-  return [...new Set((state.tables?.PROJETS || []).map((row) => displayValue(row[field])).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+  return [...new Set((state.tables?.PROJETS || [])
+    .map((row) => row[field])
+    .filter((value) => hasValue(value))
+    .map(displayValue)
+    .filter((value) => !["null", "undefined"].includes(normalizeText(value))))]
+    .sort((a, b) => a.localeCompare(b, "fr"));
 }
 
 function projectChoiceValues(field) {
@@ -593,6 +600,10 @@ function renderThemeChoices() {
 
 function openProjectForm() {
   elements.form.reset(); elements.formMessage.classList.remove("is-error"); elements.formMessage.textContent = "";
+  const currentYear = new Date().getFullYear();
+  for (const field of ["Annee_lancement", "Annee_objectif"]) {
+    elements.form.elements[field].min = String(currentYear);
+  }
   const metadataFields = [renderThemeChoices()?"Thematiques":"",fillSelect("Statut", "Sélectionner…")?"Statut":""].filter(Boolean);
   elements.form.elements.Statut.value = "À venir";
   if (!state.demo && metadataFields.length < PROJECT_CHOICE_FIELDS.length) {
