@@ -125,3 +125,18 @@ test("l’accueil identifie le compte Grist via une ligne technique temporaire",
   assert.match(source, /Cle_session/);
   assert.match(source, /Email_Grist/);
 });
+
+test("la synthèse globale ne se présente plus comme un écran personnel", () => {
+  const html = fs.readFileSync(path.join(root, "point-hebdomadaire/index.html"), "utf8");
+  const source = fs.readFileSync(path.join(root, "point-hebdomadaire/app.js"), "utf8");
+  assert.match(html, /Point de pilotage/);
+  assert.doesNotMatch(html, /Mon pilotage|Synthèse personnelle|Exporter mon point/);
+  assert.doesNotMatch(source, /Projet inconnu|Projet sans nom/);
+});
+
+test("l’annuaire signale les réunions potentiellement dupliquées", () => {
+  const source = fs.readFileSync(path.join(root, "interlocuteurs/app.js"), "utf8");
+  assert.match(source, /function isPossibleMeetingDuplicate/);
+  assert.match(source, /Doublon possible à vérifier/);
+  assert.doesNotMatch(source, /Projet inconnu|Projet sans nom/);
+});
