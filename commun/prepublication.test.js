@@ -95,11 +95,13 @@ test("l’annuaire permet de gérer les services municipaux", () => {
   assert.doesNotMatch(html, /Service\(s\) municipal\(aux\)/);
 });
 
-test("l’annuaire identifie le compte Grist via une ligne technique temporaire", () => {
-  const html = fs.readFileSync(path.join(root, "interlocuteurs/index.html"), "utf8");
+test("l’accueil identifie le compte Grist via une ligne technique temporaire", () => {
+  const html = fs.readFileSync(path.join(root, "accueil/index.html"), "utf8");
+  const peopleHtml = fs.readFileSync(path.join(root, "interlocuteurs/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "commun/current-user.js"), "utf8");
   assert.match(html, /commun\/current-user\.js/);
-  assert.match(html, /id="current-user"/);
+  assert.match(html, /id="identity-card"/);
+  assert.doesNotMatch(peopleHtml, /Utilisateur reconnu|id="current-user"/);
   assert.match(source, /CONTEXTE_UTILISATEUR/);
   assert.match(source, /\["AddRecord", CONTEXT_TABLE/);
   assert.match(source, /\["RemoveRecord", CONTEXT_TABLE/);

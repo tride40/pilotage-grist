@@ -72,5 +72,49 @@ function displayToday() {
   }).format(today);
 }
 
+function columnarToRecords(columns) {
+  const names = Object.keys(columns || {}).filter((name) => Array.isArray(columns[name]));
+  const length = Math.max(0, ...names.map((name) => columns[name].length));
+  return Array.from({ length }, (_, index) => Object.fromEntries(names.map((name) => [name, columns[name][index]])));
+}
+
+function referenceIds(value) {
+  return [...new Set((Array.isArray(value) ? value : [value]).filter((item) => item !== "L" && item !== "R" && item !== null && item !== undefined && String(item).trim()).map(String))];
+}
+
+function personName(person) {
+  return String(person?.Nom_complet || [person?.Prenom, person?.Nom].filter(Boolean).join(" ") || "Interlocuteur").trim();
+}
+
+function renderIdentity(identity, services) {
+  if (!identity?.person) return;
+  const person = identity.person;
+  const name = personName(person);
+  const linkedServices = services
+    .filter((service) => referenceIds(service.Agents).includes(String(person.id)) || referenceIds(service.Responsable).includes(String(person.id)))
+    .map((service) => String(service.Nom_service || "Service").trim())
+    .sort((a, b) => a.localeCompare(b, "fr"));
+  document.querySelector("#identity-avatar").textContent = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  document.querySelector("#identity-name").textContent = name;
+  document.querySelector("#identity-role").textContent = [...new Set([person.Role_interne, person.Fonction].filter(Boolean).map((value) => String(value).trim()))].join(" · ") || "Utilisateur";
+  const serviceLine = document.querySelector("#identity-services");
+  serviceLine.textContent = linkedServices.join(" · ");
+  serviceLine.hidden = linkedServices.length === 0;
+  document.querySelector("#identity-card").hidden = false;
+}
+
+async function identifyCurrentUser() {
+  if (isDemoMode() || !window.grist?.docApi || !window.PilotageCurrentUser) return;
+  try {
+    await Promise.resolve(window.grist.ready({ requiredAccess: "full" }));
+    const identity = await window.PilotageCurrentUser.identify();
+    const services = columnarToRecords(await window.grist.docApi.fetchTable("SERVICES"));
+    renderIdentity(identity, services);
+  } catch (error) {
+    console.warn("Identification de l’utilisateur impossible", error);
+  }
+}
+
 displayToday();
 configureCards();
+identifyCurrentUser();
