@@ -188,7 +188,10 @@ test("les nouveaux jalons utilisent la table dédiée", () => {
   const projectSource = fs.readFileSync(path.join(root, "fiche-projet/app.js"), "utf8");
   const dashboardSource = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   assert.match(html, /id="milestone-dialog"/);
-  assert.match(projectSource, /\+ Nouveau jalon/);
+  assert.match(html, /id="milestones-list"/);
+  assert.match(html, /Aucun jalon planifié|Jalons du projet/);
+  assert.match(html, /\+ Nouveau jalon/);
+  assert.match(projectSource, /function renderMilestones/);
   assert.match(projectSource, /function openMilestoneForm/);
   assert.match(projectSource, /function saveMilestone/);
   assert.match(projectSource, /openMilestoneForm\(row\)/);

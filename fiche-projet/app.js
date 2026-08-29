@@ -32,6 +32,7 @@ const ui = {
   instructions: document.querySelector("#instructions-list"),
   meetings: document.querySelector("#meetings-list"),
   actions: document.querySelector("#actions-list"),
+  milestones: document.querySelector("#milestones-list"), milestoneButton: document.querySelector("#add-milestone"),
   arbitrations: document.querySelector("#arbitrations-list"),
   decisionButton: document.querySelector("#add-decision"), decisionDialog: document.querySelector("#decision-dialog"), decisionForm: document.querySelector("#decision-form"), decisionFields: document.querySelector("#decision-fields"),
   milestoneDialog: document.querySelector("#milestone-dialog"), milestoneForm: document.querySelector("#milestone-form"), milestoneFields: document.querySelector("#milestone-fields"),
@@ -264,6 +265,7 @@ function renderProject(view) {
   renderInstructions(view.instructions);
   renderMeetings(view.meetings);
   renderActions(view.actions);
+  renderMilestones(project.id);
   renderArbitrations(view.arbitrations);
   renderContacts(view.contacts);
   renderHubLinks(project.id);
@@ -309,7 +311,6 @@ function renderProgress(project) {
   ui.progress.replaceChildren();
   const heading = element("div", "progress-card__heading");
   heading.append(textElement("h2", "Situation actuelle"));
-  const addMilestone=textElement("button","+ Nouveau jalon","button button--secondary");addMilestone.type="button";addMilestone.addEventListener("click",()=>openMilestoneForm());heading.append(addMilestone);
   ui.progress.append(heading);
   const details = element("dl", "summary-details");
   appendDefinition(details, "Lancement", [project.Mois_lancement, project.Annee_lancement].filter(hasValue).join(" "));
@@ -419,6 +420,19 @@ function renderActions(rows) {
     appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)], [isTrue(row.En_retard) ? "En retard" : "", "danger"]]);
     appendFields(card.body, [["Attribuée à", personValue(row.Attribuee_a || row.Responsable)]]);
     return card.root;
+  });
+}
+
+function renderMilestones(projectId) {
+  const rows = (appState.tables.JALONS || []).filter((row) => isLinkedToProject(row, projectId) && !isTrue(row.Franchi)).sort((a, b) => (dateValue(a.Date_prevue) || Infinity) - (dateValue(b.Date_prevue) || Infinity));
+  renderCollection(ui.milestones, rows, "Aucun jalon planifié. Créez le premier jalon du projet.", (row) => {
+    const card = makeItemCard(textOr(row.Jalon, "Jalon à préciser"), row.Date_prevue);
+    appendBadges(card.meta, [["À venir", "info"]]);
+    appendFields(card.body, [["À retenir", row.A_retenir]]);
+    const actions = element("div", "journal-card__actions");
+    const edit = textElement("button", "Modifier", "button button--secondary"); edit.type = "button"; edit.addEventListener("click", () => openMilestoneForm(row));
+    const complete = textElement("button", "Marquer comme franchi", "button button--primary"); complete.type = "button"; complete.addEventListener("click", () => resolvePilotageObject("JALONS", row));
+    actions.append(edit, complete); card.body.append(actions); return card.root;
   });
 }
 
@@ -549,6 +563,7 @@ function bindEditing() {
   ui.selector.addEventListener("change", () => selectProject(ui.selector.value, true)); ui.editButton.addEventListener("click", openProjectForm); ui.trackingButton.addEventListener("click", () => openJournalForm());
   document.querySelector("#add-journal-inline").addEventListener("click", () => openJournalForm());
   ui.decisionButton.addEventListener("click", () => openDecisionForm());
+  ui.milestoneButton.addEventListener("click", () => openMilestoneForm());
   document.querySelectorAll("dialog [data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
   ui.editForm.addEventListener("submit", saveProject); ui.trackingForm.addEventListener("submit", saveJournal); ui.decisionForm.addEventListener("submit", saveDecision); ui.milestoneForm.addEventListener("submit", saveMilestone); ui.deleteForm.addEventListener("submit", deleteJournal);
   ui.journalSearch.addEventListener("input", () => { appState.journalSearch = ui.journalSearch.value; renderWhenReady(); });

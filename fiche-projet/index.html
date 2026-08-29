@@ -7,13 +7,13 @@
     <title>Fiche projet</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
-    <link rel="stylesheet" href="style.css?v=18">
+    <link rel="stylesheet" href="style.css?v=19">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="demo-data.js?v=12" defer></script>
     <script src="../commun/context.js?v=1" defer></script>
     <script src="../commun/v3-rules.js?v=9" defer></script>
-    <script src="app.js?v=30" defer></script>
+    <script src="app.js?v=31" defer></script>
   </head>
   <body>
     <header class="app-header project-page-header">
@@ -66,6 +66,11 @@
           <section class="sheet-section" aria-labelledby="actions-title">
             <div class="section-header"><div><p class="section-kicker">À faire</p><h2 class="section-header__title" id="actions-title">Actions ouvertes</h2></div></div>
             <div class="stack-list" id="actions-list"></div>
+          </section>
+
+          <section class="sheet-section span-full" aria-labelledby="milestones-title">
+            <div class="section-header"><div><p class="section-kicker">Calendrier</p><h2 class="section-header__title" id="milestones-title">Jalons du projet</h2></div><button class="button button--primary" id="add-milestone" type="button">+ Nouveau jalon</button></div>
+            <div class="stack-list" id="milestones-list"></div>
           </section>
 
           <section class="sheet-section arbitration-section span-full" aria-labelledby="arbitrations-title">
