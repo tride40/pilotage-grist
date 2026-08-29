@@ -174,7 +174,7 @@ test("le tableau de bord distingue les données incomplètes des vraies valeurs"
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
-  assert.match(html, /app\.js\?v=15/);
+  assert.match(html, /app\.js\?v=16/);
   assert.match(source, /Projet à nommer/);
   assert.match(source, /Informations à compléter/);
   assert.match(source, /function projectObjective/);
@@ -216,7 +216,13 @@ test("les nouveaux jalons utilisent la table dédiée", () => {
 test("le tableau de bord expose précisément son erreur de chargement", () => {
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
-  assert.match(html, /app\.js\?v=15/);
+  assert.match(html, /app\.js\?v=16/);
   assert.match(source, /let loadingStage = "initialisation"/);
   assert.match(source, /\$\{loadingStage\} — \$\{exactError\(error\)\}/);
+});
+
+test("le tableau de bord sait trier les dates des jalons", () => {
+  const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
+  assert.match(source, /function dateValue\(value\)/);
+  assert.match(source, /dateValue\(a\.Date_prevue\) \?\? Infinity/);
 });

@@ -138,7 +138,7 @@ function prepareDashboardData(tables) {
 }
 
 function nextMilestoneValue(projectId, milestones) {
-  const row = milestones.filter((milestone) => referenceIds(milestone.Projet).some((id) => String(id) === String(projectId)) && !isTrue(milestone.Franchi)).sort((a, b) => (dateValue(a.Date_prevue) || Infinity) - (dateValue(b.Date_prevue) || Infinity))[0];
+  const row = milestones.filter((milestone) => referenceIds(milestone.Projet).some((id) => String(id) === String(projectId)) && !isTrue(milestone.Franchi)).sort((a, b) => (dateValue(a.Date_prevue) ?? Infinity) - (dateValue(b.Date_prevue) ?? Infinity))[0];
   if (!row) return "";
   return [formatDate(row.Date_prevue), textOr(row.Jalon, "Jalon à préciser")].filter(hasValue).join(" — ");
 }
@@ -461,6 +461,14 @@ function fillSelect(field, placeholder) {
   const values = projectChoiceValues(field);
   control.replaceChildren(option("", placeholder), ...values.map((value) => option(value, value)));
   return Boolean(state.projectChoices?.[field]?.length);
+}
+
+function dateValue(value) {
+  if (!hasValue(value)) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.getTime() / 1000;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? null : parsed / 1000;
 }
 
 function renderThemeChoices() {
