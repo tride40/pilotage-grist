@@ -83,5 +83,8 @@ test("l’annuaire permet de gérer les services municipaux", () => {
   assert.match(source, /function saveService/);
   assert.match(source, /function personServiceNames/);
   assert.match(source, /function serviceMembershipActions/);
+  assert.match(source, /function personServicesSection/);
+  assert.match(source, /detailSection\("Services"\)/);
+  assert.doesNotMatch(source, /Service\(s\) municipal\(aux\)/);
   assert.match(html, /id="person-services-field"/);
 });
