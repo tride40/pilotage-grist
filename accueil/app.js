@@ -86,8 +86,14 @@ function personName(person) {
   return String(person?.Nom_complet || [person?.Prenom, person?.Nom].filter(Boolean).join(" ") || "Interlocuteur").trim();
 }
 
-function renderIdentity(identity, services) {
-  if (!identity?.person) return;
+function renderIdentity(identity, services = []) {
+  if (!identity?.person) {
+    document.querySelector("#identity-avatar").textContent = "?";
+    document.querySelector("#identity-name").textContent = "Compte non associé";
+    document.querySelector("#identity-role").textContent = identity?.email || "Adresse Grist inconnue";
+    document.querySelector("#identity-services").hidden = true;
+    return;
+  }
   const person = identity.person;
   const name = personName(person);
   const linkedServices = services
@@ -100,18 +106,31 @@ function renderIdentity(identity, services) {
   const serviceLine = document.querySelector("#identity-services");
   serviceLine.textContent = linkedServices.join(" · ");
   serviceLine.hidden = linkedServices.length === 0;
-  document.querySelector("#identity-card").hidden = false;
+}
+
+function renderIdentityError(error) {
+  document.querySelector("#identity-avatar").textContent = "!";
+  document.querySelector("#identity-name").textContent = "Identification indisponible";
+  document.querySelector("#identity-role").textContent = error instanceof Error ? error.message : String(error);
+  document.querySelector("#identity-services").hidden = true;
 }
 
 async function identifyCurrentUser() {
-  if (isDemoMode() || !window.grist?.docApi || !window.PilotageCurrentUser) return;
+  if (isDemoMode()) { document.querySelector("#identity-card").hidden = true; return; }
+  if (!window.grist?.docApi || !window.PilotageCurrentUser) { renderIdentityError("API d’identification non chargée"); return; }
   try {
     await Promise.resolve(window.grist.ready({ requiredAccess: "full" }));
     const identity = await window.PilotageCurrentUser.identify();
-    const services = columnarToRecords(await window.grist.docApi.fetchTable("SERVICES"));
-    renderIdentity(identity, services);
+    renderIdentity(identity);
+    try {
+      const services = columnarToRecords(await window.grist.docApi.fetchTable("SERVICES"));
+      renderIdentity(identity, services);
+    } catch (error) {
+      console.warn("Lecture des services impossible", error);
+    }
   } catch (error) {
     console.warn("Identification de l’utilisateur impossible", error);
+    renderIdentityError(error);
   }
 }
 
