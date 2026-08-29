@@ -174,3 +174,11 @@ test("le tableau de bord distingue les données incomplètes des vraies valeurs"
   assert.match(css, /\.dashboard \{[^}]*margin-top: 0/);
   assert.doesNotMatch(css, /\.dashboard \{[^}]*margin-top:\s*calc\([^}]*-1/);
 });
+
+test("la sélection directe utilise le libellé Projet", () => {
+  for (const page of ["actions/app.js", "consignes/app.js"]) {
+    const source = fs.readFileSync(path.join(root, page), "utf8");
+    assert.doesNotMatch(source, /Projet imposé/, page);
+    assert.match(source, /isProjectMode\s*\?\s*"Projet"\s*:\s*"Vue globale"/, page);
+  }
+});

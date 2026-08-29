@@ -60,7 +60,7 @@ function checkboxOption(name,value,label,meta=""){const optionLabel=element("lab
 function render() {
   if (!state.project) { showFatal("Aucun projet disponible", "Ajoutez un projet dans la table PROJETS."); return; }
   ui.projectSelector.value = String(state.project.id);
-  ui.contextLabel.textContent = window.PilotageContext?.isProjectMode ? "Projet imposé" : "Vue globale";
+  ui.contextLabel.textContent = window.PilotageContext?.isProjectMode ? "Projet" : "Vue globale";
   ui.contextProject.textContent = textOr(state.project.Nom_projet, "Projet");
   const rows = state.instructions.filter((row) => referenceIds(row.Projet).includes(String(state.project.id)));
   const groups = { follow: [], history: [] };
