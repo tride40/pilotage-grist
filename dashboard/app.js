@@ -5,7 +5,7 @@ const TABLE_NAMES = [
   "PROJETS", "INTERLOCUTEURS", "REUNIONS", "ACTIONS",
   "CONSIGNES_POLITIQUES", "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
-const OPTIONAL_TABLE_NAMES = ["BLOCAGES", "VIGILANCES", "JALONS"];
+const OPTIONAL_TABLE_NAMES = ["BLOCAGES", "VIGILANCES", "JALONS", "ATTENTES_EXTERNES"];
 
 const PROJECT_CHOICE_FIELDS = ["Thematiques", "Statut"];
 const PROJECT_FORM_FIELDS = [
@@ -17,10 +17,9 @@ const PROJECT_CHOICE_FALLBACKS = {
   Statut: ["À venir", "En cours", "Terminé", "Abandonné"],
 };
 
-const state = { projects: [], activeFilter: "all", search: "", tables: null, writable: null, projectChoices: null, currentUser: null, demo: false, busy: false };
+const state = { projects: [], activeFilter: "all", search: "", tables: null, writable: null, projectChoices: null, currentUser: null, demo: false, busy: false, drag: null, suppressOpenUntil: 0 };
 const elements = {
   date: document.querySelector("#current-date"),
-  filters: document.querySelector("#filter-list"),
   kpis: document.querySelector("#kpi-grid"),
   projectGrid: document.querySelector("#project-grid"),
   resultsCount: document.querySelector("#results-count"),
@@ -132,15 +131,20 @@ function prepareDashboardData(tables) {
     ...project,
     Responsable_affiche: personValue(project.Agent_pilote || project.Responsable, tables.INTERLOCUTEURS),
     Elu_pilote_affiche: personValue(project.Elu_pilote, tables.INTERLOCUTEURS),
-    Prochain_jalon_affiche: nextMilestoneValue(project.id, tables.JALONS || []),
+    Jalons_affiches: upcomingMilestones(project.id, tables.JALONS || []),
     metrics: metrics.get(String(project.id)) ?? emptyMetrics(),
-  }));
+  })).sort((a, b) => projectOrderValue(a) - projectOrderValue(b) || Number(a.id) - Number(b.id));
 }
 
-function nextMilestoneValue(projectId, milestones) {
-  const row = milestones.filter((milestone) => referenceIds(milestone.Projet).some((id) => String(id) === String(projectId)) && !isTrue(milestone.Franchi)).sort((a, b) => (dateValue(a.Date_prevue) ?? Infinity) - (dateValue(b.Date_prevue) ?? Infinity))[0];
-  if (!row) return "";
-  return [formatDate(row.Date_prevue), textOr(row.Jalon, "Jalon à préciser")].filter(hasValue).join(" — ");
+function upcomingMilestones(projectId, milestones) {
+  return milestones
+    .filter((milestone) => referenceIds(milestone.Projet).some((id) => String(id) === String(projectId)) && !isTrue(milestone.Franchi))
+    .sort((a, b) => (dateValue(a.Date_prevue) ?? Infinity) - (dateValue(b.Date_prevue) ?? Infinity) || Number(a.id) - Number(b.id));
+}
+
+function projectOrderValue(project) {
+  const value = Number(project.manualSort);
+  return Number.isFinite(value) && value > 0 ? value : Number(project.id) || Number.MAX_SAFE_INTEGER;
 }
 
 function personValue(value, people) {
@@ -164,7 +168,6 @@ function calculateKpis(tables, projects) {
     { key: "arbitration", label: "Décisions à prendre", value: tables.ARBITRAGES_DECISIONS.filter(isOpenDecision).length },
     { key: "late", label: "Actions en retard", value: tables.ACTIONS.filter((row) => isTrue(row.En_retard)).length },
     { key: "check", label: "Consignes à contrôler", value: tables.CONSIGNES_POLITIQUES.filter((row) => isTrue(row.A_controler)).length },
-    { key: "watch", label: "Projets à surveiller", value: projects.filter(isProjectToWatch).length },
   ];
 }
 
@@ -192,11 +195,20 @@ function buildProjectMetrics(tables) {
     const item = getMetricForLinkedProject(metrics, row);
     if (item) item.vigilances += 1;
   });
+  (tables.ATTENTES_EXTERNES || []).filter(isOpenExternalWait).forEach((row) => {
+    const item = getMetricForLinkedProject(metrics, row);
+    if (item) item.externalWaits += 1;
+  });
   return metrics;
 }
 
 function emptyMetrics() {
-  return { openActions: 0, lateActions: 0, arbitrations: 0, instructions: 0, blockages: 0, vigilances: 0 };
+  return { openActions: 0, lateActions: 0, arbitrations: 0, instructions: 0, blockages: 0, vigilances: 0, externalWaits: 0 };
+}
+
+function isOpenExternalWait(row) {
+  return !hasValue(row.Date_reception || row.Date_resolution)
+    && !["recue", "recu", "resolue", "resolu", "close", "clos", "sans suite", "archivee", "archive"].includes(normalizeText(row.Statut));
 }
 
 function isOpenPilotageObject(row) {
@@ -229,10 +241,6 @@ function isActiveProject(project) {
   return !isTrue(project.Archive) && !["termine", "abandonne"].includes(normalizeText(project.Statut));
 }
 
-function isProjectToWatch(project) {
-  return project.metrics.blockages > 0 || project.metrics.vigilances > 0;
-}
-
 function isOpenAction(action) {
   if ("Ouverte" in action) return isTrue(action.Ouverte);
   if ("Terminee" in action) return !isTrue(action.Terminee);
@@ -245,24 +253,20 @@ function getFilteredProjects() {
     const matchesSearch = normalizeText(project.Nom_projet).includes(normalizeText(state.search));
     const matchesFilter = {
       all: true,
-      watch: isProjectToWatch(project),
       arbitration: project.metrics.arbitrations > 0,
       late: project.metrics.lateActions > 0,
+      check: project.metrics.instructions > 0,
     }[state.activeFilter];
     return matchesSearch && Boolean(matchesFilter);
   });
 }
 
 function bindFilters() {
-  elements.filters.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-filter]");
+  elements.kpis.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-kind]");
     if (!button) return;
-    state.activeFilter = button.dataset.filter;
-    elements.filters.querySelectorAll("[data-filter]").forEach((item) => {
-      const active = item === button;
-      item.classList.toggle("is-active", active);
-      item.setAttribute("aria-pressed", String(active));
-    });
+    state.activeFilter = button.dataset.kind === "active" ? "all" : button.dataset.kind;
+    updateKpiSelection();
     renderProjects();
   });
   elements.search.addEventListener("input", (event) => {
@@ -281,12 +285,22 @@ function renderKpis(kpis) {
   kpis.forEach((kpi) => {
     const card = template.content.firstElementChild.cloneNode(true);
     card.dataset.kind = kpi.key;
+    card.setAttribute("aria-label", `${kpi.label} : ${kpi.value}. Filtrer les projets.`);
     card.classList.toggle("kpi-card--empty", Number(kpi.value) === 0);
     card.querySelector(".kpi-card__label").textContent = kpi.label;
     card.querySelector(".kpi-card__value").textContent = new Intl.NumberFormat("fr-FR").format(kpi.value);
     fragment.append(card);
   });
   elements.kpis.replaceChildren(fragment);
+  updateKpiSelection();
+}
+
+function updateKpiSelection() {
+  elements.kpis.querySelectorAll("[data-kind]").forEach((card) => {
+    const active = card.dataset.kind === (state.activeFilter === "all" ? "active" : state.activeFilter);
+    card.classList.toggle("is-active", active);
+    card.setAttribute("aria-pressed", String(active));
+  });
 }
 
 function renderProjects() {
@@ -317,14 +331,16 @@ function createProjectCard(project) {
   card.querySelector(".project-card__title").textContent = title;
   card.setAttribute("aria-label", title);
   card.dataset.projectId = project.id;
-  card.addEventListener("click", () => openProject(project));
+  card.addEventListener("click", () => { if (Date.now() >= state.suppressOpenUntil) openProject(project); });
   card.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openProject(project); }
   });
   setOptionalText(card.querySelector(".project-card__category"), project.Thematiques);
   renderBadges(card.querySelector(".project-card__badges"), project);
-  renderDetails(card.querySelector(".project-card__details"), project);
+  renderPilots(card.querySelector(".project-card__pilots"), project);
+  renderMilestones(card.querySelector(".milestone-list"), project.Jalons_affiches);
   renderMetrics(card.querySelector(".project-card__footer"), project.metrics);
+  prepareOrderControls(card, project);
   return card;
 }
 
@@ -342,13 +358,11 @@ function renderBadges(container, project) {
   if (badges.length === 0) container.remove();
 }
 
-function renderDetails(container, project) {
+function renderPilots(container, project) {
   const details = [
-    ["Agent pilote", project.Responsable_affiche],
-    ["Élu pilote", project.Elu_pilote_affiche],
-    ["Objectif de réalisation", projectObjective(project)],
-    ["Prochain jalon", project.Prochain_jalon_affiche],
-  ].filter(([, value]) => hasValue(value));
+    ["Agent pilote", textOr(project.Responsable_affiche, "Non renseigné")],
+    ["Élu pilote", textOr(project.Elu_pilote_affiche, "Non renseigné")],
+  ];
   details.forEach(([label, value]) => {
     const wrapper = document.createElement("div");
     const term = document.createElement("dt");
@@ -361,10 +375,31 @@ function renderDetails(container, project) {
   if (details.length === 0) container.remove();
 }
 
-function projectObjective(project) {
-  const quarter = displayValue(project.Trimestre_objectif).toUpperCase();
-  const year = Number(project.Annee_objectif);
-  return /^T[1-4]$/.test(quarter) && Number.isInteger(year) && year >= 2000 ? `${quarter} ${year}` : "";
+function renderMilestones(container, milestones) {
+  if (!milestones.length) {
+    const empty = document.createElement("p");
+    empty.className = "milestone-empty";
+    empty.textContent = "Pas de jalon";
+    container.append(empty);
+    return;
+  }
+  const list = document.createElement("ol");
+  milestones.slice(0, 3).forEach((milestone) => {
+    const item = document.createElement("li");
+    const date = document.createElement("time");
+    date.textContent = formatDate(milestone.Date_prevue) || "Date à préciser";
+    const title = document.createElement("span");
+    title.textContent = textOr(milestone.Jalon, "Jalon à préciser");
+    item.append(date, title);
+    list.append(item);
+  });
+  container.append(list);
+  if (milestones.length > 3) {
+    const more = document.createElement("p");
+    more.className = "milestone-more";
+    more.textContent = `+ ${milestones.length - 3} autre${milestones.length - 3 > 1 ? "s" : ""}`;
+    container.append(more);
+  }
 }
 
 function renderMetrics(container, metrics) {
@@ -375,6 +410,7 @@ function renderMetrics(container, metrics) {
     [metrics.instructions, "consigne à contrôler", "consignes à contrôler", "warning"],
     [metrics.blockages, "blocage ouvert", "blocages ouverts", "danger"],
     [metrics.vigilances, "vigilance ouverte", "vigilances ouvertes", "warning"],
+    [metrics.externalWaits, "attente externe", "attentes externes", "warning"],
   ].filter(([count]) => count > 0);
   items.forEach(([count, singular, plural, kind]) => {
     const item = document.createElement("span");
@@ -463,6 +499,84 @@ function fillSelect(field, placeholder) {
   return Boolean(state.projectChoices?.[field]?.length);
 }
 
+function canReorderProjects() {
+  return state.activeFilter === "all" && !normalizeText(state.search);
+}
+
+function prepareOrderControls(card, project) {
+  const controls = card.querySelector(".project-card__order");
+  if (!canReorderProjects()) { controls.hidden = true; return; }
+  const index = state.projects.findIndex((item) => String(item.id) === String(project.id));
+  const up = controls.querySelector('[data-order="up"]');
+  const down = controls.querySelector('[data-order="down"]');
+  up.disabled = index === 0;
+  down.disabled = index === state.projects.length - 1;
+  controls.addEventListener("click", (event) => event.stopPropagation());
+  controls.addEventListener("keydown", (event) => event.stopPropagation());
+  up.addEventListener("click", () => moveProject(project.id, -1));
+  down.addEventListener("click", () => moveProject(project.id, 1));
+  const handle = controls.querySelector(".drag-handle");
+  handle.addEventListener("pointerdown", (event) => startProjectDrag(event, card));
+}
+
+function moveProject(projectId, delta) {
+  const from = state.projects.findIndex((project) => String(project.id) === String(projectId));
+  const to = Math.max(0, Math.min(state.projects.length - 1, from + delta));
+  if (from < 0 || from === to) return;
+  const [project] = state.projects.splice(from, 1);
+  state.projects.splice(to, 0, project);
+  renderProjects();
+  persistProjectOrder();
+}
+
+function startProjectDrag(event, card) {
+  if (!canReorderProjects()) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const handle = event.currentTarget;
+  handle.setPointerCapture?.(event.pointerId);
+  state.drag = { card, pointerId: event.pointerId, moved: false };
+  card.classList.add("is-dragging");
+  const move = (pointerEvent) => {
+    const target = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY)?.closest("[data-project-id]");
+    if (!target || target === card || !elements.projectGrid.contains(target)) return;
+    state.drag.moved = true;
+    const cards = [...elements.projectGrid.querySelectorAll("[data-project-id]")];
+    const targetIndex = cards.indexOf(target), cardIndex = cards.indexOf(card);
+    elements.projectGrid.insertBefore(card, targetIndex > cardIndex ? target.nextSibling : target);
+  };
+  const end = () => {
+    handle.removeEventListener("pointermove", move);
+    handle.removeEventListener("pointerup", end);
+    handle.removeEventListener("pointercancel", end);
+    card.classList.remove("is-dragging");
+    const ids = [...elements.projectGrid.querySelectorAll("[data-project-id]")].map((item) => String(item.dataset.projectId));
+    state.projects.sort((a, b) => ids.indexOf(String(a.id)) - ids.indexOf(String(b.id)));
+    state.suppressOpenUntil = Date.now() + 400;
+    state.drag = null;
+    renderProjects();
+    persistProjectOrder();
+  };
+  handle.addEventListener("pointermove", move);
+  handle.addEventListener("pointerup", end, { once: true });
+  handle.addEventListener("pointercancel", end, { once: true });
+}
+
+async function persistProjectOrder() {
+  state.projects.forEach((project, index) => { project.manualSort = (index + 1) * 10; });
+  if (state.demo) return;
+  if (!state.writable?.PROJETS?.has("manualSort")) {
+    showFeedback("L’ordre a changé à l’écran, mais la colonne manualSort n’est pas modifiable dans Grist.");
+    return;
+  }
+  try {
+    await window.grist.docApi.applyUserActions(state.projects.map((project) => ["UpdateRecord", "PROJETS", project.id, { manualSort: project.manualSort }]));
+    showFeedback("Nouvel ordre des projets enregistré.");
+  } catch (error) {
+    showFeedback(`Impossible d’enregistrer l’ordre : ${error.message}`);
+  }
+}
+
 function dateValue(value) {
   if (!hasValue(value)) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.getTime() / 1000;
@@ -519,6 +633,9 @@ function cleanFormValues(formData) {
 async function createProject(event) {
   event.preventDefault(); if (state.busy) return;
   const fields = cleanFormValues(new FormData(elements.form));
+  if (state.writable?.PROJETS?.has("manualSort")) {
+    fields.manualSort = Math.max(0, ...state.projects.map((project) => projectOrderValue(project))) + 10;
+  }
   if (!state.writable?.PROJETS?.has("Agent_pilote") && state.writable?.PROJETS?.has("Responsable") && fields.Agent_pilote) { fields.Responsable = fields.Agent_pilote; delete fields.Agent_pilote; }
   if (!fields.Nom_projet) return;
   state.busy = true; setFormBusy(true); elements.formMessage.textContent = "Enregistrement en cours…";

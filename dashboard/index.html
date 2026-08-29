@@ -7,12 +7,12 @@
     <title>Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="demo-data.js?v=5" defer></script>
     <script src="../commun/context.js?v=2" defer></script>
-    <script src="app.js?v=16" defer></script>
+    <script src="app.js?v=17" defer></script>
   </head>
   <body>
     <header class="dashboard-header app-header">
@@ -41,13 +41,7 @@
           <div class="projects-heading__actions"><p class="results-count" id="results-count" aria-live="polite"></p></div>
         </div>
 
-        <div class="dashboard-toolbar" aria-label="Filtres des projets">
-          <div class="filter-list" id="filter-list" role="group" aria-label="Afficher les projets">
-            <button class="filter-button is-active" type="button" data-filter="all" aria-pressed="true">Tous</button>
-            <button class="filter-button" type="button" data-filter="watch" aria-pressed="false">À surveiller</button>
-            <button class="filter-button" type="button" data-filter="arbitration" aria-pressed="false">Décisions</button>
-            <button class="filter-button" type="button" data-filter="late" aria-pressed="false">Retards</button>
-          </div>
+        <div class="dashboard-toolbar">
           <label class="search-field" for="project-search">
             <span class="visually-hidden">Rechercher un projet par son nom</span>
             <span class="search-field__icon" aria-hidden="true">⌕</span>
@@ -67,7 +61,7 @@
     <dialog id="project-dialog" aria-labelledby="project-form-title">
       <form id="project-form">
         <div class="dialog-header"><div><p class="section-kicker">Portefeuille</p><h2 id="project-form-title">Nouveau projet</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div>
-        <div class="form-grid">
+        <div class="form-scroll"><div class="form-grid">
           <label class="form-field form-field--wide"><span class="form-field__label">Nom du projet *</span><input class="form-field__control" name="Nom_projet" required maxlength="250"></label>
           <label class="form-field form-field--wide"><span class="form-field__label">Description</span><textarea class="form-field__control" name="Description" rows="3"></textarea></label>
           <label class="form-field form-field--wide"><span class="form-field__label">Objectif politique</span><textarea class="form-field__control" name="Objectif_politique" rows="3"></textarea></label>
@@ -80,25 +74,26 @@
           <label class="form-field"><span class="form-field__label">Trimestre de l’objectif</span><select class="form-field__control" name="Trimestre_objectif"><option value="">Non renseigné</option><option>T1</option><option>T2</option><option>T3</option><option>T4</option></select></label>
           <label class="form-field"><span class="form-field__label">Année de l’objectif</span><input class="form-field__control" name="Annee_objectif" type="number" min="2000" max="2200"></label>
         </div>
-        <p class="form-message" id="project-form-message" aria-live="polite"></p>
+        <p class="form-message" id="project-form-message" aria-live="polite"></p></div>
         <div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Créer le projet</button></div>
       </form>
     </dialog>
 
     <template id="kpi-template">
-      <article class="card kpi-card">
+      <button class="card kpi-card" type="button">
         <span class="kpi-card__marker" aria-hidden="true"></span>
         <div><p class="kpi-card__label"></p><p class="kpi-card__value"></p></div>
-      </article>
+      </button>
     </template>
 
     <template id="project-template">
       <article class="card project-card dashboard-project-card" tabindex="0" role="link">
         <header class="project-card__header">
           <div class="project-card__identity"><p class="project-card__category"></p><h3 class="project-card__title"></h3></div>
-          <div class="project-card__badges"></div>
+          <div class="project-card__header-actions"><div class="project-card__badges"></div><div class="project-card__order" aria-label="Réorganiser le projet"><button class="order-button" type="button" data-order="up" aria-label="Remonter ce projet">↑</button><button class="order-button" type="button" data-order="down" aria-label="Descendre ce projet">↓</button><button class="drag-handle" type="button" aria-label="Déplacer ce projet par glisser-déposer" title="Maintenir puis déplacer">⠿</button></div></div>
         </header>
-        <dl class="project-card__details"></dl>
+        <dl class="project-card__pilots"></dl>
+        <section class="project-card__milestones" aria-label="Prochains jalons"><h4>Prochains jalons</h4><div class="milestone-list"></div></section>
         <footer class="project-card__footer"></footer>
       </article>
     </template>

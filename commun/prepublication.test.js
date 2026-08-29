@@ -174,10 +174,10 @@ test("le tableau de bord distingue les données incomplètes des vraies valeurs"
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
-  assert.match(html, /app\.js\?v=16/);
+  assert.match(html, /app\.js\?v=17/);
   assert.match(source, /Projet à nommer/);
   assert.match(source, /Informations à compléter/);
-  assert.match(source, /function projectObjective/);
+  assert.doesNotMatch(source, /function projectObjective/);
   assert.match(source, /card\.classList\.toggle\("kpi-card--empty"/);
   assert.doesNotMatch(source, /Projet sans nom/);
   assert.match(css, /\.kpi-card--empty/);
@@ -209,14 +209,16 @@ test("les nouveaux jalons utilisent la table dédiée", () => {
   assert.match(projectSource, /openMilestoneForm\(row\)/);
   assert.match(projectSource, /\["AddRecord","JALONS"/);
   assert.match(projectSource, /const JOURNAL_TYPES = \["Avancement", "Information"\]/);
-  assert.match(dashboardSource, /OPTIONAL_TABLE_NAMES = \["BLOCAGES", "VIGILANCES", "JALONS"\]/);
-  assert.match(dashboardSource, /\["Prochain jalon", project\.Prochain_jalon_affiche\]/);
+  assert.match(dashboardSource, /OPTIONAL_TABLE_NAMES = \["BLOCAGES", "VIGILANCES", "JALONS", "ATTENTES_EXTERNES"\]/);
+  assert.match(dashboardSource, /function upcomingMilestones/);
+  assert.match(dashboardSource, /milestones\.slice\(0, 3\)/);
+  assert.match(dashboardSource, /Pas de jalon/);
 });
 
 test("le tableau de bord expose précisément son erreur de chargement", () => {
   const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
-  assert.match(html, /app\.js\?v=16/);
+  assert.match(html, /app\.js\?v=17/);
   assert.match(source, /let loadingStage = "initialisation"/);
   assert.match(source, /\$\{loadingStage\} — \$\{exactError\(error\)\}/);
 });
@@ -225,4 +227,19 @@ test("le tableau de bord sait trier les dates des jalons", () => {
   const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
   assert.match(source, /function dateValue\(value\)/);
   assert.match(source, /dateValue\(a\.Date_prevue\) \?\? Infinity/);
+});
+
+test("le tableau de bord audited propose filtres KPI, ordre persistant et formulaire défilable", () => {
+  const html = fs.readFileSync(path.join(root, "dashboard/index.html"), "utf8");
+  const source = fs.readFileSync(path.join(root, "dashboard/app.js"), "utf8");
+  const css = fs.readFileSync(path.join(root, "dashboard/style.css"), "utf8");
+  assert.doesNotMatch(html, /id="filter-list"|Projets à surveiller/);
+  assert.match(source, /function updateKpiSelection/);
+  assert.match(source, /function persistProjectOrder/);
+  assert.match(source, /manualSort/);
+  assert.match(source, /pointerdown/);
+  assert.match(source, /externalWaits/);
+  assert.match(html, /class="form-scroll"/);
+  assert.match(css, /\.form-scroll \{[^}]*overflow-y: auto/);
+  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 });
