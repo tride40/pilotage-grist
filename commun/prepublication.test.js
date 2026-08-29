@@ -66,3 +66,11 @@ test("les widgets V3 ne dépendent plus de Type_interlocuteur", () => {
     assert.doesNotMatch(source, /Type_interlocuteur/, file);
   }
 });
+
+test("les actions proposent deux recherches de personnes indépendantes", () => {
+  const html = fs.readFileSync(path.join(root, "actions/index.html"), "utf8");
+  const source = fs.readFileSync(path.join(root, "actions/app.js"), "utf8");
+  assert.equal((html.match(/data-person-picker=/g) || []).length, 2);
+  assert.match(source, /function renderPersonPicker/);
+  assert.doesNotMatch(html, /name="people_search"/);
+});
