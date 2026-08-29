@@ -24,8 +24,6 @@ const ui = {
   code: document.querySelector("#project-code"),
   badges: document.querySelector("#project-badges"),
   people: document.querySelector("#hero-people"),
-  objective: document.querySelector("#objective-card"),
-  progress: document.querySelector("#progress-card"),
   vigilance: document.querySelector("#vigilance-panel"),
   updates: document.querySelector("#updates-list"),
   journalSearch: document.querySelector("#journal-search"), journalTypeFilter: document.querySelector("#journal-type-filter"), journalStateFilter: document.querySelector("#journal-state-filter"), journalResults: document.querySelector("#journal-results"), showAllJournal: document.querySelector("#show-all-journal"),
@@ -259,8 +257,6 @@ function renderProject(view) {
   setText(ui.code, project.Code_projet, "Projet");
   renderProjectBadges(project);
   renderHeroPeople(project);
-  renderObjective(project);
-  renderProgress(project);
   renderUpdates(view.updates);
   renderInstructions(view.instructions);
   renderMeetings(view.meetings);
@@ -299,31 +295,6 @@ function renderHeroPeople(project) {
   else ui.people.hidden = false;
 }
 
-function renderObjective(project) {
-  ui.objective.replaceChildren();
-  const title = document.createElement("h2");
-  title.textContent = textOr(project.Objectif_politique, "Objectif politique non renseigné");
-  ui.objective.append(title);
-  if (hasValue(project.Description)) ui.objective.append(textElement("p", project.Description));
-}
-
-function renderProgress(project) {
-  ui.progress.replaceChildren();
-  const heading = element("div", "progress-card__heading");
-  heading.append(textElement("h2", "Situation actuelle"));
-  ui.progress.append(heading);
-  const details = element("dl", "summary-details");
-  appendDefinition(details, "Lancement", [project.Mois_lancement, project.Annee_lancement].filter(hasValue).join(" "));
-  appendDefinition(details, "Objectif de réalisation", [project.Trimestre_objectif, project.Annee_objectif].filter(hasValue).join(" "));
-  const linked=(table)=>((appState.tables?.[table]||[]).filter(row=>isLinkedToProject(row,project.id))),active=(table,field)=>linked(table).filter(row=>!(field in row)||isTrue(row[field]));
-  const blockages=active("BLOCAGES","Actif"),vigilances=active("VIGILANCES","Active"),expectations=linked("ATTENTES_EXTERNES").filter(row=>!["recue","sans suite"].includes(normalizeText(row.Statut))),milestones=linked("JALONS").filter(row=>!isTrue(row.Franchi));
-  appendDefinition(details,"Blocages actifs",blockages.length?String(blockages.length):"");appendDefinition(details,"Vigilances actives",vigilances.length?String(vigilances.length):"");appendDefinition(details,"Attentes externes",expectations.length?String(expectations.length):"");appendDefinition(details,"Jalons à venir",milestones.length?String(milestones.length):"");
-  appendDefinition(details, "Dernière mise à jour", formatDate(project.Derniere_MAJ));
-  if (details.children.length) ui.progress.append(details);
-  const alerts=[...blockages.slice(0,3).map(row=>["BLOCAGES",row,"Blocage",row.Blocage,"danger"]),...vigilances.slice(0,3).map(row=>["VIGILANCES",row,"Vigilance",row.Vigilance,"warning"])];if(alerts.length||milestones.length||expectations.length){const list=element("div","situation-list");alerts.forEach(([table,row,label,value,tone])=>{const item=element("div",`alert alert--${tone}`);item.append(textElement("strong",label),textElement("span",value));const button=textElement("button",table==="BLOCAGES"?"Marquer comme levé":"Lever la vigilance","button button--secondary");button.type="button";button.addEventListener("click",()=>resolvePilotageObject(table,row));item.append(button);list.append(item)});milestones.slice(0,3).forEach(row=>{const item=element("div","alert alert--info");item.append(textElement("strong","Jalon"),textElement("span",row.Jalon));if(hasValue(row.Date_prevue))item.append(textElement("small",formatDate(row.Date_prevue)));const button=textElement("button","Marquer comme franchi","button button--secondary");button.type="button";button.addEventListener("click",()=>resolvePilotageObject("JALONS",row));item.append(button);list.append(item)});expectations.slice(0,3).forEach(row=>{const item=element("div","alert alert--info"),actions=element("div","journal-card__actions");item.append(textElement("strong","Attente externe"),textElement("span",row.Attente));if(hasValue(row.Date_attendue))item.append(textElement("small",formatDate(row.Date_attendue)));[["Relancer",()=>relaunchExpectation(row)],["Marquer reçue",()=>closeExpectation(row,"Reçue")],["Sans suite",()=>closeExpectation(row,"Sans suite")]].forEach(([label,handler])=>{const button=textElement("button",label,"button button--secondary");button.type="button";button.addEventListener("click",handler);actions.append(button)});item.append(actions);list.append(item)});ui.progress.append(list)}
-  [...ui.progress.querySelectorAll(".situation-list .alert--info")].filter(item=>item.querySelector("strong")?.textContent==="Jalon").forEach((item,index)=>{const row=milestones[index];if(!row)return;const edit=textElement("button","Modifier","button button--secondary");edit.type="button";edit.addEventListener("click",()=>openMilestoneForm(row));item.insertBefore(edit,item.querySelector("button"))});
-  ui.progress.classList.remove("progress-card--next-step");
-}
 function currentNextSteps(projectId) {
   const rows = (appState.tables?.AVANCEMENTS || []).filter((row) => isLinkedToProject(row, projectId));
   const stored = rows.filter((row) => journalType(row) === "Prochaine étape" && journalEntryState(row, rows) !== "Résolu");

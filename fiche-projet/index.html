@@ -7,17 +7,17 @@
     <title>Fiche projet</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
-    <link rel="stylesheet" href="style.css?v=19">
+    <link rel="stylesheet" href="style.css?v=20">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="demo-data.js?v=12" defer></script>
     <script src="../commun/context.js?v=1" defer></script>
     <script src="../commun/v3-rules.js?v=9" defer></script>
-    <script src="app.js?v=31" defer></script>
+    <script src="app.js?v=32" defer></script>
   </head>
   <body>
     <header class="app-header project-page-header">
-      <div class="app-header__inner"><div><p class="section-kicker">Pilotage des projets</p><h1>Fiche projet</h1><p class="header-copy">Situation actuelle, calendrier et mémoire du projet sélectionné.</p></div></div>
+      <div class="app-header__inner"><div><p class="section-kicker">Pilotage des projets</p><h1>Fiche projet</h1><p class="header-copy">Jalons, décisions et mémoire du projet sélectionné.</p></div></div>
     </header>
     <main class="app-shell project-sheet">
       <div class="project-toolbar card"><label class="form-field"><span class="form-field__label">Projet</span><select class="form-field__control" id="project-selector" aria-label="Choisir un projet"></select></label><div class="project-toolbar__actions"><a class="button button--secondary home-button" href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16" target="_top" aria-label="Revenir à l’accueil"><span class="home-button__icon" aria-hidden="true">⌂</span>Accueil</a><button class="button button--primary" id="update-tracking" type="button">+ Nouvelle entrée du journal</button><button class="button button--secondary" id="edit-project" type="button">Modifier le projet</button></div></div>
@@ -38,9 +38,9 @@
 
         <nav class="project-hub card" aria-label="Outils de ce projet"><a class="project-hub__link" id="hub-actions">Ouvrir les actions</a><a class="project-hub__link" id="hub-meetings">Ouvrir les réunions</a><a class="project-hub__link" id="hub-instructions">Ouvrir les consignes</a><a class="project-hub__link" href="#arbitrations-title">Voir les décisions</a></nav>
 
-        <section class="top-grid">
-          <article class="political-objective card" id="objective-card"></article>
-          <article class="card progress-card" id="progress-card"></article>
+        <section class="milestones-priority card" aria-labelledby="milestones-title">
+          <div class="section-header"><div><p class="section-kicker">Calendrier prioritaire</p><h2 class="section-header__title" id="milestones-title">Jalons du projet</h2><p class="section-intro">Les prochaines échéances structurantes du projet.</p></div><button class="button button--primary" id="add-milestone" type="button">+ Nouveau jalon</button></div>
+          <div class="milestones-grid" id="milestones-list"></div>
         </section>
 
         <section class="vigilance-panel" id="vigilance-panel" hidden></section>
@@ -66,11 +66,6 @@
           <section class="sheet-section" aria-labelledby="actions-title">
             <div class="section-header"><div><p class="section-kicker">À faire</p><h2 class="section-header__title" id="actions-title">Actions ouvertes</h2></div></div>
             <div class="stack-list" id="actions-list"></div>
-          </section>
-
-          <section class="sheet-section span-full" aria-labelledby="milestones-title">
-            <div class="section-header"><div><p class="section-kicker">Calendrier</p><h2 class="section-header__title" id="milestones-title">Jalons du projet</h2></div><button class="button button--primary" id="add-milestone" type="button">+ Nouveau jalon</button></div>
-            <div class="stack-list" id="milestones-list"></div>
           </section>
 
           <section class="sheet-section arbitration-section span-full" aria-labelledby="arbitrations-title">

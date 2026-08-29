@@ -190,6 +190,8 @@ test("les nouveaux jalons utilisent la table dédiée", () => {
   assert.match(html, /id="milestone-dialog"/);
   assert.match(html, /id="milestones-list"/);
   assert.match(html, /Aucun jalon planifié|Jalons du projet/);
+  assert.match(html, /class="milestones-priority card"/);
+  assert.doesNotMatch(html, /id="objective-card"|id="progress-card"/);
   assert.match(html, /\+ Nouveau jalon/);
   assert.match(projectSource, /function renderMilestones/);
   assert.match(projectSource, /function openMilestoneForm/);
