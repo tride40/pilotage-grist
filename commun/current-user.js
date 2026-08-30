@@ -6,6 +6,8 @@
 
   async function identify({ people = null } = {}) {
     if (!global.grist?.docApi) throw new Error("L’API Grist n’est pas disponible.");
+    if (global.PilotageTestMode?.current()) return global.PilotageTestMode.identity(people);
+    global.PilotageTestMode?.assertWritable();
     const sessionKey = global.crypto?.randomUUID?.() || `pilotage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     let contextId = null;
     try {
@@ -25,6 +27,7 @@
       const person = personRows.find((item) => String(item.id) === String(personId))
         || personRows.find((item) => normalize(item.Email) === normalize(email))
         || null;
+      global.PilotageTestMode?.assertWritable();
       return { email, personId: person?.id ?? personId ?? null, person };
     } finally {
       if (contextId) {
@@ -51,6 +54,8 @@
   function text(value) { return value === null || value === undefined ? "" : String(value).trim(); }
   function normalize(value) { return text(value).toLocaleLowerCase("fr-FR"); }
   function requirePersonId(identity) {
+    global.PilotageTestMode?.assertWritable();
+    if (identity?.simulated) throw new Error("Mode test : impossible d’enregistrer sous une identité simulée.");
     const id = Number(identity?.personId ?? identity?.person?.id);
     if (!Number.isFinite(id) || id <= 0) throw new Error("Votre compte Grist n’est associé à aucun interlocuteur.");
     return id;
