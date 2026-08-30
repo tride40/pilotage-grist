@@ -165,9 +165,11 @@ function referenceIds(value) {
 }
 
 function calculateKpis(tables, projects) {
+  // Même périmètre et même liaison que les cartes filtrables : projets actifs seulement.
+  const activeIds = new Set(projects.filter(isActiveProject).map(project => String(project.id)));
   return [
     { key: "active", label: "Projets actifs", value: projects.length },
-    { key: "arbitration", label: "Décisions à prendre", value: tables.ARBITRAGES_DECISIONS.filter(isOpenDecision).length },
+    { key: "arbitration", label: "Décisions à prendre", value: tables.ARBITRAGES_DECISIONS.filter(row => isOpenDecision(row) && activeIds.has(String(getProjectReference(row)))).length },
     { key: "late", label: "Actions en retard", value: tables.ACTIONS.filter((row) => isTrue(row.En_retard)).length },
     { key: "check", label: "Consignes à contrôler", value: tables.CONSIGNES_POLITIQUES.filter((row) => isTrue(row.A_controler)).length },
   ];
@@ -202,6 +204,24 @@ function buildProjectMetrics(tables) {
     if (item) item.externalWaits += 1;
   });
   return metrics;
+}
+
+function unlinkedOpenDecisions(tables) {
+  const knownIds = new Set(tables.PROJETS.map(project => String(project.id)));
+  return tables.ARBITRAGES_DECISIONS.filter(row => isOpenDecision(row) && !knownIds.has(String(getProjectReference(row))));
+}
+
+function renderDecisionNotice() {
+  const notice = document.querySelector("#unlinked-decisions");
+  const rows = state.tables ? unlinkedOpenDecisions(state.tables) : [];
+  notice.hidden = rows.length === 0;
+  notice.querySelector("ul").replaceChildren();
+  notice.querySelector("summary").textContent = `${rows.length} décision${rows.length > 1 ? "s" : ""} à rattacher à un projet`;
+  for (const row of rows) {
+    const item = document.createElement("li");
+    item.textContent = `${textOr(row.Sujet, "Décision sans sujet")} — ligne ${row.id}`;
+    notice.querySelector("ul").append(item);
+  }
 }
 
 function emptyMetrics() {
@@ -306,6 +326,7 @@ function updateKpiSelection() {
 }
 
 function renderProjects() {
+  renderDecisionNotice();
   const projects = getFilteredProjects();
   elements.projectGrid.replaceChildren();
   elements.resultsCount.textContent = `${projects.length} ${projects.length > 1 ? "projets affichés" : "projet affiché"}`;

@@ -7,12 +7,12 @@
     <title>Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
-    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="style.css?v=18">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="demo-data.js?v=5" defer></script>
     <script src="../commun/context.js?v=2" defer></script>
-    <script src="app.js?v=19" defer></script>
+    <script src="app.js?v=20" defer></script>
   </head>
   <body>
     <header class="dashboard-header app-header">
@@ -30,6 +30,11 @@
       <section aria-labelledby="kpi-title">
         <h2 class="visually-hidden" id="kpi-title">Indicateurs clés</h2>
         <div class="kpi-grid" id="kpi-grid" aria-live="polite"></div>
+        <details class="decision-notice" id="unlinked-decisions" hidden>
+          <summary>Décisions à rattacher à un projet</summary>
+          <p>Ces décisions en attente ne sont pas incluses dans le compteur des projets actifs. Vérifiez leur champ « Projet » dans la table ARBITRAGES_DECISIONS : le rattachement est vide ou le projet n’est pas disponible dans les données lues.</p>
+          <ul></ul>
+        </details>
       </section>
 
       <section class="projects-section" aria-labelledby="projects-title">

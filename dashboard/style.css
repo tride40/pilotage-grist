@@ -182,3 +182,8 @@ textarea.form-field__control { resize: vertical; }
   .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .dashboard-project-card { height: 34rem; }
 }
+.decision-notice { margin-top: 16px; padding: 12px 18px; border: 1px solid #efd1a4; border-radius: 14px; background: #fff8ed; color: #714710; overflow-wrap: anywhere; }
+.decision-notice[hidden] { display: none; }
+.decision-notice summary { min-height: 44px; align-content: center; cursor: pointer; font-weight: 700; }
+.decision-notice summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.decision-notice p, .decision-notice li { line-height: 1.5; }
