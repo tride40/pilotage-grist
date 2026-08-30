@@ -50,24 +50,25 @@ body { min-height: 100vh; background: linear-gradient(180deg, #eef2ff 0, var(--c
 .secondary-sections { display: grid; gap: 2.2rem; margin-top: 2.2rem; }.secondary-sections .tool-section { margin: 0; }
 .no-script { margin: 1rem; padding: 1rem; border-radius: var(--radius-md); background: var(--color-warning-soft); color: var(--color-warning); }
 
-/* Hiérarchie des accès : le tableau de bord domine, sans masquer les groupes. */
+/* Les deux accès Piloter partagent strictement le même traitement visuel. */
+.tool-grid--featured { grid-auto-rows: 1fr; }
+.tool-card--featured { grid-template-columns: 4rem minmax(0, 1fr); }
 .tool-card:not(.is-unconfigured) .tool-card__footer { min-height: 0; padding-top: 0; border-top: 0; }
 .tool-card:not(.is-unconfigured) .tool-card__arrow { position: absolute; right: 1rem; bottom: 1rem; }
-.tool-card[data-page="dashboard"] { border: 1px solid rgb(124 110 230 / 42%); background: linear-gradient(150deg, var(--color-surface) 55%, var(--color-primary-soft)); box-shadow: 0 16px 42px rgb(45 38 110 / 18%); }
-.tool-card[data-page="dashboard"] strong { font-size: clamp(1.35rem, 3vw, 1.8rem); }
-.tool-card[data-page="dashboard"] .tool-card__icon { width: 4rem; height: 4rem; }
-.tool-card[data-page="dashboard"] .tool-card__icon svg { width: 1.9rem; height: 1.9rem; }
+.tool-card--featured { border: 1px solid rgb(124 110 230 / 42%); background: linear-gradient(150deg, var(--color-surface) 55%, var(--color-primary-soft)); box-shadow: 0 16px 42px rgb(45 38 110 / 18%); }
+.tool-card--featured strong { font-size: clamp(1.35rem, 3vw, 1.8rem); }
+.tool-card--featured .tool-card__icon { width: 4rem; height: 4rem; }
+.tool-card--featured .tool-card__icon svg { width: 1.9rem; height: 1.9rem; }
 
 @keyframes card-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (min-width: 42rem) { .hero__content { grid-template-columns: auto 1fr auto; align-items: start; padding-block: 2.7rem 3.7rem; }.hero__meta { grid-column: 3; grid-row: 1; grid-template-columns: 1fr; width: auto; justify-items: end; }.hero__date { grid-column: auto; padding-top: .3rem; }.identity-card { width: auto; }.tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.tool-grid:not(.tool-grid--featured) .tool-card:last-child:nth-child(odd) { grid-column: span 2; }.secondary-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); }.secondary-sections .tool-grid { grid-template-columns: 1fr; }.tool-card { padding: 1.3rem; } }
-@media (max-width: 30rem) { .hero__content { gap: .9rem .75rem; padding-block: 1.35rem 1.65rem; }.hero__meta { margin-top: .25rem; }.sanguinet-brand--hero { width: 5.25rem; }.identity-card__body strong { white-space: normal; }.app-shell.home { padding-block: 1.5rem 2.5rem; }.tool-card { grid-template-columns: 2.85rem minmax(0, 1fr); min-height: 0; padding: 1rem; }.tool-card__icon { width: 2.85rem; height: 2.85rem; }.tool-card[data-page="dashboard"] .tool-card__icon { width: 2.85rem; height: 2.85rem; }.tool-card__arrow { right: .8rem; bottom: .8rem; }.tool-card__description { padding-right: 1.75rem; }.secondary-sections { gap: 1.75rem; margin-top: 1.75rem; } }
+@media (max-width: 30rem) { .hero__content { gap: .9rem .75rem; padding-block: 1.35rem 1.65rem; }.hero__meta { margin-top: .25rem; }.sanguinet-brand--hero { width: 5.25rem; }.identity-card__body strong { white-space: normal; }.app-shell.home { padding-block: 1.5rem 2.5rem; }.tool-card { grid-template-columns: 2.85rem minmax(0, 1fr); min-height: 0; padding: 1rem; }.tool-card__icon { width: 2.85rem; height: 2.85rem; }.tool-card--featured .tool-card__icon { width: 2.85rem; height: 2.85rem; }.tool-card__arrow { right: .8rem; bottom: .8rem; }.tool-card__description { padding-right: 1.75rem; }.secondary-sections { gap: 1.75rem; margin-top: 1.75rem; } }
 @media (min-width: 64rem) {
   .hero__content { padding-block: 3rem 4rem; }
   .app-shell.home { padding-top: 2.5rem; }
   .tool-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .tool-grid--featured { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .tool-grid--featured .tool-card[data-page="dashboard"] { grid-column: span 2; min-height: 10rem; padding: clamp(1.25rem, 2vw, 1.65rem); }
-  .tool-grid--featured .tool-card[data-page="weekly"] { grid-column: span 1; }
+  .tool-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tool-grid--featured .tool-card--featured { grid-column: auto; min-height: 10rem; padding: clamp(1.25rem, 2vw, 1.65rem); }
   .tool-grid--daily { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tool-grid:not(.tool-grid--featured) .tool-card:last-child:nth-child(odd) { grid-column: auto; }
 }

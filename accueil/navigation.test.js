@@ -11,6 +11,13 @@ domTest("accueil : nouvelles catégories, sept cartes uniques et destinations in
     assert.deepEqual(pages("travailler-title"),["project","meetings","instructions","actions"]);
     assert.deepEqual(pages("ressources-title"),["contacts"]);
     assert.equal(doc.querySelectorAll("[data-page]").length,7);
+    const featured=[...doc.querySelectorAll(".tool-grid--featured .tool-card")];
+    assert.equal(featured[0].className,featured[1].className);
+    assert.equal(featured[0].querySelector(".tool-card__icon").className,featured[1].querySelector(".tool-card__icon").className);
+    const css=fs.readFileSync(path.join(__dirname,"styles.css"),"utf8");
+    assert.match(css,/\.tool-grid--featured \{ grid-auto-rows: 1fr;/);
+    assert.match(css,/\.tool-grid--featured \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+    assert.doesNotMatch(css,/\[data-page="(?:dashboard|weekly)"\]/);
     assert.equal(doc.querySelector("#organiser-title"),null);
     assert.equal(doc.querySelector('[data-page="project"] strong').textContent,"Suivi des projets");
     assert.match(doc.querySelector('[data-page="project"]').textContent,/jalons.*journal/);
