@@ -1,0 +1,24 @@
+/* Organisation municipale : formulaires catégorisés et hiérarchie lisible. */
+.org-section{display:grid;gap:.8rem;min-width:0;padding:1rem;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface)}
+.org-section h3,.org-section h4,.org-section p{margin:0}
+.org-section h3{font-size:1.05rem}.org-section h4{font-size:.95rem}
+.org-direction{border-left:4px solid var(--color-primary);background:linear-gradient(130deg,var(--color-primary-soft),#fff)}
+.org-leader{font-weight:750;color:var(--color-text)}
+.org-muted{display:block;font-size:.85rem;color:var(--color-text-muted)}
+.org-warning{color:var(--color-warning);font-weight:700}.org-duties{white-space:pre-line}
+.org-pole{border-left:4px solid var(--color-info)}
+.org-controls{display:flex;flex-wrap:wrap;gap:.5rem}.org-controls .button{font-size:.85rem}
+.org-members{display:grid;gap:.4rem;list-style:none;padding:0;margin:.75rem 0}
+.org-members .button{min-height:2.5rem;text-align:left}
+.service-card summary{padding:.5rem 0;cursor:pointer;font-weight:650}
+.org-grid{display:grid;gap:1rem;min-width:0}.org-grid>*{min-width:0}
+.org-form-body{display:grid!important;grid-template-columns:1fr!important;gap:1rem;min-height:0;overflow:auto;overscroll-behavior:contain;padding:2px}
+.org-form-body .service-agent-option{align-items:flex-start}.org-form-body .service-agent-option input{flex:0 0 auto}
+.org-form-body textarea{min-height:6rem}.org-form-body select{width:100%;min-width:0}
+.org-inherited{padding:.75rem;border-radius:var(--radius-sm);background:var(--color-primary-soft);color:var(--color-primary)}
+.org-inherited:empty{display:none}
+.org-dialog .form-message:empty,#service-dialog .form-message:empty{min-height:0;margin:0}
+.org-dialog form,#service-form{gap:1rem}
+#services-list{max-height:none}#services-dialog .dialog-content{height:min(50rem,calc(100dvh - 1.5rem))}
+@media(min-width:48rem){.org-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:30rem){.org-controls{display:grid}.org-section{padding:.75rem}.org-members .button{width:100%}}
