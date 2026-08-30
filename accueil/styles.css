@@ -67,7 +67,8 @@ body { min-height: 100vh; background: linear-gradient(180deg, #eef2ff 0, var(--c
   .tool-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tool-grid--featured { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tool-grid--featured .tool-card[data-page="dashboard"] { grid-column: span 2; min-height: 10rem; padding: clamp(1.25rem, 2vw, 1.65rem); }
-  .tool-grid--featured .tool-card[data-page="project"] { grid-column: span 1; }
+  .tool-grid--featured .tool-card[data-page="weekly"] { grid-column: span 1; }
+  .tool-grid--daily { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tool-grid:not(.tool-grid--featured) .tool-card:last-child:nth-child(odd) { grid-column: auto; }
 }
 @media (hover: hover) and (pointer: fine) { .tool-card:not(.is-unconfigured):hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border)); box-shadow: 0 15px 34px rgb(20 34 66 / 15%); }.tool-card:not(.is-unconfigured):hover .tool-card__arrow { transform: translateX(3px); } }

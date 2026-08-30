@@ -48,7 +48,8 @@ test("l’accueil ne présente plus les indicateurs supprimés de la V3", () => 
 test("l’accueil conserve sa fonction de portail sur tous les écrans", () => {
   const html = fs.readFileSync(path.join(root, "accueil", "index.html"), "utf8");
   const styles = fs.readFileSync(path.join(root, "accueil", "styles.css"), "utf8");
-  assert.match(html, /<h2 id="organiser-title">S’organiser<\/h2>/);
+  assert.doesNotMatch(html, /id="organiser-title"/);
+  assert.match(html, /<strong>Suivi des projets<\/strong>/);
   assert.match(html, /Consultez les jalons, l’équipe, les décisions et le journal d’un projet/);
   assert.doesNotMatch(html, />Décider<|>Temps fort</);
   assert.match(styles, /@media \(max-width: 30rem\)/);

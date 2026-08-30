@@ -8,7 +8,7 @@
     <title>Accueil · Pilotage des projets</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
     <script src="../commun/current-user.js?v=2" defer></script>
     <script src="app.js?v=5" defer></script>
@@ -39,9 +39,9 @@
             <span class="tool-card__body"><span class="tool-card__meta">Vision globale</span><strong>Tableau de bord</strong><span class="tool-card__description">Visualisez la situation, les échéances et les objets actifs de tous les projets.</span></span>
             <span class="tool-card__footer"><span class="link-status">Ouvrir l’outil</span><span class="tool-card__arrow" aria-hidden="true">→</span></span>
           </a>
-          <a class="tool-card tool-card--project" data-page="project" target="_top">
-            <span class="tool-card__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2Zm8 2v4h4l-4-4ZM9 12h8v-2H9v2Zm0 4h8v-2H9v2Zm0 4h6v-2H9v2Z"/></svg></span>
-            <span class="tool-card__body"><span class="tool-card__meta">Suivi détaillé</span><strong>Fiche projet</strong><span class="tool-card__description">Consultez les jalons, l’équipe, les décisions et le journal d’un projet.</span></span>
+          <a class="tool-card tool-card--decision" data-page="weekly" target="_top">
+            <span class="tool-card__icon tool-card__icon--violet" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v18h18v-2H5V3H3Zm4 12h3v2H7v-2Zm0-4h7v2H7v-2Zm0-4h11v2H7V7Zm9 4h2v6h-2v-6Zm-4 3h2v3h-2v-3Z"/></svg></span>
+            <span class="tool-card__body"><span class="tool-card__meta">Synthèse personnelle</span><strong>Mon pilotage</strong><span class="tool-card__description">Retrouvez automatiquement les éléments actifs qui demandent votre attention.</span></span>
             <span class="tool-card__footer"><span class="link-status">Ouvrir l’outil</span><span class="tool-card__arrow" aria-hidden="true">→</span></span>
           </a>
         </div>
@@ -52,7 +52,12 @@
           <span class="section-heading__mark section-heading__mark--blue" aria-hidden="true"></span>
           <div><p>Au quotidien</p><h2 id="travailler-title">Travailler</h2></div>
         </div>
-        <div class="tool-grid">
+        <div class="tool-grid tool-grid--daily">
+          <a class="tool-card tool-card--project" data-page="project" target="_top">
+            <span class="tool-card__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2Zm8 2v4h4l-4-4ZM9 12h8v-2H9v2Zm0 4h8v-2H9v2Zm0 4h6v-2H9v2Z"/></svg></span>
+            <span class="tool-card__body"><span class="tool-card__meta">Suivi détaillé</span><strong>Suivi des projets</strong><span class="tool-card__description">Consultez les jalons, l’équipe, les décisions et le journal d’un projet.</span></span>
+            <span class="tool-card__footer"><span class="link-status">Ouvrir l’outil</span><span class="tool-card__arrow" aria-hidden="true">→</span></span>
+          </a>
           <a class="tool-card" data-page="meetings" target="_top">
             <span class="tool-card__icon tool-card__icon--blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm1 15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8h16v8ZM4 9V7a1 1 0 0 1 1-1h1v2h2V6h8v2h2V6h1a1 1 0 0 1 1 1v2H4Z"/></svg></span>
             <span class="tool-card__body"><span class="tool-card__meta">Agenda & comptes rendus</span><strong>Réunions</strong><span class="tool-card__description">Préparez les rendez-vous et versionnez leurs comptes rendus.</span></span>
@@ -78,16 +83,6 @@
             <a class="tool-card" data-page="contacts" target="_top">
               <span class="tool-card__icon tool-card__icon--teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3Zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13Zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z"/></svg></span>
               <span class="tool-card__body"><span class="tool-card__meta">Annuaire</span><strong>Interlocuteurs</strong><span class="tool-card__description">Identifiez rapidement les élus, agents et partenaires des projets.</span></span>
-              <span class="tool-card__footer"><span class="link-status">Ouvrir l’outil</span><span class="tool-card__arrow" aria-hidden="true">→</span></span>
-            </a>
-          </div>
-        </section>
-        <section class="tool-section" aria-labelledby="organiser-title">
-          <div class="section-heading"><span class="section-heading__mark section-heading__mark--violet" aria-hidden="true"></span><div><p>Espace personnel</p><h2 id="organiser-title">S’organiser</h2></div></div>
-          <div class="tool-grid">
-            <a class="tool-card tool-card--decision" data-page="weekly" target="_top">
-              <span class="tool-card__icon tool-card__icon--violet" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v18h18v-2H5V3H3Zm4 12h3v2H7v-2Zm0-4h7v2H7v-2Zm0-4h11v2H7V7Zm9 4h2v6h-2v-6Zm-4 3h2v3h-2v-3Z"/></svg></span>
-              <span class="tool-card__body"><span class="tool-card__meta">Synthèse personnelle</span><strong>Mon pilotage</strong><span class="tool-card__description">Retrouvez automatiquement les éléments actifs qui demandent votre attention.</span></span>
               <span class="tool-card__footer"><span class="link-status">Ouvrir l’outil</span><span class="tool-card__arrow" aria-hidden="true">→</span></span>
             </a>
           </div>
