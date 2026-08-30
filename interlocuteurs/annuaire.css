@@ -1,0 +1,79 @@
+/* Annuaire municipal : une hiérarchie visible, des listes de services à la demande. */
+.directory-layout{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:2rem}
+.directory-section{min-width:0;display:grid;gap:1rem}
+.directory-heading{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;justify-content:space-between}
+.directory-heading h2{margin:0;font-size:clamp(1.35rem,3vw,1.7rem);letter-spacing:-.025em;color:var(--color-navigation)}
+.directory-heading p{margin:.3rem 0 0;color:var(--color-text-muted);font-size:.9rem}
+.directory-heading>div{padding-left:.85rem;border-left:4px solid var(--color-primary)}
+.directory-administration>.directory-heading>div{border-left-color:var(--color-info)}
+.directory-external>.directory-heading>div{border-left-color:var(--color-success)}
+.directory-cards{display:grid;grid-template-columns:minmax(0,1fr);gap:.85rem;min-width:0}
+.directory-card{padding:1rem;min-width:0;grid-template-rows:auto auto 1fr auto;gap:.7rem;border-left-width:3px;box-shadow:var(--shadow-sm)}
+.directory-card .person-card__header{gap:.7rem}
+.directory-card .avatar{width:2.75rem;height:2.75rem;flex-basis:2.75rem;font-size:.9rem}
+.directory-card .person-card__identity h3{margin:0;font-size:1.12rem;font-weight:800;line-height:1.3;overflow-wrap:anywhere;letter-spacing:-.015em}
+.directory-card .person-card__identity p{font-size:.88rem;line-height:1.45;margin:.3rem 0 0}
+.directory-card .person-card__identity .directory-delegation{color:var(--color-primary);font-weight:650}
+.directory-card .person-card__identity .directory-organisation{font-weight:650;color:var(--color-text)}
+.directory-card .person-card__contact{font-size:.85rem;align-content:start;gap:.4rem;padding:.7rem}
+.directory-card .person-card__actions .button{font-size:.85rem;padding-inline:.75rem;min-height:44px}
+.directory-card .person-card__badges{align-content:start;gap:.35rem}
+.directory-card .badge{font-size:.72rem;min-height:1.7rem}
+.directory-card--mayor{border-color:var(--color-primary);background:linear-gradient(145deg,#fff 60%,var(--color-primary-soft))}
+.directory-card--mayor .avatar{background:var(--color-primary);color:white}
+.directory-direction{padding:1rem;border-radius:var(--radius-lg);border:1px solid #c5d2eb;background:linear-gradient(115deg,#e9effc,#f7f8ff)}
+.directory-direction>h3{font-size:.75rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--color-navigation);margin:0 0 .8rem}
+.directory-direction .directory-cards{grid-template-columns:minmax(0,1fr)}
+.directory-card--dgs{border-color:var(--color-info)}
+.directory-card--dgs .avatar{background:var(--color-navigation);color:#fff}
+.directory-pole{min-width:0;padding:1rem;display:grid;gap:.85rem;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
+.directory-pole__heading{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:.4rem}
+.directory-pole h3{margin:0;font-size:1.15rem;overflow-wrap:anywhere}
+.directory-pole>.directory-cards .directory-card{background:linear-gradient(135deg,var(--color-surface-muted),#fff);box-shadow:none;border-left-color:var(--color-info)}
+.directory-pole--pending{border-style:dashed;box-shadow:none}
+.directory-muted{font-size:.8rem;color:var(--color-text-muted);font-weight:400}
+.directory-service{min-width:0;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-background);overflow:hidden}
+.directory-service>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.85rem 1rem;cursor:pointer;min-height:64px}
+.directory-service>summary::-webkit-details-marker{display:none}
+.directory-service__title{min-width:0;display:grid;gap:.2rem;overflow-wrap:anywhere}
+.directory-service__title strong{font-size:.95rem;color:var(--color-navigation)}
+.directory-chevron{font-size:1.3rem;color:var(--color-primary);transition:transform 150ms ease}
+.directory-service[open] .directory-chevron{transform:rotate(180deg)}
+.directory-service>summary:hover{background:var(--color-primary-soft)}
+.directory-service>.directory-cards{padding:0 .75rem .75rem}
+.directory-external--idle{padding:1.25rem;background:var(--color-surface);border:1px dashed var(--color-border);border-radius:var(--radius-lg)}
+.directory-external--idle>.button{justify-self:start}
+.directory-empty{margin:0;padding:1.25rem;border:1px dashed var(--color-border);border-radius:var(--radius-md);color:var(--color-text-muted);background:var(--color-surface)}
+.directory-setup{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1rem;margin-bottom:1rem;background:var(--color-info-soft);border:1px solid #c5d2eb;border-radius:var(--radius-md)}
+.directory-setup>div{flex:1 1 20rem}.directory-setup p{margin:.35rem 0 0;font-size:.88rem;color:var(--color-text-muted)}
+.directory-toolbar{box-shadow:none;padding:1rem;gap:.75rem}
+.directory-toolbar .directory-clear{grid-column:1/-1;justify-self:start;font-size:.85rem}
+.directory-toolbar input{font-size:1rem;font-weight:400}
+.directory-form-body{grid-template-columns:minmax(0,1fr)!important;padding:2px}
+.directory-form-section{display:grid;gap:1rem;min-width:0;padding:1rem;border:1px solid var(--color-border);border-radius:var(--radius-md)}
+.directory-form-section>h3{margin:0;font-size:1rem;color:var(--color-navigation)}
+.directory-form-grid{display:grid;gap:1rem;min-width:0}.directory-form-grid>*{min-width:0}
+.directory-form-section .form-field--wide{grid-column:auto}
+.directory-form-section .form-field--toggle{margin:0}
+.directory-form-section #person-services-field{border:0;padding:0}
+.directory-form-section #person-services-field legend{padding:0;margin-bottom:.4rem}
+.directory-legacy{margin:0;padding:.75rem;background:var(--color-info-soft);border-radius:var(--radius-sm);font-size:.85rem;color:var(--color-info)}
+.directory-form-section .form-field__control{width:100%;min-width:0}
+.directory-form-section .form-field:has(input[name="Rang"]){max-width:26rem}
+.directory-form-section input[name="Rang"]{max-width:8rem}
+@media(min-width:48rem){
+ .directory-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .directory-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .directory-toolbar{grid-template-columns:minmax(14rem,2fr) minmax(8rem,1fr) minmax(7rem,1fr) auto}
+ .directory-direction .directory-card{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto;column-gap:1.5rem}
+ .directory-direction .person-card__header{grid-column:1;grid-row:1}.directory-direction .person-card__badges{grid-column:1;grid-row:2}
+ .directory-direction .person-card__contact{grid-column:2;grid-row:1}.directory-direction .person-card__actions{grid-column:2;grid-row:2}
+}
+@media(min-width:75rem){.directory-elected>.directory-cards,.directory-external>.directory-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:30rem){
+ .directory-pole,.directory-direction{padding:.75rem}.directory-service>summary{padding:.75rem}
+ .directory-heading>.button,.directory-external--idle>.button{width:100%}
+ .directory-service>.directory-cards{padding:0 .5rem .5rem}
+ .directory-card .person-card__actions{flex-wrap:nowrap}
+ .directory-form-section{padding:.75rem}.directory-toolbar .directory-clear{justify-self:stretch}
+}

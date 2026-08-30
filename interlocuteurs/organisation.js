@@ -279,5 +279,5 @@ window.MunicipalOrganisation = (() => {
     };
     applyDemo=function([type,table,id,fields]){const rows=table===TABLE?state.people:table==="SERVICES"?state.services:table==="POLES"?org.poles:null;if(!rows)throw Error(`Table de démonstration inconnue : ${table}`);if(type==="AddRecord")rows.push({id:Math.max(0,...rows.map(r=>Number(r.id)))+1,...fields});else if(type==="UpdateRecord"){const row=rows.find(r=>Number(r.id)===Number(id));if(!row)throw Error("Ligne de démonstration absente.");Object.assign(row,fields);}};
   }
-  return {install};
+  return {install,getPoles:()=>org.poles,getMetadata:()=>org.metadata};
 })();
