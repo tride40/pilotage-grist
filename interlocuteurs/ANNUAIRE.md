@@ -39,6 +39,16 @@ Un seul maire actif peut être désigné depuis le widget. Un maire inactif rest
 
 ## Vérifications et limites
 
+### Suppression d’une fiche
+
+La catégorie « Suppression définitive » apparaît uniquement en modification, en bas du formulaire. Une confirmation nomme la personne concernée. La suppression envoie une seule action `RemoveRecord` ; aucune relation n’est supprimée en cascade. Aucune nouvelle colonne ni autorisation de widget n’est nécessaire.
+
+Avant la confirmation, puis immédiatement après, le widget relit les métadonnées et toutes les tables comportant des colonnes `Ref:INTERLOCUTEURS` ou `RefList:INTERLOCUTEURS`, y compris calculées. Toute référence entrante bloque la suppression, même dans un historique ou un service inactif. La DGS doit être remplacée préalablement. Une lecture impossible ou une référence masquée/en erreur bloque également l’opération. La désactivation reste l’alternative pour préserver les liens.
+
+Ce contrôle porte sur les données accessibles au compte connecté et les références typées Grist (pas les mentions textuelles libres). Il ne garantit pas l’absence de références dans des lignes entièrement cachées par les règles d’accès, ni contre une écriture concurrente intervenant après la dernière vérification. La suppression de la ligne ne purge pas les sauvegardes ou l’historique propre à Grist.
+
+Les tests de suppression utilisent exclusivement des données fictives : annulation, suppression isolée, liens historiques, responsabilités, nouvelle référence pendant la confirmation, erreur de lecture/écriture et échec du rechargement après une suppression réussie.
+
 - Tests de règles et de compatibilité : `node --test commun/*.test.js interlocuteurs/*.test.js`.
 - Les tests `annuaire-dom.test.js` nécessitent `jsdom` (testés avec 26.1.0). Ils sont ignorés explicitement si la bibliothèque est absente. On peut l’installer dans un environnement de test séparé et définir `JSDOM_PATH` vers son dossier ou utiliser une installation locale accessible à Node.
 - Les tests de DOM exécutent le widget complet avec des personnes fictives et une API Grist simulée. Ils couvrent l’ajout des champs, la sauvegarde, la gestion des erreurs, la recherche et la visibilité du rang. Ils ne remplacent pas un contrôle visuel dans un navigateur.

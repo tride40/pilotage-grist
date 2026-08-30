@@ -23,7 +23,7 @@ Les services existants restent disponibles pendant la mise en place. Pour créer
 - La DGS est hors services et pôles. Sa désignation retire ses appartenances aux services ; ses liens avec les projets restent inchangés. Ses responsabilités de service ou de pôle doivent être réaffectées avant sa désignation.
 - Lors d’un remplacement de DGS, un service doit être choisi pour la personne sortante si elle reste active.
 - Une responsabilité active bloque la désactivation ou le passage au profil externe. Une modification ne doit pas laisser un agent actif sans service actif.
-- La désactivation conserve les lignes et leurs références historiques ; aucun bouton de suppression n’est ajouté.
+- La désactivation conserve les lignes et leurs références historiques. La fiche de modification d’un interlocuteur permet désormais sa suppression, uniquement sans référence entrante et hors DGS en fonction. Les pôles et services ne proposent pas de suppression définitive.
 
 ## Adaptation technique, déclenchée uniquement par le bouton
 

@@ -67,6 +67,9 @@ async function page({live=false,missingMandate=false}={}){
             if(kind==="AddRecord"){
               const newId=Math.max(0,...tables[table].map(row=>row.id))+1;tables[table].push({id:newId,...fields});retValues.push(newId);
             }else Object.assign(tables[table].find(row=>row.id===id),fields);
+          }else if(kind==="RemoveRecord"){
+            const index=tables[table].findIndex(row=>row.id===id);
+            assert.ok(index>=0);tables[table].splice(index,1);
           }else throw Error(`Action inattendue : ${kind}`);
         }
         refresh();return {retValues};
@@ -84,6 +87,111 @@ async function page({live=false,missingMandate=false}={}){
   return {dom,w,doc:w.document,tables,calls,schema,context,errors,fail:()=>failNext=true,run:source=>vm.runInContext(source,context),cleanup:()=>w.close()};
 }
 function click(doc,text,scope=doc){const button=[...scope.querySelectorAll("button")].find(b=>b.textContent===text);assert.ok(button,`Bouton ${text}`);button.click();}
+async function removePerson(p){p.doc.querySelector("#delete-person").click();await settle();await settle();}
+
+domTest("une référence censurée bloque ; un nombre sans type référence ne bloque pas",async()=>{
+  for(const censored of [true,false]){
+    const p=await page({live:true});try{
+      if(censored)p.tables.SERVICES[0].Agents=["C"];
+      else p.tables.PROJETS[0].Responsable=23; // Colonne Text dans cette simulation.
+      await openEdit(p,"Louis André");await removePerson(p);
+      assert.equal(p.calls.length,censored?0:1);
+      if(censored)assert.match(p.doc.querySelector("#person-form .form-message").textContent,/inaccessible ou en erreur/);
+    }finally{p.cleanup();}
+  }
+});
+
+domTest("suppression uniquement en modification ; annulation sans écriture",async()=>{
+  const p=await page({live:true});try{
+    click(p.doc,"+ Nouvel interlocuteur");await settle();
+    assert.equal(p.doc.querySelector(".person-delete-zone").hidden,true);
+    p.doc.querySelector("#person-dialog").close();
+    await openEdit(p,"Louis André");
+    assert.equal(p.doc.querySelector(".person-delete-zone").hidden,false);
+    let prompt="";p.w.confirm=text=>{prompt=text;return false;};
+    await removePerson(p);
+    assert.match(prompt,/Louis André/);assert.equal(p.calls.length,0);
+    assert.equal(p.doc.querySelector("#person-dialog").open,true);
+  }finally{p.cleanup();}
+});
+
+domTest("suppression confirmée : une seule ligne retirée, formulaire fermé et annuaire actualisé",async()=>{
+  const p=await page({live:true});try{
+    const before=JSON.parse(JSON.stringify(p.tables));
+    await openEdit(p,"Louis André");await removePerson(p);
+    assert.deepEqual(p.calls,[[["RemoveRecord","INTERLOCUTEURS",23]]]);
+    before.INTERLOCUTEURS=before.INTERLOCUTEURS.filter(row=>row.id!==23);
+    assert.deepEqual(p.tables,before);
+    assert.equal(p.doc.querySelector("#person-dialog").open,false);
+    assert.equal(cardByName(p,"Louis André"),undefined);
+    assert.equal(p.run("state.selected"),null);
+  }finally{p.cleanup();}
+});
+
+domTest("DGS et responsabilités de pôle/service protégées sans confirmation ni écriture",async()=>{
+  for(const name of ["Alice Robert","Camille Martin"]){
+    const p=await page({live:true});try{
+      let confirmed=false;p.w.confirm=()=>{confirmed=true;return true;};
+      await openEdit(p,name);await removePerson(p);
+      assert.equal(confirmed,false);assert.equal(p.calls.length,0);
+      assert.match(p.doc.querySelector("#person-form .form-message").textContent,name==="Alice Robert"?/DGS/:/encore utilisé/);
+    }finally{p.cleanup();}
+  }
+});
+
+domTest("références typées historiques et nouvelles références pendant confirmation bloquent",async()=>{
+  for(const late of [false,true]){
+    const p=await page({live:true});try{
+      // Champ ajouté à une table hors organisation, également valable s'il est calculé.
+      const template=p.schema.find(c=>c.colId==="Participants")||p.schema.find(c=>c.colId==="Nom_projet");
+      assert.ok(template);
+      p.schema.push({...template,id:999,colId:"Auteur_historique",type:"RefList:INTERLOCUTEURS",isFormula:true});
+      const table=p.tables.REUNIONS.some(r=>Object.hasOwn(r,"Participants"))?"REUNIONS":"PROJETS";
+      const link=()=>{p.tables[table][0].Auteur_historique=["L",23];};
+      if(late)p.w.confirm=()=>{link();return true;};else link();
+      await openEdit(p,"Louis André");await removePerson(p);
+      assert.equal(p.calls.length,0);
+      assert.match(p.doc.querySelector("#person-form .form-message").textContent,/Auteur_historique/);
+    }finally{p.cleanup();}
+  }
+});
+
+domTest("lecture ou écriture en échec : aucune fermeture et message dans le formulaire",async()=>{
+  for(const reading of [true,false]){
+    const p=await page({live:true});try{
+      await openEdit(p,"Louis André");
+      if(reading)p.w.grist.docApi.fetchTable=async()=>{throw Error("Lecture refusée");};else p.fail();
+      await removePerson(p);
+      assert.equal(p.doc.querySelector("#person-dialog").open,true);
+      assert.ok(p.tables.INTERLOCUTEURS.some(r=>r.id===23));
+      assert.equal(p.calls.length,0);
+      assert.match(p.doc.querySelector("#person-form .form-message").textContent,reading?/Lecture refusée/:/Échec d’écriture/);
+    }finally{p.cleanup();}
+  }
+});
+
+domTest("démo : suppression isolée aux données fictives",async()=>{
+  const p=await page();try{
+    await openEdit(p,"Louis André");await removePerson(p);
+    assert.equal(p.run("state.people.some(r=>r.id===23)"),false);
+    assert.equal(p.doc.querySelector("#person-dialog").open,false);
+  }finally{p.cleanup();}
+});
+
+domTest("suppression réussie mais rechargement en échec : pas de formulaire obsolète",async()=>{
+  const p=await page({live:true});try{
+    const apply=p.w.grist.docApi.applyUserActions;
+    p.w.grist.docApi.applyUserActions=async actions=>{
+      const result=await apply(actions);
+      p.w.grist.docApi.fetchTable=async()=>{throw Error("Rechargement indisponible");};
+      return result;
+    };
+    await openEdit(p,"Louis André");await removePerson(p);
+    assert.equal(p.doc.querySelector("#person-dialog").open,false);
+    assert.match(p.doc.querySelector("#interface-state").textContent,/suppression a réussi/);
+    assert.equal(p.calls.length,1);
+  }finally{p.cleanup();}
+});
 function input(p,selector,value,event="input"){
   const node=p.doc.querySelector(selector);assert.ok(node,selector);node.value=value;node.dispatchEvent(new p.w.Event(event,{bubbles:true}));return node;
 }

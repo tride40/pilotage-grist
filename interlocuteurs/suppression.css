@@ -1,0 +1,13 @@
+.person-delete-zone {
+  grid-column: 1 / -1;
+  padding: 18px;
+  border: 1px solid #f4c9ce;
+  border-radius: 14px;
+  background: #fff8f8;
+}
+.person-delete-zone[hidden] { display: none; }
+.person-delete-zone h3 { margin: 0 0 8px; font-size: 1rem; color: #a61b32; }
+.person-delete-zone p { margin: 0 0 14px; line-height: 1.5; color: #65515a; }
+.person-delete-zone .button { min-height: 44px; white-space: normal; color: #a61b32; border-color: #df9ca7; background: white; }
+.person-delete-zone .button:hover { background: #ffecef; }
+@media (max-width: 560px) { .person-delete-zone .button { width: 100%; } }
