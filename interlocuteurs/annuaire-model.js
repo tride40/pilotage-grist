@@ -51,6 +51,18 @@
     if(fields.Fonction_elu===FUNCTIONS[0]&&data.get("Actif")==="on"&&people.some(p=>p.id!==current?.id&&elected(p)&&O.active(p)&&p.Fonction_elu===FUNCTIONS[0]))throw Error("Un maire actif est déjà renseigné. Modifiez d’abord sa fonction ou son état.");
     return fields;
   }
+  // Placement unique des responsables, indépendant de la recherche de personnes.
+  // Les agents sans responsabilité n'ont pas de placement imposé.
+  function leadershipPlacements(poles,services){
+    const placements=new Map();
+    const ordered=rows=>[...rows].sort((a,b)=>collator.compare(a.Nom_service||a.Pole||"",b.Nom_service||b.Pole||"")||Number(a.id)-Number(b.id));
+    const assign=(personId,kind,id)=>{personId=Number(personId);if(personId>0&&!placements.has(personId))placements.set(personId,{kind,id:Number(id)});};
+    const sortedPoles=ordered(poles);
+    for(const p of sortedPoles)assign(p.Responsable,"pole",p.id);
+    for(const p of sortedPoles)assign(p.Responsable_adjoint,"pole",p.id);
+    for(const s of ordered(services))assign(O.responsible(s,poles),"service",s.id);
+    return placements;
+  }
   const FIELDS=[
     ["Fonction_elu","Choice","Fonction élu"],
     ["Delegation","Text","Délégation"],
@@ -78,6 +90,6 @@
     }
     return actions;
   }
-  const api={FUNCTIONS,FIELDS,norm,internal,elected,agent,category,fullName,alphabet,rank,electedOrder,functionLabel,hasDelegation,delegatedRole,matches,mandateValues,schemaActions};
+  const api={FUNCTIONS,FIELDS,norm,internal,elected,agent,category,fullName,alphabet,rank,electedOrder,functionLabel,hasDelegation,delegatedRole,matches,mandateValues,schemaActions,leadershipPlacements};
   if(typeof module!=="undefined")module.exports=api;else root.AnnuaireModel=api;
 })(typeof window==="undefined"?{}:window);

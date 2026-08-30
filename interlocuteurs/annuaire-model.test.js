@@ -3,6 +3,17 @@ const test=require("node:test"),assert=require("node:assert/strict"),M=require("
 const elected=(id,role,extra={})=>({id,Prenom:"Élu",Nom:String(id),Interne_Mairie:true,Role_interne:"Élu",Fonction_elu:role,Actif:true,...extra});
 const agent=(id,extra={})=>({id,Prenom:"Agent",Nom:String(id),Interne_Mairie:true,Role_interne:"Agent",Actif:true,...extra});
 const form=values=>new Map(Object.entries({Actif:"on",...values}));
+
+test("responsables : pôle avant service, titulaire avant adjoint puis ordre alphabétique stable",()=>{
+  const poles=[{id:2,Pole:"Zèbre",Responsable:1,Responsable_adjoint:2},{id:1,Pole:"Alpha",Responsable:2,Responsable_adjoint:1}];
+  const services=[{id:2,Nom_service:"Zèbre",Responsable_designe:3},{id:1,Nom_service:"Alpha",Responsable_designe:3},{id:3,Nom_service:"Autre",Responsable_designe:1}];
+  const map=M.leadershipPlacements(poles,services);
+  assert.deepEqual(map.get(1),{kind:"pole",id:2});
+  assert.deepEqual(map.get(2),{kind:"pole",id:1});
+  assert.deepEqual(map.get(3),{kind:"service",id:1});
+  assert.equal(map.has(4),false);
+  assert.deepEqual([...M.leadershipPlacements([...poles].reverse(),[...services].reverse())],[...map]);
+});
 test("maire puis adjoints par rang, rangs vides après les rangs renseignés",()=>{
   const rows=[elected(1,"Conseiller municipal"),elected(2,"Adjoint au maire",{Rang:2}),elected(3,"Adjoint au maire",{Rang:1}),elected(4,"Maire"),elected(5,"Adjoint au maire"),elected(6,"Conseiller délégué")];
   assert.deepEqual(rows.sort(M.electedOrder).map(p=>p.id),[4,3,2,5,6,1]);

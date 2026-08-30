@@ -7,7 +7,7 @@ window.MunicipalDirectory=(()=>{
   const poles=()=>window.MunicipalOrganisation.getPoles();
   const metadata=()=>window.MunicipalOrganisation.getMetadata();
   const collator=new Intl.Collator("fr",{sensitivity:"base",numeric:true});
-  const byTitle=(a,b)=>collator.compare(a.Pole||a.Nom_service,b.Pole||b.Nom_service);
+  const byTitle=(a,b)=>collator.compare(a.Nom_service||a.Pole,b.Nom_service||b.Pole)||Number(a.id)-Number(b.id);
   const ready=()=>state.demo||M.schemaActions(metadata()).length===0;
   function group(title,subtitle,kind=""){
     const box=element("section",`directory-section ${kind}`),header=element("div","directory-heading");
@@ -42,32 +42,36 @@ window.MunicipalDirectory=(()=>{
       refreshMandate();
     }catch(error){feedback(exactError(error),true);if(ui.dialog.open)showFormError(ui.dialog,error);}
   }
-  function serviceBlock(service,people){
+  function serviceBlock(service,people,placements){
     const details=element("details","directory-service"),summary=element("summary"),title=element("span","directory-service__title");
     details.dataset.serviceId=String(service.id);
     const leader=O.responsible(service,poles());
+    const memberCount=people.length;
+    people=people.filter(p=>{const place=placements.get(Number(p.id));return !place||(place.kind==="service"&&place.id===Number(service.id));});
     people=[...people].sort((a,b)=>(Number(b.id)===leader)-(Number(a.id)===leader)||M.alphabet(a,b));
-    title.append(textElement("strong",service.Nom_service||"Service à nommer"),textElement("span",`${people.length} agent${people.length>1?"s":""}${O.active(service)?"":" · Service inactif"}`,"directory-muted"));
+    title.append(textElement("strong",service.Nom_service||"Service à nommer"),textElement("span",`${memberCount} agent${memberCount>1?"s":""}${memberCount!==people.length?` · ${people.length} présenté${people.length>1?"s":""} ici`:""}${O.active(service)?"":" · Service inactif"}`,"directory-muted"));
     summary.append(title,textElement("span","⌄","directory-chevron"));summary.lastChild.setAttribute("aria-hidden","true");
     const labels=new Map(people.filter(p=>Number(p.id)===leader).map(p=>[Number(p.id),"Responsable du service"]));
-    details.append(summary,cards(people,labels));
+    details.append(summary,people.length?cards(people,labels):empty("Les responsables de ce service sont déjà présentés à leur niveau le plus haut dans l’annuaire."));
     details.open=Boolean(state.query.trim())||view.openServices.has(String(service.id));
     details.addEventListener("toggle",()=>{if(!details.isConnected)return;if(!state.query.trim()){if(details.open)view.openServices.add(String(service.id));else view.openServices.delete(String(service.id));}updateExpandLabel();});
     return details;
   }
-  function poleBlock(pole,agents,services){
+  function poleBlock(pole,agents,services,placements){
     const peopleById=new Map(agents.map(p=>[Number(p.id),p]));
-    const leaders=[...new Set([Number(pole.Responsable),Number(pole.Responsable_adjoint)])].map(id=>peopleById.get(id)).filter(Boolean);
+    const allLeaders=[...new Set([Number(pole.Responsable),Number(pole.Responsable_adjoint)])].map(id=>peopleById.get(id)).filter(Boolean);
+    const leaders=allLeaders.filter(p=>placements.get(Number(p.id))?.kind==="pole"&&placements.get(Number(p.id)).id===Number(pole.id));
     const children=services.filter(s=>Number(s.Pole)===Number(pole.id)).map(service=>({service,people:agents.filter(p=>O.members(service,poles()).includes(Number(p.id)))})).filter(s=>s.people.length);
-    if(!leaders.length&&!children.length)return null;
-    const distinct=new Set([...leaders.map(p=>p.id),...children.flatMap(s=>s.people.map(p=>p.id))]);
+    if(!allLeaders.length&&!children.length)return null;
+    const distinct=new Set([...allLeaders.map(p=>p.id),...children.flatMap(s=>s.people.map(p=>p.id))]);
     const box=element("section","directory-pole"),heading=element("div","directory-pole__heading");
     heading.append(textElement("h3",pole.Pole||"Pôle à nommer"),textElement("span",`${distinct.size} agent${distinct.size>1?"s":""}${O.active(pole)?"":" · Pôle inactif"}`,"directory-muted"));box.append(heading);
     if(leaders.length){
       const labels=new Map(leaders.map(p=>[Number(p.id),Number(p.id)===Number(pole.Responsable)?"Responsable de pôle":"Responsable adjoint de pôle"]));
       box.append(cards(leaders,labels));
     }
-    box.append(...children.map(({service,people})=>serviceBlock(service,people)));
+    if(allLeaders.length>leaders.length)box.append(empty("Les autres responsables de ce pôle sont déjà présentés dans un autre pôle."));
+    box.append(...children.map(({service,people})=>serviceBlock(service,people,placements)));
     return box;
   }
   function administration(agents){
@@ -76,11 +80,12 @@ window.MunicipalDirectory=(()=>{
     if(direction.length){const dgsBox=element("section","directory-direction");dgsBox.append(textElement("h3","Direction générale des services"),cards(direction));box.append(dgsBox);}
     const members=agents.filter(p=>!O.dgs(p));
     const services=state.services.filter(s=>O.active(s)||state.active!=="active").sort(byTitle);
+    const placements=M.leadershipPlacements(poles(),services);
     const expand=button("Tout développer","secondary",toggleServices);expand.id="directory-expand";box.firstChild.append(expand);
-    for(const pole of [...poles()].sort(byTitle)){const content=poleBlock(pole,members,services);if(content)box.append(content);}
+    for(const pole of [...poles()].sort(byTitle)){const content=poleBlock(pole,members,services,placements);if(content)box.append(content);}
     const unassigned=services.filter(s=>!O.poleOf(s,poles()));
     const unknown=element("section","directory-pole directory-pole--pending");unknown.append(textElement("h3","Services à rattacher"));
-    for(const service of unassigned){const people=members.filter(p=>O.members(service,poles()).includes(Number(p.id)));if(people.length)unknown.append(serviceBlock(service,people));}
+    for(const service of unassigned){const people=members.filter(p=>O.members(service,poles()).includes(Number(p.id)));if(people.length)unknown.append(serviceBlock(service,people,placements));}
     if(unknown.children.length>1)box.append(unknown);
     const withoutService=members.filter(p=>!O.servicesOf(p,services,poles()).length&&!poles().some(pole=>[Number(pole.Responsable),Number(pole.Responsable_adjoint)].includes(Number(p.id))));
     if(withoutService.length){const pending=element("section","directory-pole directory-pole--pending");pending.append(textElement("h3","Rattachements à compléter"),cards(withoutService.sort(M.alphabet)));box.append(pending);}

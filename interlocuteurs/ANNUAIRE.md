@@ -6,8 +6,9 @@
 - Élus municipaux : maire en premier, adjoints classés par rang, conseillers délégués puis conseillers municipaux. Dans les autres cas, le classement est alphabétique par nom et prénom.
 - Le rang ne classe que les adjoints. Il figure dans le formulaire de modification, jamais dans les cartes, les fiches de consultation ou la recherche. Un rang vide place l’adjoint après les adjoints dont le rang est renseigné. Les rangs identiques sont départagés alphabétiquement.
 - Administration : DGS en tête, puis pôles. Chaque pôle présente son responsable et son éventuel adjoint, puis les services dépliables et leurs agents. Les services sont repliés au départ.
-- Un agent présent dans plusieurs services peut apparaître dans plusieurs groupes ; chaque carte ouvre la même fiche. Les compteurs de personnes sont dédupliqués.
-- Le responsable d’un service est placé en tête de sa liste d’agents.
+- Un agent sans responsabilité présent dans plusieurs services apparaît dans chacun de ces services ; chaque carte ouvre la même fiche. Les compteurs de personnes sont dédupliqués.
+- Chaque responsable apparaît une seule fois : responsable de pôle, puis adjoint de pôle, puis responsable de service. En cas de plusieurs responsabilités au même niveau, le premier groupe par ordre alphabétique est retenu (identifiant comme départage). Le placement reste stable lors d’une recherche, y compris par un autre service d’appartenance. La DGS reste uniquement en direction générale.
+- Le responsable de service non présenté au niveau pôle est placé en tête d’un seul service. Les services conservent leur effectif réel dans la sélection et précisent le nombre de cartes présentées ici lorsque certains responsables figurent ailleurs. Tous les rattachements et responsabilités restent inchangés dans Grist et consultables dans les fiches.
 - Les services sans pôle et les agents sans service restent accessibles dans des groupes de rattachements à compléter.
 - Les interlocuteurs inactifs restent accessibles grâce au filtre État ; ils ne sont ni supprimés ni détachés de leur historique.
 

@@ -89,6 +89,37 @@ async function page({live=false,missingMandate=false}={}){
 function click(doc,text,scope=doc){const button=[...scope.querySelectorAll("button")].find(b=>b.textContent===text);assert.ok(button,`Bouton ${text}`);button.click();}
 async function removePerson(p){p.doc.querySelector("#delete-person").click();await settle();await settle();}
 
+domTest("responsables uniques au plus haut niveau, agents ordinaires dans plusieurs services",async()=>{
+  const p=await page();try{
+    p.run(`state.people.push({id:90,Prenom:"Agent",Nom:"Multiple",Interne_Mairie:true,Role_interne:"Agent",Actif:true});
+      state.services[0].Agents.push(90,15);state.services[1].Agents.push(90);
+      render();`);
+    const count=name=>[...p.doc.querySelectorAll("#people-grid .person-card__identity h3")].filter(n=>n.textContent===name).length;
+    assert.equal(count("Camille Martin"),1);
+    assert.equal(count("Léa Moreau"),1);
+    assert.equal(count("Noé Petit"),1);
+    assert.equal(count("Agent Multiple"),2);
+    assert.ok(cardByName(p,"Léa Moreau").closest(".directory-pole").querySelector("h3").textContent.includes("Services"));
+    assert.equal(cardByName(p,"Noé Petit").closest(".directory-service").dataset.serviceId,"2");
+    const before=p.run("JSON.stringify(state.services)");
+    input(p,"#search","bâtiments");await settle();
+    assert.equal(count("Léa Moreau"),1);assert.equal(count("Noé Petit"),1);
+    assert.equal(p.run("JSON.stringify(state.services)"),before);
+    assert.equal(p.errors.length,0);
+  }finally{p.cleanup();}
+});
+
+domTest("un responsable de plusieurs services n'a qu'une carte, même sans pôle",async()=>{
+  const p=await page();try{
+    p.run(`state.services[0].Responsable_du_pole=false;
+      state.services[0].Responsable_designe=15;state.services[0].Responsable=15;
+      state.services[0].Pole=0;render();`);
+    const noes=[...p.doc.querySelectorAll("#people-grid .person-card__identity h3")].filter(n=>n.textContent==="Noé Petit");
+    assert.equal(noes.length,1);
+    assert.equal(noes[0].closest(".directory-service").dataset.serviceId,"1");
+  }finally{p.cleanup();}
+});
+
 domTest("une référence censurée bloque ; un nombre sans type référence ne bloque pas",async()=>{
   for(const censored of [true,false]){
     const p=await page({live:true});try{
@@ -210,7 +241,7 @@ domTest("vue initiale catégorisée, maire premier, adjoints ordonnés et rang n
     assert.doesNotMatch(p.doc.querySelector("#people-grid").textContent,/Rang/i);
     assert.equal(p.doc.querySelector("#active-filter").value,"active");
     const pole=p.doc.querySelector(".directory-pole");
-    assert.deepEqual([...pole.querySelectorAll(":scope > .directory-cards .person-card__identity h3")].map(n=>n.textContent),["Camille Martin","Léa Moreau"]);
+    assert.deepEqual([...pole.querySelectorAll(":scope > .directory-cards .person-card__identity h3")].map(n=>n.textContent),["Camille Martin"]);
     assert.ok(p.doc.querySelector("#directory-expand"));
   }finally{p.cleanup();}
 });
@@ -218,7 +249,7 @@ domTest("déplier les services, multi-appartenance et recherche de service",asyn
   const p=await page();try{
     click(p.doc,"Tout développer");await settle();assert.equal(p.doc.querySelectorAll(".directory-service[open]").length,3);
     click(p.doc,"Tout réduire");await settle();assert.equal(p.doc.querySelectorAll(".directory-service[open]").length,0);
-    const lea=[...p.doc.querySelectorAll(".directory-service .person-card__identity h3")].filter(n=>n.textContent==="Léa Moreau");assert.equal(lea.length,3);
+    const lea=[...p.doc.querySelectorAll(".directory-service .person-card__identity h3")].filter(n=>n.textContent==="Léa Moreau");assert.equal(lea.length,0);
     input(p,"#search","bâtiments");await settle();
     assert.ok(p.doc.querySelector(".directory-service[open]"));assert.equal(p.doc.querySelectorAll(".directory-elected").length,0);
     assert.equal(p.doc.querySelectorAll(".directory-external .directory-card").length,0);
