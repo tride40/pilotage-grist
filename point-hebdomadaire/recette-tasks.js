@@ -7,7 +7,8 @@
   else root.RecetteTasks = factory(root.PilotagePrivateTasks);
 })(typeof globalThis === "object" ? globalThis : this, function createModule(validation) {
   const TABLE = "TACHES_PERSONNELLES";
-  const RECIPE = "6HXN7w5Tqxm4";
+  // Internal document ID supplied from Grist settings, not the short URL ID.
+  const RECIPE = "6HXN7w5Tqxm477j6cqagdG";
   function rows(raw) {
     return (raw.id || []).map((id, i) => Object.fromEntries(Object.entries(raw).filter(([, value]) => Array.isArray(value)).map(([key, value]) => [key, value[i]])));
   }
