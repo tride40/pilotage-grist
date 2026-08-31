@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><title>Préparer le circuit des actions</title>
+  <link rel="stylesheet" href="../commun/theme.css"><link rel="stylesheet" href="../commun/components.css">
+  <link rel="stylesheet" href="preparer.css">
+  <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
+  <script src="../commun/test-mode.js" defer></script>
+  <script src="../commun/action-grist-schema.js" defer></script>
+  <script src="../commun/action-grist-setup.js" defer></script><script src="preparer.js" defer></script>
+</head>
+<body><main>
+  <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
+  <p>Création de quatre tables vides avec accès réservé aux propriétaires du document. Les anciennes actions, leurs règles et les tâches personnelles restent inchangées.</p>
+  <section class="card"><h2>1 · Vérifier sans modifier</h2>
+    <p>La vérification lit seulement la structure et les permissions. Elle n’affiche aucun contenu métier.</p>
+    <button class="button button--secondary" id="check" type="button">Vérifier le document</button>
+    <p id="status" role="status" aria-live="polite">Vérification requise avant toute préparation.</p>
+    <ul id="findings"></ul><ul id="tables"></ul>
+  </section>
+  <section class="card"><h2>2 · Préparer les tables protégées</h2>
+    <p>Cette étape ne met pas encore le nouveau circuit à disposition des agents. N’ajoutez pas de données dans les nouvelles tables avant la suite de l’installation.</p>
+    <label><input id="backup" type="checkbox"> J’ai téléchargé une sauvegarde actuelle du document.</label>
+    <button class="button button--primary" id="install" type="button" disabled>Créer les tables protégées</button>
+    <p>Ne modifiez pas la structure ou les permissions dans un autre onglet pendant cette opération. En cas de résultat incertain, faites contrôler le document avant de recommencer.</p>
+  </section>
+</main></body></html>

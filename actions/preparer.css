@@ -1,0 +1,9 @@
+main { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); }
+.card { padding: 20px; margin: 20px 0; }
+label { display: flex; gap: 12px; align-items: center; margin: 20px 0; min-height: 44px; }
+input { width: 22px; height: 22px; flex-shrink: 0; }
+button { min-height: 44px; white-space: normal; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+li { margin-bottom: 8px; overflow-wrap: anywhere; }
+:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
