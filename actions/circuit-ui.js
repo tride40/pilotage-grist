@@ -124,6 +124,8 @@
     function isOverdue(row){if(!row.deadline||["performed","closed","cancelled"].includes(row.state))return false;const end=new Date(`${row.deadline}T23:59:59`);return !Number.isNaN(end.getTime())&&end.getTime()<Date.now();}
     function detailLine(parent,label,value){if(value===null||value===undefined||value==="")return;const line=node("p");line.append(node("strong",`${label} : `),doc.createTextNode(String(value)));parent.append(line);}
     function targetName(row){return row.targetKind==="person"?personName(row.targetId):row.targetKind==="service"?serviceName(row.targetId):row.targetKind==="pole"?poleName(row.targetId):"Non renseigné";}
+    function normalizeText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr");}
+    function searchableText(row){return normalizeText([row.title,row.projectTitle,labels[row.state]||row.state,personName(row.creatorId),row.executorId&&personName(row.executorId),targetName(row),row.serviceId&&serviceName(row.serviceId),...(row.associateIds||[]).map(personName)].filter(Boolean).join(" "));}
     async function openDetail(row){
       if(busy)return;busy=true;disabled();
       try{const fresh=await service.inspect(row.id);selected=fresh.row;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent="Détail de l’action";currentCapability=false;currentOperation="view";showSubmit(false);back.textContent="Retour à la liste";
@@ -143,7 +145,7 @@
         :filter.value==="review"?Boolean(r.roles?.creator&&r.state==="performed")
         :filter.value==="executor"?Boolean(r.roles?.executor&&!terminal)
         :filter.value==="creator"?Boolean(r.roles?.creator&&!terminal):!terminal;
-      return scope&&`${r.title} ${r.projectTitle}`.toLocaleLowerCase("fr").includes(search.value.toLocaleLowerCase("fr"));});
+      return scope&&searchableText(r).includes(normalizeText(search.value));});
       if(!shown.length)list.append(node("p","Aucune action dans cette vue.","circuit-empty"));
       shown.forEach(r=>{const card=node("article",undefined,"card circuit-card"),h=node("h2",r.title),meta=node("p",`${r.projectTitle} · ${labels[r.state]||r.state}`);
         card.append(h,meta);if(r.deadline)card.append(node("p",`Échéance : ${formatDate(r.deadline)}${isOverdue(r)?" · En retard":""}`));if(r.performedAt)card.append(node("p",`Réalisation déclarée : ${formatDate(r.performedAt,true)}${r.performedBy?` par ${personName(r.performedBy)}`:""}`));
