@@ -8,6 +8,7 @@
   let notificationService, notificationResult = null, notificationBusy = false;
   let accountService, accountResult = null, accountBusy = false;
   let projectService, projectResult = null, projectBusy = false;
+  let permissionService, permissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -33,6 +34,7 @@
     $("project-check").disabled = projectBusy;
     $("project-backup").disabled = projectBusy;
     $("project-install").disabled = projectBusy || !$("project-backup").checked || !projectResult?.readyToInstall || projectResult.alreadyInstalled || projectResult.outcomeUncertain;
+    $("permission-check").disabled = permissionBusy;
   }
   function renderProject(value) {
     projectResult = value;
@@ -258,6 +260,23 @@
     if (projectBusy || $("project-install").disabled || !projectService) return;
     if (!window.confirm(`Ajouter les ${projectResult.columns.length} colonnes manquantes du lot PROJETS ? Aucune ligne de projet ne sera modifiée.`)) return;
     executeProject(() => projectService.install({ confirmed: true }));
+  };
+  $("permission-check").onclick = async () => {
+    if(permissionBusy)return;
+    permissionBusy=true;controls();$("permission-status").textContent="Inventaire des permissions en cours…";
+    $("permission-findings").replaceChildren();$("permission-confirmed").replaceChildren();
+    try{
+      if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+      await window.grist.ready({requiredAccess:"full"});
+      permissionService??=window.PilotageActionPermissionAuditService.create({grist:window.grist});
+      const value=await permissionService.inspect();
+      const list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      list("permission-findings",value.findings);list("permission-confirmed",value.confirmed);
+      $("permission-status").textContent=value.readyForPermissionReview
+        ?`Contrôle 1/4 conforme : ${value.confirmed.length} points confirmés. ${value.preservedResourceCount} ressource(s) hors circuit seront préservées.`
+        :"Contrôle 1/4 bloqué : examinez les écarts affichés avant toute modification.";
+    }catch(error){$("permission-status").textContent=error.message;}
+    finally{permissionBusy=false;controls();}
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

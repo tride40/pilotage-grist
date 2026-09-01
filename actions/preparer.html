@@ -20,7 +20,10 @@
   <script src="../commun/action-notification-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-account-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-project-schema-lot.js?v=1" defer></script>
-  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=7" defer></script>
+  <script src="../commun/action-table-schema-setup.js?v=1" defer></script>
+  <script src="../commun/action-source-protection.js" defer></script>
+  <script src="../commun/action-permission-audit.js?v=1" defer></script>
+  <script src="../commun/action-permission-audit-service.js?v=1" defer></script><script src="preparer.js?v=8" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -99,5 +102,12 @@
     <label><input id="project-backup" type="checkbox"> Je confirme poursuivre depuis le lot COMPTES contrôlé.</label>
     <button class="button button--primary" id="project-install" type="button" disabled>Ajouter les 6 colonnes PROJETS</button>
     <p>Les pilotes et les listes d’associés existants sont relus avant l’ajout. Aucune ligne de projet ni donnée métier n’est modifiée.</p>
+  </section>
+  <section class="card"><h2>10 · Permissions — contrôle 1/4</h2>
+    <p>Ce contrôle inventorie uniquement la structure et les règles actuelles. Il ne lit aucune ligne métier et ne modifie aucun droit.</p>
+    <button class="button button--secondary" id="permission-check" type="button">Contrôler les permissions actuelles</button>
+    <p id="permission-status" role="status" aria-live="polite">Contrôle en lecture seule requis avant l’installation des permissions.</p>
+    <ul id="permission-findings"></ul><ul id="permission-confirmed"></ul>
+    <p>Étapes restantes après ce contrôle : protection du circuit, droits ACTIONS et héritage, puis comptes/projets et validation finale.</p>
   </section>
 </main></body></html>
