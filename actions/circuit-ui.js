@@ -20,7 +20,7 @@
     const list=node("section");list.setAttribute("aria-label","Liste des actions");
     const dialog=node("dialog");dialog.setAttribute("aria-labelledby","circuit-form-title");
     const form=node("form"),formTitle=node("h2");formTitle.id="circuit-form-title";
-    const fields=node("div"),error=node("p");error.setAttribute("role","alert");
+    const fields=node("div",undefined,"circuit-form-fields"),error=node("p",undefined,"circuit-form-error");error.setAttribute("role","alert");
     const controls=node("div",undefined,"circuit-controls"),back=button("Retour",()=>close()),submit=node("button","Enregistrer","button button--primary");submit.type="submit";
     controls.append(back,submit);form.append(formTitle,fields,error,controls);dialog.append(form);
     element.append(heading,notice,toolbar,status,list,dialog);
