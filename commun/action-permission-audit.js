@@ -26,6 +26,8 @@
   }
   function staging(rows){return rows?.length===2&&owner(rows[0])&&rows[0].permissionsText==="+CRUD"&&rows[1].aclFormula===""&&rows[1].permissionsText==="-CRUD";}
   function inspect(snapshot){
+    if(!projectLot?.inspect||!notificationPolicy?.matches||!sourceProtection?.condition)
+      throw Error("Un module de contrôle des permissions manque dans la publication. Rechargez la version complète avant de poursuivre.");
     if(snapshot?.documentId!==documentId)throw Error("Contrôle réservé au document de base autorisé.");
     for(const label of ["tables","columns","resources","rules"])validate(snapshot[label],label);
     const findings=[],confirmed=[];
