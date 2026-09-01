@@ -38,11 +38,13 @@
   <script src="../commun/action-real-data-preflight.js?v=1" defer></script>
   <script src="../commun/action-deadlines.js?v=1" defer></script>
   <script src="../commun/action-assignment.js?v=1" defer></script>
+  <script src="../commun/action-lifecycle.js?v=1" defer></script>
   <script src="../commun/action-directory.js?v=1" defer></script>
   <script src="../commun/action-associate-contexts.js?v=1" defer></script>
   <script src="../commun/action-grist-assignment.js?v=1" defer></script>
   <script src="../commun/action-creation-live-audit.js?v=1" defer></script>
-  <script src="preparer.js?v=23" defer></script>
+  <script src="../commun/action-lifecycle-live-audit.js?v=1" defer></script>
+  <script src="preparer.js?v=24" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -217,5 +219,12 @@
     <p id="creation-preview-status" role="status" aria-live="polite">Prévisualisation requise avant d’activer le formulaire du nouveau circuit.</p>
     <ul id="creation-preview-findings"></ul><ul id="creation-preview-confirmed"></ul><ul id="creation-preview-counts"></ul>
     <p>Aucune action réelle n’est créée par ce contrôle. Les règles métier peuvent refuser certains chemins selon vos responsabilités dans chaque projet.</p>
+  </section>
+  <section class="card"><h2>22 · Données réelles — cycle de vie 3/4</h2>
+    <p>Répéter entièrement en mémoire les opérations du nouveau circuit : réalisation par l’exécutant, demande de complément, nouvelle réalisation, clôture par le créateur et annulation motivée.</p>
+    <button class="button button--secondary" id="lifecycle-preview-check" type="button">Répéter le cycle complet</button>
+    <p id="lifecycle-preview-status" role="status" aria-live="polite">Répétition requise avant le contrôle des échéances et notifications.</p>
+    <ul id="lifecycle-preview-findings"></ul><ul id="lifecycle-preview-confirmed"></ul><ul id="lifecycle-preview-counts"></ul>
+    <p>Les rôles sont calculés depuis l’organisation réelle, mais chaque transition reste une simulation locale. Aucun journal, état ou notification n’est enregistré.</p>
   </section>
 </main></body></html>

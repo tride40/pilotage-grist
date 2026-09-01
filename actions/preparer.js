@@ -20,6 +20,7 @@
   let finalPermissionService, finalPermissionBusy = false;
   let realDataService, realDataBusy = false;
   let creationPreviewService, creationPreviewBusy = false;
+  let lifecyclePreviewService, lifecyclePreviewBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -69,6 +70,7 @@
     $("final-permission-check").disabled = finalPermissionBusy;
     $("real-data-check").disabled = realDataBusy;
     $("creation-preview-check").disabled = creationPreviewBusy;
+    $("lifecycle-preview-check").disabled = lifecyclePreviewBusy;
   }
   function renderProject(value) {
     projectResult = value;
@@ -512,6 +514,20 @@
       $("creation-preview-status").textContent=value.readyForCreation?"Données réelles 2/4 conformes : création et attribution initiale entièrement calculables, sans aucun enregistrement.":"Données réelles 2/4 bloquées : examinez les écarts de rôle ou d’organisation affichés.";
     }catch(error){$("creation-preview-status").textContent=error.message;}
     finally{creationPreviewBusy=false;controls();}
+  };
+  $("lifecycle-preview-check").onclick=async()=>{
+    if(lifecyclePreviewBusy)return;lifecyclePreviewBusy=true;controls();$("lifecycle-preview-status").textContent="Répétition du cycle complet en cours…";$("lifecycle-preview-findings").replaceChildren();$("lifecycle-preview-confirmed").replaceChildren();$("lifecycle-preview-counts").replaceChildren();
+    try{
+      if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+      await window.grist.ready({requiredAccess:"full"});
+      if(!window.PilotageActionLifecycleLiveAudit?.create||!window.PilotageCurrentUser?.identify)throw Error("Le répétiteur sécurisé du cycle de vie manque dans la publication.");
+      lifecyclePreviewService??=window.PilotageActionLifecycleLiveAudit.create({grist:window.grist,mode:window.PilotageTestMode,identify:options=>window.PilotageCurrentUser.identify(options)});
+      const value=await lifecyclePreviewService.inspect(),list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      list("lifecycle-preview-findings",value.findings);list("lifecycle-preview-confirmed",value.confirmed);
+      list("lifecycle-preview-counts",[`Transitions contrôlées : ${value.counts.transitions}`,`Révision finale simulée : ${value.counts.finalRevision}`,`Notifications calculées : ${value.counts.notifications}`]);
+      $("lifecycle-preview-status").textContent=value.readyForLifecycle?"Données réelles 3/4 conformes : le cycle complet et ses rôles ont été répétés sans aucun enregistrement.":"Données réelles 3/4 bloquées : examinez l’écart affiché avant toute activation.";
+    }catch(error){$("lifecycle-preview-status").textContent=error.message;}
+    finally{lifecyclePreviewBusy=false;controls();}
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
