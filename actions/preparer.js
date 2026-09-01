@@ -15,6 +15,7 @@
   let notificationPermissionService, notificationPermissionResult = null, notificationPermissionBusy = false;
   let legacyService, legacyBusy = false;
   let sourcePermissionService, sourcePermissionResult = null, sourcePermissionBusy = false;
+  let accountPermissionService, accountPermissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -57,6 +58,7 @@
     $("source-permission-check").disabled = sourcePermissionBusy;
     $("source-permission-confirm").disabled = sourcePermissionBusy;
     $("source-permission-install").disabled = sourcePermissionBusy || !$("source-permission-confirm").checked || !sourcePermissionResult?.readyToInstall || sourcePermissionResult.alreadyInstalled || sourcePermissionResult.outcomeUncertain;
+    $("account-permission-check").disabled = accountPermissionBusy;
   }
   function renderProject(value) {
     projectResult = value;
@@ -442,6 +444,20 @@
     if(sourcePermissionBusy||$("source-permission-install").disabled||!sourcePermissionService)return;
     if(!window.confirm("Installer les 9 règles définitives sur ACTIONS uniquement, après une nouvelle vérification des 17 anciennes actions ?"))return;
     executeSourcePermission(()=>sourcePermissionService.install({confirmed:true}));
+  };
+  $("account-permission-check").onclick=async()=>{
+    if(accountPermissionBusy)return;accountPermissionBusy=true;controls();$("account-permission-status").textContent="Contrôle des comptes administrateurs en cours…";$("account-permission-findings").replaceChildren();$("account-permission-counts").replaceChildren();
+    try{
+      if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+      await window.grist.ready({requiredAccess:"full"});
+      if(!window.PilotageActionAccountLiveAudit?.create)throw Error("Le contrôle sécurisé des comptes manque dans la publication.");
+      accountPermissionService??=window.PilotageActionAccountLiveAudit.create({grist:window.grist});const value=await accountPermissionService.inspect();
+      $("account-permission-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      const counts=[`Comptes enregistrés : ${value.accountCount}`,`Comptes actifs : ${value.activeAccountCount}`,`Administrateurs désignés : ${value.administratorCount}`];
+      $("account-permission-counts").replaceChildren(...counts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      $("account-permission-status").textContent=value.readyForAuthorityPolicy?"Comptes 1/3 conforme : registre unique, actif et administrateur interne confirmé.":"Comptes 1/3 bloqué : examinez les écarts affichés.";
+    }catch(error){$("account-permission-status").textContent=error.message;}
+    finally{accountPermissionBusy=false;controls();}
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

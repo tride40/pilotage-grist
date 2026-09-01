@@ -30,7 +30,8 @@
   <script src="../commun/action-permission-audit.js?v=6" defer></script>
   <script src="../commun/action-permission-audit-service.js?v=2" defer></script>
   <script src="../commun/action-permission-lot-setup.js?v=3" defer></script>
-  <script src="../commun/action-legacy-live-audit.js?v=1" defer></script><script src="preparer.js?v=17" defer></script>
+  <script src="../commun/action-legacy-live-audit.js?v=1" defer></script>
+  <script src="../commun/action-account-live-audit.js?v=1" defer></script><script src="preparer.js?v=18" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -168,5 +169,12 @@
     <label><input id="source-permission-confirm" type="checkbox"> Je confirme que le contrôle des 17 anciennes actions ci-dessus est conforme.</label>
     <button class="button button--primary" id="source-permission-install" type="button" disabled>Installer les 9 règles ACTIONS</button>
     <p>Une seule écriture groupée est envoyée. Les règles et les compteurs historiques sont entièrement relus avant et après cette écriture.</p>
+  </section>
+  <section class="card"><h2>17 · Permissions 4/4 — comptes 1/3</h2>
+    <p>Contrôle en lecture seule du registre des comptes et de la désignation des administrateurs. Aucune adresse électronique ni aucun nom n’est affiché.</p>
+    <button class="button button--secondary" id="account-permission-check" type="button">Contrôler les comptes administrateurs</button>
+    <p id="account-permission-status" role="status" aria-live="polite">Contrôle requis avant les droits des projets.</p>
+    <ul id="account-permission-findings"></ul><ul id="account-permission-counts"></ul>
+    <p>Chaque administrateur doit correspondre à un compte actif, unique et rattaché à un interlocuteur interne actif.</p>
   </section>
 </main></body></html>
