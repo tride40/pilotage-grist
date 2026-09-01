@@ -415,5 +415,6 @@
     for(const wanted of expected){const nextResource=++resourceId;actions.push(["AddRecord","_grist_ACLResources",nextResource,{tableId:wanted.tableId,colIds:wanted.colIds}]);wanted.rules.forEach((rule,index)=>actions.push(["AddRecord","_grist_ACLRules",++ruleId,{resource:nextResource,aclFormula:rule.aclFormula,permissionsText:rule.permissionsText,memo:"Politique d’autorité vérifiée.",rulePos:index+1}]));}
     return {findings:[],readyToInstall:true,alreadyInstalled:false,actions};
   }
-  return Object.freeze({tableId:"AUTORITES",tableIds:Object.freeze([...tableIds]),definitions,inspect});
+  function matches(snapshot){return inspect(snapshot).alreadyInstalled===true;}
+  return Object.freeze({tableId:"AUTORITES",tableIds:Object.freeze([...tableIds]),definitions,inspect,matches});
 });
