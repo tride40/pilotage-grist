@@ -6,6 +6,7 @@
   let circuitService, circuitResult = null, circuitBusy = false;
   let eventService, eventResult = null, eventBusy = false;
   let notificationService, notificationResult = null, notificationBusy = false;
+  let accountService, accountResult = null, accountBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -25,6 +26,18 @@
     $("notification-check").disabled = notificationBusy;
     $("notification-backup").disabled = notificationBusy;
     $("notification-install").disabled = notificationBusy || !$("notification-backup").checked || !notificationResult?.readyToInstall || notificationResult.alreadyInstalled || notificationResult.outcomeUncertain;
+    $("account-check").disabled = accountBusy;
+    $("account-backup").disabled = accountBusy;
+    $("account-install").disabled = accountBusy || !$("account-backup").checked || !accountResult?.readyToInstall || accountResult.alreadyInstalled || accountResult.outcomeUncertain;
+  }
+  function renderAccount(value) {
+    accountResult = value;
+    $("account-findings").replaceChildren(...value.findings.map(text => { const li = document.createElement("li"); li.textContent = text; return li; }));
+    $("account-columns").replaceChildren(...value.columns.map(text => { const li = document.createElement("li"); li.textContent = `PILOTAGE_COMPTES.${text}`; return li; }));
+    $("account-status").textContent = value.outcomeUncertain ? "Résultat incertain : ne relancez pas l’installation."
+      : value.alreadyInstalled ? "Lot 6 confirmé : la colonne Administrateur est présente et conforme."
+      : value.readyToInstall ? "Lot 6 prêt : ajout compatible, registre des comptes et dépendance NOTIFICATIONS confirmés."
+      : "Lot 6 bloqué : examinez les écarts affichés.";
   }
   function renderNotification(value) {
     notificationResult = value;
@@ -123,12 +136,20 @@
     catch (error) { notificationResult = null; $("notification-columns").replaceChildren(); $("notification-findings").replaceChildren(); $("notification-status").textContent = error.message; }
     finally { notificationBusy = false; controls(); }
   }
+  async function executeAccount(operation) {
+    if (accountBusy) return;
+    accountBusy = true; controls(); $("account-status").textContent = "Contrôle du lot COMPTES en cours…";
+    try { renderAccount(await operation()); }
+    catch (error) { accountResult = null; $("account-columns").replaceChildren(); $("account-findings").replaceChildren(); $("account-status").textContent = error.message; }
+    finally { accountBusy = false; controls(); }
+  }
   $("backup").onchange = controls;
   $("source-backup").onchange = controls;
   $("attribution-backup").onchange = controls;
   $("circuit-backup").onchange = controls;
   $("event-backup").onchange = controls;
   $("notification-backup").onchange = controls;
+  $("account-backup").onchange = controls;
   $("check").onclick = () => execute(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
@@ -194,6 +215,17 @@
     if (notificationBusy || $("notification-install").disabled || !notificationService) return;
     if (!window.confirm("Ajouter les deux colonnes techniques du lot NOTIFICATIONS ? Les notifications restent vides et protégées pendant cette préparation.")) return;
     executeNotification(() => notificationService.install({ confirmed: true }));
+  };
+  $("account-check").onclick = () => executeAccount(async () => {
+    if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({ requiredAccess: "full" });
+    accountService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionAccountSchemaLot });
+    return accountService.inspect();
+  });
+  $("account-install").onclick = () => {
+    if (accountBusy || $("account-install").disabled || !accountService) return;
+    if (!window.confirm("Ajouter la colonne Administrateur au registre des comptes ? Aucun compte ne sera désigné et aucun droit ne sera modifié par cette étape.")) return;
+    executeAccount(() => accountService.install({ confirmed: true }));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

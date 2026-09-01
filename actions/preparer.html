@@ -18,7 +18,8 @@
   <script src="../commun/action-circuit-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-event-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-notification-schema-lot.js?v=1" defer></script>
-  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=5" defer></script>
+  <script src="../commun/action-account-schema-lot.js?v=1" defer></script>
+  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=6" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -79,5 +80,14 @@
     <label><input id="notification-backup" type="checkbox"> Je confirme poursuivre depuis le lot ÉVÉNEMENTS contrôlé.</label>
     <button class="button button--primary" id="notification-install" type="button" disabled>Ajouter les 2 colonnes NOTIFICATIONS</button>
     <p>Le journal doit rester strictement conforme. Aucune notification existante n’est lue ou modifiée pendant cet ajout de structure.</p>
+  </section>
+  <section class="card"><h2>8 · Installer le lot 6 — COMPTES</h2>
+    <p>Ce lot ajoute la colonne Administrateur au registre des comptes. Il ne désigne encore aucun administrateur et ne modifie aucun droit.</p>
+    <button class="button button--secondary" id="account-check" type="button">Vérifier le lot COMPTES</button>
+    <p id="account-status" role="status" aria-live="polite">Vérification du lot requise.</p>
+    <ul id="account-findings"></ul><ul id="account-columns"></ul>
+    <label><input id="account-backup" type="checkbox"> Je confirme poursuivre depuis le lot NOTIFICATIONS contrôlé.</label>
+    <button class="button button--primary" id="account-install" type="button" disabled>Ajouter la colonne Administrateur</button>
+    <p>Les colonnes Email, Interlocuteur et Actif doivent rester strictement conformes. La désignation des administrateurs sera contrôlée avant l’installation des permissions.</p>
   </section>
 </main></body></html>
