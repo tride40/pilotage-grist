@@ -35,6 +35,13 @@
     try { return new Date(value * 1000).toISOString(); } catch { throw Error("Date Grist invalide."); }
   }
   const seconds = value => Date.parse(value) / 1000;
+  function storedValueMatches(actual, expected) {
+    if (Array.isArray(expected) && expected[0] === "L") {
+      const actualRefs = actual == null ? [] : Array.isArray(actual) ? (actual[0] === "L" ? actual.slice(1) : actual) : null;
+      return actualRefs !== null && JSON.stringify(actualRefs) === JSON.stringify(expected.slice(1));
+    }
+    return JSON.stringify(actual) === JSON.stringify(expected);
+  }
   function one(rows, predicate) {
     const matches = rows.filter(predicate);
     if (matches.length !== 1) throw Error("Action absente, dupliquée ou non raccordée au circuit.");
@@ -177,7 +184,7 @@
         await grist.docApi.applyUserActions(bundle.actions);
         const events=await fetch("ACTIONS_EVENEMENTS");
         const recorded=events.find(e=>e.id===bundle.eventId), expected=bundle.actions[0][3];
-        if (!recorded || Object.entries(expected).some(([k,v])=>JSON.stringify(recorded[k])!==JSON.stringify(v))) throw Error("Événement enregistré non confirmé.");
+        if (!recorded || Object.entries(expected).some(([k,v])=>!storedValueMatches(recorded[k],v))) throw Error("Événement enregistré non confirmé.");
         const notifications=await fetch("ACTIONS_NOTIFICATIONS");
         const expectedNotices=bundle.actions.filter(a=>a[0]==="AddRecord"&&a[1]==="ACTIONS_NOTIFICATIONS");
         if(notifications.filter(n=>n.Evenement===bundle.eventId).length!==expectedNotices.length)
