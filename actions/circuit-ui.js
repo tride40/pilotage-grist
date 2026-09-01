@@ -43,7 +43,7 @@
   }
   function mount({element,service,catalog={projects:[],people:[],services:[],poles:[]},canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente.",title="Circuit des actions",initialFilter="open",showCreate=true,showNotifications=false}){
     const doc=element.ownerDocument, win=doc.defaultView;
-    let rows=[],notifications=[],notificationButtons=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null;
+    let rows=[],notifications=[],notificationButtons=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null,smartFilter=initialFilter==="smart";
     const node=(tag,text,cls)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
     const button=(text,fn,cls="button button--secondary")=>{const e=node("button",text,cls);e.type="button";e.addEventListener("click",fn);return e;};
     const option=(select,value,label)=>{const e=node("option",label);e.value=value;select.append(e);};
@@ -132,7 +132,10 @@
       unread.forEach(item=>{const card=node("article",undefined,"circuit-notification"),label=({create:"Nouvelle action",assign:"Action attribuée",perform:"Action déclarée réalisée",close:"Action clôturée",request_additional_work:"Complément demandé",cancel:"Action annulée"})[item.type]||"Mise à jour de l’action";
         card.append(node("h3",item.title),node("p",label));const controls=node("div",undefined,"circuit-controls"),view=button("Afficher l’action",()=>showAction(item)),read=button("Marquer comme lue",()=>markRead(item.id));notificationButtons.push(view,read);controls.append(view,read);card.append(controls);notificationPanel.append(card);});disabled();}
     async function markRead(id){if(busy||locked||!canWrite||typeof service.markNotificationRead!=="function")return;busy=true;disabled();try{await service.markNotificationRead(id);busy=false;await load();status.textContent="Notification marquée comme lue.";}catch(e){locked=true;status.textContent=failureMessage(e);}finally{busy=false;disabled();}}
-    async function load(){if(busy)return;busy=true;disabled();try{const values=await Promise.all([service.list(),showNotifications&&typeof service.notifications==="function"?service.notifications():[]]);rows=values[0];notifications=values[1];status.textContent=`${rows.length} action(s) chargée(s).`;}catch(e){rows=[];notifications=[];status.textContent=e.message;}finally{busy=false;renderNotifications();disabled();render();}}
+    function chooseSmartFilter(){if(!smartFilter)return;const active=row=>!["closed","cancelled"].includes(row.state);filter.value=rows.some(row=>row.roles?.creator&&row.state==="performed")?"review"
+        :rows.some(row=>row.roles?.executor&&active(row))?"executor"
+        :rows.some(row=>row.roles?.creator&&active(row))?"creator":"open";smartFilter=false;}
+    async function load(){if(busy)return;busy=true;disabled();try{const values=await Promise.all([service.list(),showNotifications&&typeof service.notifications==="function"?service.notifications():[]]);rows=values[0];notifications=values[1];chooseSmartFilter();status.textContent=`${rows.length} action(s) chargée(s).`;}catch(e){rows=[];notifications=[];status.textContent=e.message;}finally{busy=false;renderNotifications();disabled();render();}}
     form.addEventListener("submit",async event=>{event.preventDefault();if(busy||locked||!canWrite||!currentCapability||!collect||!form.reportValidity())return;
       if(confirmWrites&&!win.confirm(confirmations[currentOperation]||"Enregistrer cette opération réelle ?"))return;
       busy=true;disabled();error.textContent="";
@@ -142,7 +145,7 @@
         // Do not retry blindly after a network response was lost.
         locked=true;status.textContent="Envoi interrompu. Actualisez pour consulter ; aucun nouvel envoi avant contrôle.";
       }finally{busy=false;disabled();render();}});
-    dialog.addEventListener("cancel",e=>{e.preventDefault();close();});search.addEventListener("input",render);filter.addEventListener("change",render);
+    dialog.addEventListener("cancel",e=>{e.preventDefault();close();});search.addEventListener("input",render);filter.addEventListener("change",()=>{smartFilter=false;render();});
     disabled();const ready=load();
     return {ready,refresh:load,dispose(){locked=true;canWrite=false;rows=[];element.replaceChildren();}};
   }
