@@ -4,6 +4,7 @@
   let service, result = null, busy = false, sourceService, sourceResult = null, sourceBusy = false;
   let attributionService, attributionResult = null, attributionBusy = false;
   let circuitService, circuitResult = null, circuitBusy = false;
+  let eventService, eventResult = null, eventBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -17,6 +18,18 @@
     $("circuit-check").disabled = circuitBusy;
     $("circuit-backup").disabled = circuitBusy;
     $("circuit-install").disabled = circuitBusy || !$("circuit-backup").checked || !circuitResult?.readyToInstall || circuitResult.alreadyInstalled || circuitResult.outcomeUncertain;
+    $("event-check").disabled = eventBusy;
+    $("event-backup").disabled = eventBusy;
+    $("event-install").disabled = eventBusy || !$("event-backup").checked || !eventResult?.readyToInstall || eventResult.alreadyInstalled || eventResult.outcomeUncertain;
+  }
+  function renderEvent(value) {
+    eventResult = value;
+    $("event-findings").replaceChildren(...value.findings.map(text => { const li = document.createElement("li"); li.textContent = text; return li; }));
+    $("event-columns").replaceChildren(...value.columns.map(text => { const li = document.createElement("li"); li.textContent = `ACTIONS_EVENEMENTS.${text}`; return li; }));
+    $("event-status").textContent = value.outcomeUncertain ? "Résultat incertain : ne relancez pas l’installation."
+      : value.alreadyInstalled ? "Lot 4 confirmé : les six colonnes ÉVÉNEMENTS sont présentes et conformes."
+      : value.readyToInstall ? "Lot 4 prêt : six ajouts compatibles, dépendance CIRCUIT confirmée."
+      : "Lot 4 bloqué : examinez les écarts affichés.";
   }
   function renderCircuit(value) {
     circuitResult = value;
@@ -83,10 +96,18 @@
     catch (error) { circuitResult = null; $("circuit-columns").replaceChildren(); $("circuit-findings").replaceChildren(); $("circuit-status").textContent = error.message; }
     finally { circuitBusy = false; controls(); }
   }
+  async function executeEvent(operation) {
+    if (eventBusy) return;
+    eventBusy = true; controls(); $("event-status").textContent = "Contrôle du lot ÉVÉNEMENTS en cours…";
+    try { renderEvent(await operation()); }
+    catch (error) { eventResult = null; $("event-columns").replaceChildren(); $("event-findings").replaceChildren(); $("event-status").textContent = error.message; }
+    finally { eventBusy = false; controls(); }
+  }
   $("backup").onchange = controls;
   $("source-backup").onchange = controls;
   $("attribution-backup").onchange = controls;
   $("circuit-backup").onchange = controls;
+  $("event-backup").onchange = controls;
   $("check").onclick = () => execute(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
@@ -130,6 +151,17 @@
     if (circuitBusy || $("circuit-install").disabled || !circuitService) return;
     if (!window.confirm("Ajouter les quatorze colonnes techniques du lot CIRCUIT ? Les tables métier restent protégées pendant cette préparation.")) return;
     executeCircuit(() => circuitService.install({ confirmed: true }));
+  };
+  $("event-check").onclick = () => executeEvent(async () => {
+    if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({ requiredAccess: "full" });
+    eventService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionEventSchemaLot });
+    return eventService.inspect();
+  });
+  $("event-install").onclick = () => {
+    if (eventBusy || $("event-install").disabled || !eventService) return;
+    if (!window.confirm("Ajouter les six colonnes techniques du lot ÉVÉNEMENTS ? Le journal reste vide et protégé pendant cette préparation.")) return;
+    executeEvent(() => eventService.install({ confirmed: true }));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
