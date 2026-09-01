@@ -22,8 +22,10 @@
   <script src="../commun/action-project-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-table-schema-setup.js?v=1" defer></script>
   <script src="../commun/action-source-protection.js" defer></script>
-  <script src="../commun/action-permission-audit.js?v=2" defer></script>
-  <script src="../commun/action-permission-audit-service.js?v=2" defer></script><script src="preparer.js?v=9" defer></script>
+  <script src="../commun/action-circuit-permission-lot.js?v=1" defer></script>
+  <script src="../commun/action-permission-audit.js?v=3" defer></script>
+  <script src="../commun/action-permission-audit-service.js?v=2" defer></script>
+  <script src="../commun/action-permission-lot-setup.js?v=1" defer></script><script src="preparer.js?v=10" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -109,5 +111,14 @@
     <p id="permission-status" role="status" aria-live="polite">Contrôle en lecture seule requis avant l’installation des permissions.</p>
     <ul id="permission-findings"></ul><ul id="permission-confirmed"></ul>
     <p>Étapes restantes après ce contrôle : protection du circuit, droits ACTIONS et héritage, puis comptes/projets et validation finale.</p>
+  </section>
+  <section class="card"><h2>11 · Permissions 2/4 — circuit 1/4</h2>
+    <p>Premier petit lot : ouvrir uniquement les opérations vérifiées et la lecture des participants sur ACTIONS_CIRCUIT. Les trois autres tables restent inchangées.</p>
+    <button class="button button--secondary" id="circuit-permission-check" type="button">Vérifier les 9 règles CIRCUIT</button>
+    <p id="circuit-permission-status" role="status" aria-live="polite">Vérification requise avant toute modification.</p>
+    <ul id="circuit-permission-findings"></ul>
+    <label><input id="circuit-permission-confirm" type="checkbox"> Je confirme que le contrôle 1/4 ci-dessus est conforme.</label>
+    <button class="button button--primary" id="circuit-permission-install" type="button" disabled>Installer les 9 règles ACTIONS_CIRCUIT</button>
+    <p>Une seule écriture groupée sera envoyée puis toutes les métadonnées seront relues. En cas de résultat incertain, ne cliquez pas une seconde fois.</p>
   </section>
 </main></body></html>

@@ -9,6 +9,7 @@
   let accountService, accountResult = null, accountBusy = false;
   let projectService, projectResult = null, projectBusy = false;
   let permissionService, permissionBusy = false;
+  let circuitPermissionService, circuitPermissionResult = null, circuitPermissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -35,6 +36,9 @@
     $("project-backup").disabled = projectBusy;
     $("project-install").disabled = projectBusy || !$("project-backup").checked || !projectResult?.readyToInstall || projectResult.alreadyInstalled || projectResult.outcomeUncertain;
     $("permission-check").disabled = permissionBusy;
+    $("circuit-permission-check").disabled = circuitPermissionBusy;
+    $("circuit-permission-confirm").disabled = circuitPermissionBusy;
+    $("circuit-permission-install").disabled = circuitPermissionBusy || !$("circuit-permission-confirm").checked || !circuitPermissionResult?.readyToInstall || circuitPermissionResult.alreadyInstalled || circuitPermissionResult.outcomeUncertain;
   }
   function renderProject(value) {
     projectResult = value;
@@ -277,6 +281,31 @@
         :"Contrôle 1/4 bloqué : examinez les écarts affichés avant toute modification.";
     }catch(error){$("permission-status").textContent=error.message;}
     finally{permissionBusy=false;controls();}
+  };
+  $("circuit-permission-confirm").onchange=controls;
+  async function executeCircuitPermission(operation){
+    if(circuitPermissionBusy)return;
+    circuitPermissionBusy=true;controls();$("circuit-permission-status").textContent="Contrôle du premier lot de permissions en cours…";
+    try{
+      const value=await operation();circuitPermissionResult=value;
+      $("circuit-permission-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      $("circuit-permission-status").textContent=value.outcomeUncertain?"Résultat incertain : ne relancez pas l’installation."
+        :value.alreadyInstalled?"Circuit 1/4 confirmé : les 9 règles ACTIONS_CIRCUIT sont présentes et conformes."
+        :value.readyToInstall?"Circuit 1/4 prêt : 9 règles ordonnées, autres ressources préservées."
+        :"Circuit 1/4 bloqué : examinez les écarts affichés.";
+    }catch(error){circuitPermissionResult=null;$("circuit-permission-findings").replaceChildren();$("circuit-permission-status").textContent=error.message;}
+    finally{circuitPermissionBusy=false;controls();}
+  }
+  $("circuit-permission-check").onclick=()=>executeCircuitPermission(async()=>{
+    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({requiredAccess:"full"});
+    circuitPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionCircuitPermissionLot});
+    return circuitPermissionService.inspect();
+  });
+  $("circuit-permission-install").onclick=()=>{
+    if(circuitPermissionBusy||$("circuit-permission-install").disabled||!circuitPermissionService)return;
+    if(!window.confirm("Installer les 9 règles finales sur ACTIONS_CIRCUIT uniquement ?"))return;
+    executeCircuitPermission(()=>circuitPermissionService.install({confirmed:true}));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
