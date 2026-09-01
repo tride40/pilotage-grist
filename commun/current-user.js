@@ -3,6 +3,21 @@
 (function exposeCurrentUser(global) {
   const CONTEXT_TABLE = "CONTEXTE_UTILISATEUR";
   const PEOPLE_TABLE = "INTERLOCUTEURS";
+  const ACCOUNTS_TABLE = "PILOTAGE_COMPTES";
+
+  async function accountProfile(email, personId) {
+    try {
+      const accounts = columnarToRecords(await global.grist.docApi.fetchTable(ACCOUNTS_TABLE));
+      const matches = accounts.filter((item) => normalize(item.Email) === normalize(email));
+      if (matches.length !== 1) return { accountId: null, accountActive: false, administrator: false, administratorProfileAvailable: false };
+      const account = matches[0], linked = referenceId(account.Interlocuteur), available = Object.hasOwn(account, "Administrateur");
+      const active = account.Actif === true && Number(linked) === Number(personId);
+      return { accountId: account.id ?? null, accountActive: active, administrator: Boolean(active && available && account.Administrateur === true), administratorProfileAvailable: available };
+    } catch (error) {
+      console.warn("Profil PILOTAGE_COMPTES indisponible", error);
+      return { accountId: null, accountActive: false, administrator: false, administratorProfileAvailable: false };
+    }
+  }
 
   async function identify({ people = null } = {}) {
     if (!global.grist?.docApi) throw new Error("L’API Grist n’est pas disponible.");
@@ -27,8 +42,10 @@
       const person = personRows.find((item) => String(item.id) === String(personId))
         || personRows.find((item) => normalize(item.Email) === normalize(email))
         || null;
+      const resolvedPersonId = person?.id ?? personId ?? null;
+      const profile = await accountProfile(email, resolvedPersonId);
       global.PilotageTestMode?.assertWritable();
-      return { email, personId: person?.id ?? personId ?? null, person };
+      return { email, personId: resolvedPersonId, person, ...profile };
     } finally {
       if (contextId) {
         try {
@@ -61,5 +78,12 @@
     return id;
   }
 
-  global.PilotageCurrentUser = Object.freeze({ identify, requirePersonId });
+  function requireAdministrator(identity) {
+    global.PilotageTestMode?.assertWritable();
+    if (identity?.simulated) throw new Error("Mode test : profil administrateur simulé interdit pour un enregistrement réel.");
+    if (identity?.administrator !== true) throw new Error("Cette opération est réservée à un administrateur désigné.");
+    return true;
+  }
+
+  global.PilotageCurrentUser = Object.freeze({ identify, requirePersonId, requireAdministrator });
 })(window);
