@@ -12,7 +12,10 @@
   <script src="../commun/action-grist-setup.js" defer></script>
   <script src="../commun/action-source-permissions.js" defer></script>
   <script src="../commun/action-source-schema-lot.js" defer></script>
-  <script src="../commun/action-source-schema-setup.js" defer></script><script src="preparer.js" defer></script>
+  <script src="../commun/action-source-schema-setup.js" defer></script>
+  <script src="../commun/action-attribution-permissions.js" defer></script>
+  <script src="../commun/action-attribution-schema-lot.js" defer></script>
+  <script src="../commun/action-table-schema-setup.js" defer></script><script src="preparer.js" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -37,5 +40,14 @@
     <label><input id="source-backup" type="checkbox"> Je confirme utiliser la sauvegarde actuelle contrôlée.</label>
     <button class="button button--primary" id="source-install" type="button" disabled>Ajouter les 5 colonnes ACTIONS</button>
     <p>Une seule écriture groupée sera envoyée, puis les cinq colonnes seront relues. En cas de réponse incertaine, ne cliquez pas une seconde fois.</p>
+  </section>
+  <section class="card"><h2>4 · Installer le lot 2 — ATTRIBUTIONS</h2>
+    <p>Ce lot ajoute cinq colonnes techniques à la table des niveaux d’attribution. La table est encore vide et reste réservée aux propriétaires pendant la préparation.</p>
+    <button class="button button--secondary" id="attribution-check" type="button">Vérifier le lot ATTRIBUTIONS</button>
+    <p id="attribution-status" role="status" aria-live="polite">Vérification du lot requise.</p>
+    <ul id="attribution-findings"></ul><ul id="attribution-columns"></ul>
+    <label><input id="attribution-backup" type="checkbox"> Je confirme poursuivre depuis le lot ACTIONS contrôlé.</label>
+    <button class="button button--primary" id="attribution-install" type="button" disabled>Ajouter les 5 colonnes ATTRIBUTIONS</button>
+    <p>Le schéma est comparé une nouvelle fois avant l’écriture et relu ensuite. Une réponse incertaine interdit toute seconde tentative.</p>
   </section>
 </main></body></html>
