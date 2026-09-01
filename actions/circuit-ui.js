@@ -67,8 +67,8 @@
     controls.append(back,submit);form.append(formTitle,fields,error,controls);dialog.append(form);
     element.append(heading,notice,...(showNotifications?[notificationPanel]:[]),toolbar,status,list,dialog);
     function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;notificationButtons.forEach(item=>item.disabled=busy||locked||!canWrite);}
-    function close(){if(busy)return;dialog.close();form.reset();fields.replaceChildren();selected=null;currentCapability=false;currentOperation=null;opener?.focus();}
-    function open(title,capability,operation){if(busy||locked||!canWrite||!capability)return false;currentCapability=true;currentOperation=operation;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent=title;submit.textContent="Enregistrer";disabled();dialog.showModal();return true;}
+    function close(){if(busy)return;dialog.close();form.reset();fields.replaceChildren();selected=null;currentCapability=false;currentOperation=null;submit.hidden=false;back.textContent="Retour";opener?.focus();}
+    function open(title,capability,operation){if(busy||locked||!canWrite||!capability)return false;currentCapability=true;currentOperation=operation;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent=title;submit.hidden=false;submit.textContent="Enregistrer";back.textContent="Retour";disabled();dialog.showModal();return true;}
     function group(title){const e=node("fieldset");e.append(node("legend",title));fields.append(e);return e;}
     function field(parent,label,name,type="text",required=false){const wrap=node("label"),control=node(type==="select"?"select":type==="textarea"?"textarea":"input");control.name=name;if(control.tagName==="INPUT")control.type=type;control.required=required;wrap.append(node("span",label),control);parent.append(wrap);return control;}
     function destination(parent,withKind){
@@ -114,6 +114,21 @@
           service.execute(selected.id,{type:operation,note:note.value,expectedRevision:selected.revision});
       }catch(e){status.textContent=e.message;}finally{busy=false;disabled();}
     }
+    const personName=id=>catalog.people.find(person=>person.id===id)?.name||"Non renseigné";
+    const serviceName=id=>catalog.services.find(service=>service.id===id)?.name||"Non renseigné";
+    const poleName=id=>catalog.poles.find(pole=>pole.id===id)?.name||"Non renseigné";
+    function detailLine(parent,label,value){if(value===null||value===undefined||value==="")return;const line=node("p");line.append(node("strong",`${label} : `),doc.createTextNode(String(value)));parent.append(line);}
+    function targetName(row){return row.targetKind==="person"?personName(row.targetId):row.targetKind==="service"?serviceName(row.targetId):row.targetKind==="pole"?poleName(row.targetId):"Non renseigné";}
+    async function openDetail(row){
+      if(busy)return;busy=true;disabled();
+      try{const fresh=await service.inspect(row.id);selected=fresh.row;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent="Détail de l’action";currentCapability=false;currentOperation="view";submit.hidden=true;back.textContent="Retour à la liste";
+        const summary=group(selected.title);detailLine(summary,"Projet",selected.projectTitle);detailLine(summary,"État",labels[selected.state]||selected.state);detailLine(summary,"Échéance",selected.deadline);detailLine(summary,"Dernière mise à jour",selected.updatedAt);
+        const actors=group("Acteurs");detailLine(actors,"Créateur",personName(selected.creatorId));detailLine(actors,"Destinataire",targetName(selected));detailLine(actors,"Exécutant",selected.executorId?personName(selected.executorId):"À attribuer");detailLine(actors,"Service concerné",selected.serviceId?serviceName(selected.serviceId):null);detailLine(actors,"Agents associés",selected.associateIds?.length?selected.associateIds.map(personName).join(", "):"Aucun");
+        const outcome=group("Réalisation et suivi");detailLine(outcome,"Bilan",selected.result);detailLine(outcome,"Motif du complément",selected.additionalWorkReason);detailLine(outcome,"Motif de l’annulation",selected.cancellationReason);detailLine(outcome,"Déclarée réalisée le",selected.performedAt);detailLine(outcome,"Clôturée le",selected.closedAt);detailLine(outcome,"Annulée le",selected.cancelledAt);
+        if(fresh.operations?.length){const available=group("Actions disponibles"),bar=node("div",undefined,"circuit-controls");for(const operation of fresh.operations){const permitted=operation==="assign"?allowAssignment:allowLifecycle,b=button(verbs[operation],()=>{close();openCommand(fresh.row,operation);});b.disabled=!canWrite||!permitted||locked;bar.append(b);}available.append(bar);}
+        disabled();dialog.showModal();
+      }catch(e){status.textContent=e.message;}finally{busy=false;disabled();}
+    }
     function render(){list.replaceChildren();const shown=rows.filter(r=>{
       const terminal=["closed","cancelled"].includes(r.state);
       const scope=filter.value==="all"||filter.value==="history"?filter.value==="all"||terminal
@@ -124,7 +139,7 @@
       if(!shown.length)list.append(node("p","Aucune action dans cette vue.","circuit-empty"));
       shown.forEach(r=>{const card=node("article",undefined,"card circuit-card"),h=node("h2",r.title),meta=node("p",`${r.projectTitle} · ${labels[r.state]||r.state}`);
         card.append(h,meta);if(r.deadline)card.append(node("p",`Échéance : ${r.deadline}`));
-        const bar=node("div",undefined,"circuit-controls");for(const op of r.operations||[]){const permitted=op==="assign"?allowAssignment:allowLifecycle,b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||!permitted||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
+        const bar=node("div",undefined,"circuit-controls");bar.append(button("Voir le détail",()=>openDetail(r)));for(const op of r.operations||[]){const permitted=op==="assign"?allowAssignment:allowLifecycle,b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||!permitted||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
     }
     function showAction(notification){filter.value="all";search.value=notification.title;render();list.scrollIntoView({block:"start",behavior:"smooth"});}
     function renderNotifications(){if(!showNotifications)return;notificationButtons=[];notificationPanel.replaceChildren(notificationTitle,notificationStatus);const unread=notifications.filter(item=>!item.read);notificationTitle.textContent=`Notifications${unread.length?` (${unread.length})`:""}`;
