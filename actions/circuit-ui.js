@@ -10,6 +10,15 @@
     request_additional_work:"Demander réellement un complément sur cette action ?",
     cancel:"Annuler réellement cette action ?"
   };
+  function failureMessage(error){
+    const message=typeof error?.message==="string"&&error.message.trim()?error.message.trim():"Erreur Grist non précisée.";
+    const details=error?.details, raw=details?.memos;
+    const memos=[...new Set((Array.isArray(raw)?raw:Object.values(raw||{})).flat(4)
+      .filter(value=>typeof value==="string").map(value=>value.trim()).filter(Boolean))];
+    const code=typeof error?.code==="string"&&error.code.trim()?error.code.trim():"";
+    const diagnostic=[code&&`code ${code}`,...memos].filter(Boolean).join(" · ");
+    return diagnostic?`${message} (${diagnostic})`:message;
+  }
   function mount({element,service,catalog,canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente."}){
     const doc=element.ownerDocument, win=doc.defaultView;
     let rows=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null;
@@ -93,7 +102,7 @@
       if(confirmWrites&&!win.confirm(confirmations[currentOperation]||"Enregistrer cette opération réelle ?"))return;
       busy=true;disabled();error.textContent="";
       try{await collect();busy=false;close();await load();status.textContent="Action enregistrée.";}
-      catch(e){error.textContent=e.message;
+      catch(e){error.textContent=failureMessage(e);
         // Any submission failure stays locked until the controller reconciles it.
         // Do not retry blindly after a network response was lost.
         locked=true;status.textContent="Envoi interrompu. Actualisez pour consulter ; aucun nouvel envoi avant contrôle.";
@@ -102,5 +111,5 @@
     disabled();const ready=load();
     return {ready,refresh:load,dispose(){locked=true;canWrite=false;rows=[];element.replaceChildren();}};
   }
-  root.PilotageActionCircuitUI=Object.freeze({mount});
+  root.PilotageActionCircuitUI=Object.freeze({mount,failureMessage});
 })(typeof globalThis==="object"?globalThis:this);
