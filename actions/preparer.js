@@ -3,6 +3,7 @@
   const $ = id => document.getElementById(id);
   let service, result = null, busy = false, sourceService, sourceResult = null, sourceBusy = false;
   let attributionService, attributionResult = null, attributionBusy = false;
+  let circuitService, circuitResult = null, circuitBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -13,6 +14,18 @@
     $("attribution-check").disabled = attributionBusy;
     $("attribution-backup").disabled = attributionBusy;
     $("attribution-install").disabled = attributionBusy || !$("attribution-backup").checked || !attributionResult?.readyToInstall || attributionResult.alreadyInstalled || attributionResult.outcomeUncertain;
+    $("circuit-check").disabled = circuitBusy;
+    $("circuit-backup").disabled = circuitBusy;
+    $("circuit-install").disabled = circuitBusy || !$("circuit-backup").checked || !circuitResult?.readyToInstall || circuitResult.alreadyInstalled || circuitResult.outcomeUncertain;
+  }
+  function renderCircuit(value) {
+    circuitResult = value;
+    $("circuit-findings").replaceChildren(...value.findings.map(text => { const li = document.createElement("li"); li.textContent = text; return li; }));
+    $("circuit-columns").replaceChildren(...value.columns.map(text => { const li = document.createElement("li"); li.textContent = `ACTIONS_CIRCUIT.${text}`; return li; }));
+    $("circuit-status").textContent = value.outcomeUncertain ? "Résultat incertain : ne relancez pas l’installation."
+      : value.alreadyInstalled ? "Lot 3 confirmé : les quatorze colonnes CIRCUIT sont présentes et conformes."
+      : value.readyToInstall ? "Lot 3 prêt : quatorze ajouts compatibles, lots ACTIONS et ATTRIBUTIONS confirmés."
+      : "Lot 3 bloqué : examinez les écarts affichés.";
   }
   function renderAttribution(value) {
     attributionResult = value;
@@ -63,9 +76,17 @@
     catch (error) { attributionResult = null; $("attribution-columns").replaceChildren(); $("attribution-findings").replaceChildren(); $("attribution-status").textContent = error.message; }
     finally { attributionBusy = false; controls(); }
   }
+  async function executeCircuit(operation) {
+    if (circuitBusy) return;
+    circuitBusy = true; controls(); $("circuit-status").textContent = "Contrôle du lot CIRCUIT en cours…";
+    try { renderCircuit(await operation()); }
+    catch (error) { circuitResult = null; $("circuit-columns").replaceChildren(); $("circuit-findings").replaceChildren(); $("circuit-status").textContent = error.message; }
+    finally { circuitBusy = false; controls(); }
+  }
   $("backup").onchange = controls;
   $("source-backup").onchange = controls;
   $("attribution-backup").onchange = controls;
+  $("circuit-backup").onchange = controls;
   $("check").onclick = () => execute(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
@@ -98,6 +119,17 @@
     if (attributionBusy || $("attribution-install").disabled || !attributionService) return;
     if (!window.confirm("Ajouter les cinq colonnes techniques du lot ATTRIBUTIONS ? La table est encore vide et reste protégée.")) return;
     executeAttribution(() => attributionService.install({ confirmed: true }));
+  };
+  $("circuit-check").onclick = () => executeCircuit(async () => {
+    if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({ requiredAccess: "full" });
+    circuitService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionCircuitSchemaLot });
+    return circuitService.inspect();
+  });
+  $("circuit-install").onclick = () => {
+    if (circuitBusy || $("circuit-install").disabled || !circuitService) return;
+    if (!window.confirm("Ajouter les quatorze colonnes techniques du lot CIRCUIT ? Les tables métier restent protégées pendant cette préparation.")) return;
+    executeCircuit(() => circuitService.install({ confirmed: true }));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

@@ -15,7 +15,8 @@
   <script src="../commun/action-source-schema-setup.js" defer></script>
   <script src="../commun/action-attribution-permissions.js" defer></script>
   <script src="../commun/action-attribution-schema-lot.js?v=2" defer></script>
-  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=2" defer></script>
+  <script src="../commun/action-circuit-schema-lot.js?v=1" defer></script>
+  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=3" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -49,5 +50,14 @@
     <label><input id="attribution-backup" type="checkbox"> Je confirme poursuivre depuis le lot ACTIONS contrôlé.</label>
     <button class="button button--primary" id="attribution-install" type="button" disabled>Ajouter les 5 colonnes ATTRIBUTIONS</button>
     <p>Le schéma est comparé une nouvelle fois avant l’écriture et relu ensuite. Une réponse incertaine interdit toute seconde tentative.</p>
+  </section>
+  <section class="card"><h2>5 · Installer le lot 3 — CIRCUIT</h2>
+    <p>Ce lot ajoute les quatorze contrôles qui garantissent la révision, l’auteur, le périmètre, la chaîne d’attribution, les notifications et l’audience du circuit.</p>
+    <button class="button button--secondary" id="circuit-check" type="button">Vérifier le lot CIRCUIT</button>
+    <p id="circuit-status" role="status" aria-live="polite">Vérification du lot requise.</p>
+    <ul id="circuit-findings"></ul><ul id="circuit-columns"></ul>
+    <label><input id="circuit-backup" type="checkbox"> Je confirme poursuivre depuis les lots ACTIONS et ATTRIBUTIONS contrôlés.</label>
+    <button class="button button--primary" id="circuit-install" type="button" disabled>Ajouter les 14 colonnes CIRCUIT</button>
+    <p>Les deux lots précédents doivent être strictement conformes. L’ajout est groupé puis entièrement relu avant de poursuivre.</p>
   </section>
 </main></body></html>
