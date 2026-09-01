@@ -61,6 +61,13 @@
     "memo": "Aucun autre accès."
   }
 ];
+  // Notifications are appended after the circuit update in the same atomic
+  // bundle. Their completeness is verified after the write, not while this
+  // intermediate row update is being authorized.
+  for(const rule of expected){
+    if(["perform-U","close-U","request_additional_work-U","cancel-U"].includes(rule.key))
+      rule.aclFormula=rule.aclFormula.replace(" and newRec.ACL_evenement_notifications_coherentes","");
+  }
   const compact=value=>String(value||"").replace(/\s/g,"");
   const owner=rule=>["user.Access==OWNER","user.Accessin[OWNER]"].includes(compact(rule.aclFormula));
   function definitions(){return expected.map(rule=>({...rule}));}

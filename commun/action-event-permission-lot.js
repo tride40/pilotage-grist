@@ -26,25 +26,25 @@
   },
   {
     "key": "perform-C",
-    "aclFormula": "((user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and user.PilotageCompte.Interlocuteur > 0) and (newRec.Auteur == user.PilotageCompte.Interlocuteur) and (newRec.ACL_revision_coherente) and (newRec.ACL_notifications_coherentes) and (newRec.ACL_rattachement_valide)) and (newRec.Operation == 'perform')",
+    "aclFormula": "((user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and user.PilotageCompte.Interlocuteur > 0) and (newRec.Auteur == user.PilotageCompte.Interlocuteur) and (newRec.ACL_transition_autorisee) and (newRec.ACL_rattachement_valide)) and (newRec.Operation == 'perform')",
     "permissionsText": "+C",
     "memo": "Opération métier vérifiée."
   },
   {
     "key": "close-C",
-    "aclFormula": "((user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and user.PilotageCompte.Interlocuteur > 0) and (newRec.Auteur == user.PilotageCompte.Interlocuteur) and (newRec.ACL_revision_coherente) and (newRec.ACL_notifications_coherentes) and (newRec.ACL_rattachement_valide)) and (newRec.Operation == 'close')",
+    "aclFormula": "((user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and user.PilotageCompte.Interlocuteur > 0) and (newRec.Auteur == user.PilotageCompte.Interlocuteur) and (newRec.ACL_transition_autorisee) and (newRec.ACL_rattachement_valide)) and (newRec.Operation == 'close')",
     "permissionsText": "+C",
     "memo": "Opération métier vérifiée."
   },
   {
     "key": "request_additional_work-C",
-    "aclFormula": "((user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and user.PilotageCompte.Interlocuteur > 0) and (newRec.Auteur == user.PilotageCompte.Interlocuteur) and (newRec.ACL_revision_coherente) and (newRec.ACL_notifications_coherentes) and (newRec.ACL_rattachement_valide)) and (newRec.Operation == 'request_additional_work')",
+    "aclFormula": "((user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and user.PilotageCompte.Interlocuteur > 0) and (newRec.Auteur == user.PilotageCompte.Interlocuteur) and (newRec.ACL_transition_autorisee) and (newRec.ACL_rattachement_valide)) and (newRec.Operation == 'request_additional_work')",
     "permissionsText": "+C",
     "memo": "Opération métier vérifiée."
   },
   {
     "key": "cancel-C",
-    "aclFormula": "((user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and user.PilotageCompte.Interlocuteur > 0) and (newRec.Auteur == user.PilotageCompte.Interlocuteur) and (newRec.ACL_revision_coherente) and (newRec.ACL_notifications_coherentes) and (newRec.ACL_rattachement_valide)) and (newRec.Operation == 'cancel')",
+    "aclFormula": "((user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and user.PilotageCompte.Interlocuteur > 0) and (newRec.Auteur == user.PilotageCompte.Interlocuteur) and (newRec.ACL_transition_autorisee) and (newRec.ACL_rattachement_valide)) and (newRec.Operation == 'cancel')",
     "permissionsText": "+C",
     "memo": "Opération métier vérifiée."
   },

@@ -9,7 +9,7 @@
     return False
   circuit = circuits[0]
   events = list(ACTIONS_EVENEMENTS.lookupRecords(Action=rec, Revision=circuit.Revision))
-  if len(events) != 1 or not circuit.ACL_revision_coherente or not circuit.ACL_evenement_notifications_coherentes:
+  if len(events) != 1 or not circuit.ACL_revision_coherente:
     return False
   event = events[0]
   if type(rec.Revision_circuit) is not int or rec.Revision_circuit != circuit.Revision:

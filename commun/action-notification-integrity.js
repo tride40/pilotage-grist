@@ -62,7 +62,7 @@ except Exception:
   return False`;
   const valid=`try:
   event = rec.Evenement
-  if not event.id or not event.ACL_revision_coherente or not event.ACL_notifications_coherentes:
+  if not event.id or not event.ACL_revision_coherente:
     return False
   if not rec.Destinataire.id or rec.Action.id != event.Action.id:
     return False

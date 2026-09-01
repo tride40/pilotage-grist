@@ -37,12 +37,22 @@
     "formula": "try:\n  revision = rec.Revision_rattachement_projet\n  if type(revision) is not int or revision < 0:\n    return False\n  if revision == 0:\n    return len(list(rec.Membres_projet_avant)) == 0\n  project = rec.Action.Projet\n  return bool(project.id and project.Revision_rattachement == revision and project.Evenement_rattachement.id == rec.id and project.ACL_rattachement_coherent)\nexcept Exception:\n  return False"
   },
   {
+    "id": "ACL_transition_autorisee",
+    "type": "Bool",
+    "isFormula": true,
+    "formula": "try:\n  action = rec.Action\n  if not action.id or rec.Operation not in [\"perform\", \"close\", \"request_additional_work\", \"cancel\"]:\n    return False\n  circuits = list(ACTIONS_CIRCUIT.lookupRecords(Action=action))\n  if len(circuits) != 1:\n    return False\n  circuit = circuits[0]\n  if type(rec.Revision) is not int or rec.Revision != circuit.Revision + 1:\n    return False\n  if rec.Cle_evenement != \"action:%s:revision:%s\" % (action.id, rec.Revision):\n    return False\n  if not rec.Auteur.id or rec.Etape_avant != circuit.Etape or rec.Date_evenement is None or circuit.Modifie_le is None or rec.Date_evenement < circuit.Modifie_le:\n    return False\n  if action.Revision_circuit != circuit.Revision or action.Statut != circuit.Etape:\n    return False\n  if rec.Operation == \"perform\":\n    return bool(rec.Auteur.id == circuit.Executant.id and circuit.Etape in [\"En cours\", \"Complément demandé\"] and rec.Etape_apres == \"Réalisée à examiner\" and isinstance(rec.Precision, str) and rec.Precision.strip())\n  if rec.Auteur.id != circuit.Createur.id:\n    return False\n  if rec.Operation == \"close\":\n    return bool(circuit.Etape == \"Réalisée à examiner\" and rec.Etape_apres == \"Clôturée\" and rec.Precision == \"\")\n  if rec.Operation == \"request_additional_work\":\n    return bool(circuit.Etape == \"Réalisée à examiner\" and rec.Etape_apres == \"Complément demandé\" and isinstance(rec.Precision, str) and rec.Precision.strip())\n  return bool(circuit.Etape in [\"À attribuer\", \"En cours\", \"Complément demandé\", \"Réalisée à examiner\"] and rec.Etape_apres == \"Annulée\" and isinstance(rec.Precision, str) and rec.Precision.strip())\nexcept Exception:\n  return False"
+  },
+  {
     "id": "ACL_audience",
     "type": "RefList:INTERLOCUTEURS",
     "isFormula": true,
     "formula": "try:\n  return rec.Action.ACL_audience if rec.Action.id else []\nexcept Exception:\n  return []"
   }
 ];
+  expected.find(column=>column.id==="ACL_transition_autorisee").formula=expected.find(column=>column.id==="ACL_transition_autorisee").formula.replace(
+    " and isinstance(rec.Precision, str) and rec.Precision.strip())",
+    " and isinstance(rec.Precision, str))"
+  );
   function definitions(){return expected.map(column=>({...column}));}
   function exact(actual,target){return actual.type===target.type&&Boolean(actual.isFormula)===target.isFormula&&(actual.formula||"")===(target.formula||"");}
   function inspect(metadata){

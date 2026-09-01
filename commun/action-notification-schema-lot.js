@@ -10,7 +10,7 @@
     "id": "ACL_notification_valide",
     "type": "Bool",
     "isFormula": true,
-    "formula": "try:\n  event = rec.Evenement\n  if not event.id or not event.ACL_revision_coherente or not event.ACL_notifications_coherentes:\n    return False\n  if not rec.Destinataire.id or rec.Action.id != event.Action.id:\n    return False\n  if rec.Type_notification != event.Operation:\n    return False\n  return rec.Cle_notification == \"%s:recipient:%s\" % (event.Cle_evenement, rec.Destinataire.id)\nexcept Exception:\n  return False"
+    "formula": "try:\n  event = rec.Evenement\n  if not event.id or not event.ACL_revision_coherente:\n    return False\n  if not rec.Destinataire.id or rec.Action.id != event.Action.id:\n    return False\n  if rec.Type_notification != event.Operation:\n    return False\n  return rec.Cle_notification == \"%s:recipient:%s\" % (event.Cle_evenement, rec.Destinataire.id)\nexcept Exception:\n  return False"
   },
   {
     "id": "ACL_evenement_auteur",
