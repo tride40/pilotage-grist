@@ -11,10 +11,11 @@
     common?require("./action-circuit-permission-lot.js"):root.PilotageActionCircuitPermissionLot,
     common?require("./action-attribution-permission-lot.js"):root.PilotageActionAttributionPermissionLot,
     common?require("./action-event-permission-lot.js"):root.PilotageActionEventPermissionLot,
-    common?require("./action-notification-permission-lot.js"):root.PilotageActionNotificationPermissionLot
+    common?require("./action-notification-permission-lot.js"):root.PilotageActionNotificationPermissionLot,
+    common?require("./action-source-permission-lot.js"):root.PilotageActionSourcePermissionLot
   );
   if(common)module.exports=api;else root.PilotageActionPermissionAudit=api;
-})(typeof globalThis==="object"?globalThis:this,function factory(projectLot,notificationPolicy,sourceProtection,circuitPermissionLot,attributionPermissionLot,eventPermissionLot,notificationPermissionLot){
+})(typeof globalThis==="object"?globalThis:this,function factory(projectLot,notificationPolicy,sourceProtection,circuitPermissionLot,attributionPermissionLot,eventPermissionLot,notificationPermissionLot,sourcePermissionLot){
   const documentId="f8iwcexDATAwBKsaG6gZRs";
   const protectedTables=["ACTIONS_CIRCUIT","ACTIONS_ATTRIBUTIONS","ACTIONS_EVENEMENTS","ACTIONS_NOTIFICATIONS"];
   const compact=value=>String(value||"").replace(/\s/g,"");
@@ -30,7 +31,7 @@
   }
   function staging(rows){return rows?.length===2&&owner(rows[0])&&rows[0].permissionsText==="+CRUD"&&rows[1].aclFormula===""&&rows[1].permissionsText==="-CRUD";}
   function inspect(snapshot){
-    if(!projectLot?.inspect||!notificationPolicy?.matches||!sourceProtection?.condition||!circuitPermissionLot?.matches||!attributionPermissionLot?.matches||!eventPermissionLot?.matches||!notificationPermissionLot?.matches)
+    if(!projectLot?.inspect||!notificationPolicy?.matches||!sourceProtection?.condition||!circuitPermissionLot?.matches||!attributionPermissionLot?.matches||!eventPermissionLot?.matches||!notificationPermissionLot?.matches||!sourcePermissionLot?.matches)
       throw Error("Un module de contrôle des permissions manque dans la publication. Rechargez la version complète avant de poursuivre.");
     if(snapshot?.documentId!==documentId)throw Error("Contrôle réservé au document de base autorisé.");
     for(const label of ["tables","columns","resources","rules"])validate(snapshot[label],label);
@@ -84,9 +85,10 @@
     else{
       const rows=ordered(snapshot,actionResources[0])||[];
       const meaningful=rows.filter(rule=>rule.aclFormula||rule.permissionsText||rule.userAttributes);
-      if(meaningful.length!==2||!owner(meaningful[0])||meaningful[0].permissionsText!=="+CRUD"||meaningful[1].aclFormula!==sourceProtection.condition||meaningful[1].permissionsText!=="-UD")
+      const prepared=meaningful.length===2&&owner(meaningful[0])&&meaningful[0].permissionsText==="+CRUD"&&meaningful[1].aclFormula===sourceProtection.condition&&meaningful[1].permissionsText==="-UD";
+      if(!prepared&&!sourcePermissionLot.matches(rows))
         findings.push("ACTIONS : protection préparatoire différente de celle attendue.");
-      else confirmed.push("ACTIONS : protection des actions gérées conforme");
+      else confirmed.push(prepared?"ACTIONS : protection des actions gérées conforme":"ACTIONS : politique finale et héritage conformes");
     }
 
     const accountResources=snapshot.resources.filter(resource=>resource.tableId==="PILOTAGE_COMPTES"&&resource.colIds==="*");
