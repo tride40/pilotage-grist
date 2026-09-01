@@ -85,5 +85,14 @@
     return true;
   }
 
-  global.PilotageCurrentUser = Object.freeze({ identify, requirePersonId, requireAdministrator });
+  function actionContext(identity) {
+    if (identity?.simulated) throw new Error("Mode test : le circuit réel reste en consultation seule.");
+    const personId = Number(identity?.personId ?? identity?.person?.id), person = identity?.person;
+    if (!Number.isSafeInteger(personId) || personId <= 0 || !person) throw new Error("Votre compte Grist n’est associé à aucun interlocuteur accessible.");
+    const active = person.Actif === true || person.Actif === 1, internal = person.Interne_Mairie === true || person.Interne_Mairie === 1;
+    if (!active || !internal || identity?.accountActive !== true) throw new Error("Un compte réel actif rattaché à un interlocuteur interne est nécessaire.");
+    return Object.freeze({ personId, active: true, internal: true, simulated: false, delegated: false });
+  }
+
+  global.PilotageCurrentUser = Object.freeze({ identify, requirePersonId, requireAdministrator, actionContext });
 })(window);

@@ -11,10 +11,11 @@
     common ? require("./action-grist-schema.js") : root.PilotageActionGristSchema,
     common ? require("./action-grist-assignment.js") : root.PilotageActionGristAssignment,
     common ? require("./action-deadlines.js") : root.PilotageActionDeadlines,
-    common ? require("./action-associate-contexts.js") : root.PilotageActionAssociateContexts);
+    common ? require("./action-associate-contexts.js") : root.PilotageActionAssociateContexts,
+    common ? require("./action-final-permission-gate.js") : root.PilotageActionFinalPermissionGate);
   if (common) module.exports = api;
   else root.PilotageActionGristLifecycle = api;
-})(typeof globalThis === "object" ? globalThis : this, function (lifecycle, directory, schema, assignment, deadlines, associateContexts) {
+})(typeof globalThis === "object" ? globalThis : this, function (lifecycle, directory, schema, assignment, deadlines, associateContexts, finalGate) {
   const states = { "À attribuer":"to_assign", "En cours":"in_progress", "Complément demandé":"additional_work",
     "Réalisée à examiner":"performed", "Clôturée":"closed", "Annulée":"cancelled" };
   const labels = Object.fromEntries(Object.entries(states).map(([k,v]) => [v,k]));
@@ -109,7 +110,7 @@
     }]);
     return {actions,plan,eventId:next};
   }
-  function create({grist,mode,identify,clock = () => new Date().toISOString()}) {
+  function create({grist,mode,identify,clock = () => new Date().toISOString(),requireFinalPermissions=false}) {
     let busy = false, latch = submissionLatch();
     async function guard() {
       if (!mode || mode.isReadOnly()) throw Error("Commandes interdites en simulation.");
@@ -121,9 +122,11 @@
       await guard();
       const names=["_grist_Tables","_grist_Tables_column","_grist_ACLResources","_grist_ACLRules"];
       const [tables,columns,resources,rules]=await Promise.all(names.map(fetch));
-      if (!schema.inspect({documentId:schema.documentId,tables,columns,resources,rules}).alreadyPrepared) {
-        throw Error("Les protections propriétaire de préparation ne sont plus confirmées.");
-      }
+      const metadata={documentId:schema.documentId,tables,columns,resources,rules};
+      const staged=schema.inspect(metadata).alreadyPrepared;
+      const final=Boolean(finalGate?.inspect&&finalGate.inspect(metadata).readyForFunctionalPages);
+      if(requireFinalPermissions&&!final)throw Error("Les 81 règles finales ne sont plus confirmées.");
+      if(!staged&&!final)throw Error("Les protections propriétaire du circuit ne sont plus confirmées.");
       const writable={ACTIONS:{Action:"Text",Projet:"Ref:PROJETS",Demandee_par:"Ref:INTERLOCUTEURS",Attribuee_a:"Ref:INTERLOCUTEURS",
         Statut:"Choice",Date_creation:"Date",Echeance:"Date",Resultat:"Text",Revision_circuit:"Int"},PROJETS:{Agents_associes:"RefList:INTERLOCUTEURS",
           Revision_rattachement:"Int",Evenement_rattachement:"Ref:ACTIONS_EVENEMENTS"}};
