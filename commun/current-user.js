@@ -91,7 +91,7 @@
     if (!Number.isSafeInteger(personId) || personId <= 0 || !person) throw new Error("Votre compte Grist n’est associé à aucun interlocuteur accessible.");
     const active = person.Actif === true || person.Actif === 1, internal = person.Interne_Mairie === true || person.Interne_Mairie === 1;
     if (!active || !internal || identity?.accountActive !== true) throw new Error("Un compte réel actif rattaché à un interlocuteur interne est nécessaire.");
-    return Object.freeze({ personId, active: true, internal: true, simulated: false, delegated: false });
+    return Object.freeze({ personId, active: true, internal: true, simulated: false, delegated: false, administrator: identity?.administrator === true });
   }
 
   global.PilotageCurrentUser = Object.freeze({ identify, requirePersonId, requireAdministrator, actionContext });

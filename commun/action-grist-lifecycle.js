@@ -125,8 +125,13 @@
       if (await grist.docApi.getDocName() !== schema.documentId) throw Error("Document de base non autorisé.");
     }
     const fetch = async table => directory.records(await grist.docApi.fetchTable(table));
-    async function confined(actions=[]) {
+    async function confined(actions=[],context=null) {
       await guard();
+      // Editors cannot read the complete ACL metadata in Grist. Their writes
+      // remain authorized by the installed server rules; only designated
+      // administrators can and must repeat the exact client-side ACL audit.
+      if(requireFinalPermissions&&context?.administrator===false)return;
+      if(requireFinalPermissions&&context?.administrator!==true)throw Error("Profil de contrôle des permissions indéterminé.");
       const names=["_grist_Tables","_grist_Tables_column","_grist_ACLResources","_grist_ACLRules"];
       const [tables,columns,resources,rules]=await Promise.all(names.map(fetch));
       const metadata={documentId:schema.documentId,tables,columns,resources,rules};
@@ -147,8 +152,8 @@
         }
       }
     }
-    async function snapshot(actionId, withDirectory=false) {
-      await confined();
+    async function snapshot(actionId, withDirectory=false, context=null) {
+      await confined([],context);
       const before = await fetch("ACTIONS_EVENEMENTS");
       const names=["ACTIONS","ACTIONS_CIRCUIT","ACTIONS_ATTRIBUTIONS","PROJETS",
         ...(withDirectory?["INTERLOCUTEURS","SERVICES","POLES"]:[])];
@@ -171,7 +176,7 @@
       busy=true;
       try {
         await guard();
-        const context=await identity(), current=await snapshot(actionId,operation!=="lifecycle");
+        const context=await identity(), current=await snapshot(actionId,operation!=="lifecycle",context);
         const at=clock();
         const bundle=operation==="create"?assignment.creation(current.data,context,projectId,input,at):
           operation==="assign"?assignment.attribution(current.data,current.decoded,context,input,at):
@@ -179,7 +184,7 @@
         actionId=bundle.actionId??actionId;
         if(operation!=="lifecycle")assignment.validateSourceWrites(current.data,bundle);
         const confirmEntry=operation!=="lifecycle"?assignment.prepareConfirmation(current.data,bundle):null;
-        await confined(bundle.actions);
+        await confined(bundle.actions,context);
         latch.markSubmitted();
         await grist.docApi.applyUserActions(bundle.actions);
         const events=await fetch("ACTIONS_EVENEMENTS");
@@ -193,7 +198,7 @@
           const expected=action[3], matches=notifications.filter(n=>n.Cle_notification===expected.Cle_notification);
           if (matches.length!==1 || Object.entries(expected).some(([k,v])=>k!=="Lue" && k!=="Date_lecture" && matches[0][k]!==v)) throw Error("Notifications enregistrées non confirmées.");
         }
-        const verified=await snapshot(actionId);
+        const verified=await snapshot(actionId,false,context);
         const expectedAudience=operation==="create"?bundle.plan.row.visibleTo:current.decoded.row.initialAudience;
         if(expectedAudience.length!==verified.decoded.row.initialAudience.length
           ||!expectedAudience.every(pid=>verified.decoded.row.initialAudience.includes(pid)))
@@ -213,7 +218,7 @@
     return Object.freeze({
       async list() {
         if(busy)throw Error("Enregistrement en cours.");
-        await guard();const context=await identity(),current=await snapshot(null);
+        await guard();const context=await identity(),current=await snapshot(null,false,context);
         return current.data.ACTIONS_CIRCUIT.map(c=>decode(current.data,c.Action).row)
           .filter(row=>row.visibleTo.includes(context.personId)).map(row=>({ ...row,
             operations:[...lifecycle.operations(row,context),...(row.state==="to_assign"&&[row.creatorId,row.assignerId].includes(context.personId)?["assign"]:[])],
@@ -221,7 +226,7 @@
       },
       async catalog() {
         if(busy)throw Error("Enregistrement en cours.");
-        await guard();await identity();const {data}=await snapshot(null,true);
+        await guard();const context=await identity();const {data}=await snapshot(null,true,context);
         const raw=Object.fromEntries(["INTERLOCUTEURS","SERVICES","POLES"].map(name=>{
           const rows=data[name],keys=[...new Set(["id",...rows.flatMap(Object.keys)])];
           return [name,Object.fromEntries(keys.map(k=>[k,rows.map(r=>r[k])]))];
@@ -237,7 +242,7 @@
       async inspect(actionId) {
         if (busy) throw Error("Enregistrement en cours.");
         await guard();
-        const context=await identity(), current=await snapshot(actionId);
+        const context=await identity(), current=await snapshot(actionId,false,context);
         const row=current.decoded.row;
         return {row,operations:[...lifecycle.operations(row,context),...(row.visibleTo.includes(context.personId)&&row.state==="to_assign"&&[row.creatorId,row.assignerId].includes(context.personId)?["assign"]:[])],
           outcomeUncertain:latch.isUncertain(),ownerStagingOnly:true,businessWorkflowEnabled:false};
