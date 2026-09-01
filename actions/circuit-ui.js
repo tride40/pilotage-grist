@@ -2,6 +2,14 @@
 (function(root){
   const labels={to_assign:"À attribuer",in_progress:"En cours",additional_work:"Complément demandé",performed:"Réalisée à examiner",closed:"Clôturée",cancelled:"Annulée"};
   const verbs={perform:"Déclarer réalisée",close:"Clôturer",request_additional_work:"Demander un complément",cancel:"Annuler l’action",assign:"Attribuer"};
+  const confirmations={
+    create:"Créer cette action réelle dans le nouveau circuit ?",
+    assign:"Enregistrer cette attribution réelle ?",
+    perform:"Déclarer cette action comme réellement réalisée ?",
+    close:"Clôturer définitivement cette action ?",
+    request_additional_work:"Demander réellement un complément sur cette action ?",
+    cancel:"Annuler réellement cette action ?"
+  };
   function mount({element,service,catalog,canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente."}){
     const doc=element.ownerDocument, win=doc.defaultView;
     let rows=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null;
@@ -82,7 +90,7 @@
     }
     async function load(){if(busy)return;busy=true;disabled();try{rows=await service.list();status.textContent=`${rows.length} action(s) chargée(s).`;}catch(e){rows=[];status.textContent=e.message;}finally{busy=false;disabled();render();}}
     form.addEventListener("submit",async event=>{event.preventDefault();if(busy||locked||!canWrite||!currentCapability||!collect||!form.reportValidity())return;
-      if(confirmWrites&&!win.confirm(currentOperation==="create"?"Créer cette action réelle dans le nouveau circuit ?":"Enregistrer cette attribution réelle dans le nouveau circuit ?"))return;
+      if(confirmWrites&&!win.confirm(confirmations[currentOperation]||"Enregistrer cette opération réelle ?"))return;
       busy=true;disabled();error.textContent="";
       try{await collect();busy=false;close();await load();status.textContent="Action enregistrée.";}
       catch(e){error.textContent=e.message;
