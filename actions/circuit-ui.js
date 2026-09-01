@@ -2,6 +2,13 @@
 (function(root){
   const labels={to_assign:"À attribuer",in_progress:"En cours",additional_work:"Complément demandé",performed:"Réalisée à examiner",closed:"Clôturée",cancelled:"Annulée"};
   const verbs={perform:"Déclarer réalisée",close:"Clôturer",request_additional_work:"Demander un complément",cancel:"Annuler l’action",assign:"Attribuer"};
+  const commandPresentation={
+    assign:{title:"Nouvelle attribution",subtitle:"Exécutant et échéance",submit:"Attribuer l’action"},
+    perform:{title:"Réalisation",subtitle:"Bilan de l’exécution",submit:"Déclarer l’action réalisée",note:"Bilan de réalisation (facultatif)"},
+    close:{title:"Validation",subtitle:"Décision du créateur",submit:"Clôturer l’action",note:"Précision de validation (facultative)"},
+    request_additional_work:{title:"Complément demandé",subtitle:"Précisions attendues",submit:"Envoyer la demande de complément",note:"Complément attendu *"},
+    cancel:{title:"Annulation",subtitle:"Motif de l’annulation",submit:"Confirmer l’annulation",note:"Motif de l’annulation *"}
+  };
   const eventLabels={create:"Création de l’action",assign:"Attribution de l’action",perform:"Réalisation déclarée",close:"Action clôturée",request_additional_work:"Complément demandé",cancel:"Action annulée"};
   const confirmations={
     create:"Créer cette action réelle dans le nouveau circuit ?",
@@ -129,10 +136,12 @@
       try{const fresh=await service.inspect(row.id);selected=fresh.row;
         if(!fresh.operations.includes(operation))throw Error("Cette commande n’est plus disponible. Actualisez la liste.");
         busy=false;if(!open(verbs[operation],capability,operation))return;selected=fresh.row;
-        const details=group(selected.title);let target=null;
+        const presentation=commandPresentation[operation],context=group("1 · Action concernée","Vérifiez le contexte avant de poursuivre");
+        detailLine(context,"Action",selected.title);detailLine(context,"Projet",selected.projectTitle);detailLine(context,"État",labels[selected.state]||selected.state);detailLine(context,"Destinataire",targetName(selected));
+        const details=group(`2 · ${presentation.title}`,presentation.subtitle);submit.textContent=presentation.submit;let target=null;
         if(operation==="assign")target=destination(details,false);
         const deadline=operation==="assign"?field(details,"Échéance (facultative)","deadline","date"):null;
-        const note=operation!=="assign"?field(details,["cancel","request_additional_work"].includes(operation)?"Motif obligatoire":"Bilan ou précision (facultatif)","note","textarea",["cancel","request_additional_work"].includes(operation)):null;
+        const note=operation!=="assign"?field(details,presentation.note,"note","textarea",["cancel","request_additional_work"].includes(operation)):null;
         if(note)note.maxLength=10000;
         collect=()=>operation==="assign"?service.assignAction(selected.id,{target:target(),deadline:deadline.value||null,expectedRevision:selected.revision}):
           service.execute(selected.id,{type:operation,note:note.value,expectedRevision:selected.revision});
@@ -179,7 +188,7 @@
       if(!shown.length)list.append(node("p",search.value.trim()?"Aucune action ne correspond à votre recherche.":"Aucune action dans cette vue.","circuit-empty"));
       shown.forEach(r=>{const late=isOverdue(r),card=node("article",undefined,`card circuit-card circuit-card--${late?"late":r.state}`),top=node("div",undefined,"circuit-card__top"),project=node("span",r.projectTitle||"Sans projet","circuit-chip"),state=node("span",late?"En retard":labels[r.state]||r.state,`circuit-badge circuit-badge--${late?"late":r.state}`),h=node("h2",r.title);
         top.append(project,state);card.append(top,h);
-        const facts=node("div",undefined,"circuit-card__facts");detailLine(facts,"Destinataire",targetName(r));if(r.deadline)detailLine(facts,"Échéance",formatDate(r.deadline));if(r.performedAt)detailLine(facts,"Réalisation déclarée",`${formatDate(r.performedAt,true)}${r.performedBy?` par ${personName(r.performedBy)}`:""}`);card.append(facts);
+        const facts=node("div",undefined,"circuit-card__facts");detailLine(facts,"Destinataire",targetName(r));if(r.executorId&&!(r.targetKind==="person"&&r.targetId===r.executorId))detailLine(facts,"Exécutant",personName(r.executorId));if(r.deadline)detailLine(facts,"Échéance",formatDate(r.deadline));if(r.performedAt)detailLine(facts,"Réalisation déclarée",`${formatDate(r.performedAt,true)}${r.performedBy?` par ${personName(r.performedBy)}`:""}`);card.append(facts);
         const bar=node("div",undefined,"circuit-controls circuit-card__actions");bar.append(button("Voir la fiche",()=>openDetail(r),"button button--primary"));for(const op of r.operations||[]){const permitted=op==="assign"?allowAssignment:allowLifecycle,b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||!permitted||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
     }
     function showAction(notification){const row=rows.find(item=>item.id===notification.actionId);if(!row){status.textContent="Cette action n’est plus disponible dans votre vue. Actualisez la page.";return;}openDetail(row);}
