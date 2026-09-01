@@ -41,19 +41,20 @@
     const rawDetails=diagnosticDetails(error);
     return [diagnostic?`${message} (${diagnostic})`:message,rawDetails&&`Détails techniques : ${rawDetails}`].filter(Boolean).join("\n");
   }
-  function mount({element,service,catalog,canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente."}){
+  function mount({element,service,catalog={projects:[],people:[],services:[],poles:[]},canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente.",title="Circuit des actions",initialFilter="open",showCreate=true}){
     const doc=element.ownerDocument, win=doc.defaultView;
     let rows=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null;
     const node=(tag,text,cls)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
     const button=(text,fn,cls="button button--secondary")=>{const e=node("button",text,cls);e.type="button";e.addEventListener("click",fn);return e;};
     const option=(select,value,label)=>{const e=node("option",label);e.value=value;select.append(e);};
     element.replaceChildren();
-    const heading=node("header",undefined,"circuit-heading"), title=node("h1","Circuit des actions");
-    const add=button("Nouvelle action",()=>openCreate(),"button button--primary");heading.append(title,add);
+    const heading=node("header",undefined,"circuit-heading"), pageTitle=node("h1",title);
+    const add=button("Nouvelle action",()=>openCreate(),"button button--primary");heading.append(pageTitle);if(showCreate)heading.append(add);
     const notice=node("p",banner,"circuit-notice"),status=node("p","");status.setAttribute("role","status");status.setAttribute("aria-live","polite");
     const toolbar=node("div",undefined,"circuit-toolbar"), search=node("input"), filter=node("select");
     search.type="search";search.placeholder="Rechercher une action";search.setAttribute("aria-label","Rechercher une action");
-    for(const [key,label] of [["open","Actions ouvertes"],["all","Toutes les actions"],["history","Historique"]])option(filter,key,label);
+    for(const [key,label] of [["open","Actions ouvertes"],["creator","Mes demandes en cours"],["review","À valider"],["all","Toutes les actions"],["history","Historique"]])option(filter,key,label);
+    filter.value=["open","creator","review","all","history"].includes(initialFilter)?initialFilter:"open";
     filter.setAttribute("aria-label","Afficher les actions");
     const refresh=button("Actualiser",()=>load());toolbar.append(search,filter,refresh);
     const list=node("section");list.setAttribute("aria-label","Liste des actions");
@@ -113,7 +114,10 @@
     }
     function render(){list.replaceChildren();const shown=rows.filter(r=>{
       const terminal=["closed","cancelled"].includes(r.state);
-      return (filter.value==="all"||(filter.value==="history"?terminal:!terminal))&&`${r.title} ${r.projectTitle}`.toLocaleLowerCase("fr").includes(search.value.toLocaleLowerCase("fr"));});
+      const scope=filter.value==="all"||filter.value==="history"?filter.value==="all"||terminal
+        :filter.value==="review"?Boolean(r.roles?.creator&&r.state==="performed")
+        :filter.value==="creator"?Boolean(r.roles?.creator&&!terminal):!terminal;
+      return scope&&`${r.title} ${r.projectTitle}`.toLocaleLowerCase("fr").includes(search.value.toLocaleLowerCase("fr"));});
       if(!shown.length)list.append(node("p","Aucune action dans cette vue.","circuit-empty"));
       shown.forEach(r=>{const card=node("article",undefined,"card circuit-card"),h=node("h2",r.title),meta=node("p",`${r.projectTitle} · ${labels[r.state]||r.state}`);
         card.append(h,meta);if(r.deadline)card.append(node("p",`Échéance : ${r.deadline}`));
