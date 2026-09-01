@@ -86,7 +86,14 @@
     function resetDialogScroll(){dialog.scrollTop=0;form.scrollTop=0;fields.scrollTop=0;}
     function close(){if(busy)return;dialog.close();form.reset();fields.replaceChildren();selected=null;currentCapability=false;currentOperation=null;showSubmit(true);back.textContent="Retour";resetDialogScroll();opener?.focus();}
     function open(title,capability,operation){if(busy||locked||!canWrite||!capability)return false;currentCapability=true;currentOperation=operation;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent=title;showSubmit(true);submit.textContent="Enregistrer";back.textContent="Retour";disabled();dialog.showModal();resetDialogScroll();return true;}
-    function group(title){const e=node("fieldset");e.append(node("legend",title));fields.append(e);return e;}
+    function group(title,subtitle=""){
+      const e=node("section",undefined,"circuit-form-section"),numbered=/^(\d+)\s*·\s*(.+)$/.exec(title);
+      if(numbered){
+        const header=node("div",undefined,"circuit-form-section__heading"),number=node("p",numbered[1]),copy=node("div"),heading=node("h3",numbered[2]);
+        copy.append(heading);if(subtitle)copy.append(node("span",subtitle));header.append(number,copy);e.append(header);
+      }else e.append(node("h3",title,"circuit-form-section__title"));
+      fields.append(e);return e;
+    }
     function field(parent,label,name,type="text",required=false){const wrap=node("label"),control=node(type==="select"?"select":type==="textarea"?"textarea":"input");control.name=name;if(control.tagName==="INPUT")control.type=type;control.required=required;wrap.append(node("span",label),control);parent.append(wrap);return control;}
     function destination(parent,withKind){
       const kind=withKind?field(parent,"Destinataire","kind","select"):null;
@@ -104,12 +111,12 @@
       return ()=>({kind:kind?.value||"person",id:Number(target.value),...(context.value&&!(kind&&kind.value!=="person")?{serviceId:Number(context.value)}:{})});
     }
     let collect=null;
-    function openCreate(){if(!open("Nouvelle action",allowCreate,"create"))return;selected=null;
-      const subject=group("1 · Projet et demande"),project=field(subject,"Projet","project","select",true);
+    function openCreate(){if(!open("Nouvelle action",allowCreate,"create"))return;selected=null;submit.textContent="Créer l’action";
+      const subject=group("1 · Projet et demande","Contexte et finalité de l’action"),project=field(subject,"Projet","project","select",true);
       option(project,"","Choisir un projet");catalog.projects.forEach(p=>option(project,p.id,p.name));field(subject,"Intitulé","title","text",true).maxLength=500;
-      const recipient=group("2 · Attribution"),getTarget=destination(recipient,true);
-      const timing=group("3 · Calendrier"),date=field(timing,"Échéance (facultative)","deadline","date");
-      const associates=group("4 · Agents associés (facultatif)"),items=[];
+      const recipient=group("2 · Attribution","Destinataire et service concerné"),getTarget=destination(recipient,true);
+      const timing=group("3 · Calendrier","Échéance prévisionnelle"),date=field(timing,"Échéance (facultative)","deadline","date");
+      const associates=group("4 · Agents associés","Participants complémentaires facultatifs"),items=[];
       catalog.people.filter(p=>p.kind==="agent").forEach(p=>{const check=field(associates,p.name,`associate-${p.id}`,"checkbox");const services=p.serviceIds||[];let selector=null;
         if(services.length>1){selector=field(associates,`Service pour ${p.name}`,`associate-service-${p.id}`,"select");option(selector,"","Choisir le service");services.forEach(id=>{const s=catalog.services.find(s=>s.id===id);if(s)option(selector,id,s.name);});selector.disabled=true;check.addEventListener("change",()=>{selector.disabled=!check.checked;selector.required=check.checked;});}
         items.push({p,check,selector});});
