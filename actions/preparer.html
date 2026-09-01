@@ -7,8 +7,12 @@
   <link rel="stylesheet" href="preparer.css">
   <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script>
   <script src="../commun/test-mode.js" defer></script>
+  <script src="../commun/action-notification-permissions.js" defer></script>
   <script src="../commun/action-grist-schema.js" defer></script>
-  <script src="../commun/action-grist-setup.js" defer></script><script src="preparer.js" defer></script>
+  <script src="../commun/action-grist-setup.js" defer></script>
+  <script src="../commun/action-source-permissions.js" defer></script>
+  <script src="../commun/action-source-schema-lot.js" defer></script>
+  <script src="../commun/action-source-schema-setup.js" defer></script><script src="preparer.js" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -24,5 +28,14 @@
     <label><input id="backup" type="checkbox"> J’ai téléchargé une sauvegarde actuelle du document.</label>
     <button class="button button--primary" id="install" type="button" disabled>Créer les tables protégées</button>
     <p>Ne modifiez pas la structure ou les permissions dans un autre onglet pendant cette opération. En cas de résultat incertain, faites contrôler le document avant de recommencer.</p>
+  </section>
+  <section class="card"><h2>3 · Installer le lot 1 — ACTIONS</h2>
+    <p>Ce lot ajoute uniquement cinq colonnes techniques. Il ne modifie aucune ligne existante et maintient les 17 anciennes actions à la révision 0.</p>
+    <button class="button button--secondary" id="source-check" type="button">Vérifier le lot ACTIONS</button>
+    <p id="source-status" role="status" aria-live="polite">Vérification du lot requise.</p>
+    <ul id="source-findings"></ul><ul id="source-columns"></ul>
+    <label><input id="source-backup" type="checkbox"> Je confirme utiliser la sauvegarde actuelle contrôlée.</label>
+    <button class="button button--primary" id="source-install" type="button" disabled>Ajouter les 5 colonnes ACTIONS</button>
+    <p>Une seule écriture groupée sera envoyée, puis les cinq colonnes seront relues. En cas de réponse incertaine, ne cliquez pas une seconde fois.</p>
   </section>
 </main></body></html>
