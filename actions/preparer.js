@@ -12,6 +12,7 @@
   let circuitPermissionService, circuitPermissionResult = null, circuitPermissionBusy = false;
   let attributionPermissionService, attributionPermissionResult = null, attributionPermissionBusy = false;
   let eventPermissionService, eventPermissionResult = null, eventPermissionBusy = false;
+  let notificationPermissionService, notificationPermissionResult = null, notificationPermissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -47,6 +48,9 @@
     $("event-permission-check").disabled = eventPermissionBusy;
     $("event-permission-confirm").disabled = eventPermissionBusy;
     $("event-permission-install").disabled = eventPermissionBusy || !$("event-permission-confirm").checked || !eventPermissionResult?.readyToInstall || eventPermissionResult.alreadyInstalled || eventPermissionResult.outcomeUncertain;
+    $("notification-permission-check").disabled = notificationPermissionBusy;
+    $("notification-permission-confirm").disabled = notificationPermissionBusy;
+    $("notification-permission-install").disabled = notificationPermissionBusy || !$("notification-permission-confirm").checked || !notificationPermissionResult?.readyToInstall || notificationPermissionResult.alreadyInstalled || notificationPermissionResult.outcomeUncertain;
   }
   function renderProject(value) {
     projectResult = value;
@@ -367,6 +371,32 @@
     if(eventPermissionBusy||$("event-permission-install").disabled||!eventPermissionService)return;
     if(!window.confirm("Installer les 9 règles finales sur ACTIONS_EVENEMENTS uniquement ?"))return;
     executeEventPermission(()=>eventPermissionService.install({confirmed:true}));
+  };
+  $("notification-permission-confirm").onchange=controls;
+  async function executeNotificationPermission(operation){
+    if(notificationPermissionBusy)return;
+    notificationPermissionBusy=true;controls();$("notification-permission-status").textContent="Contrôle du dernier lot de permissions du circuit en cours…";
+    try{
+      const value=await operation();notificationPermissionResult=value;
+      $("notification-permission-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      $("notification-permission-status").textContent=value.outcomeUncertain?"Résultat incertain : ne relancez pas l’installation."
+        :value.alreadyInstalled?"Circuit 4/4 confirmé : les 5 règles ACTIONS_NOTIFICATIONS sont présentes et conformes. La protection du circuit est terminée."
+        :value.readyToInstall?"Circuit 4/4 prêt : 5 règles ordonnées, confidentialité existante reconnue et lots précédents confirmés."
+        :"Circuit 4/4 bloqué : examinez les écarts affichés.";
+    }catch(error){notificationPermissionResult=null;$("notification-permission-findings").replaceChildren();$("notification-permission-status").textContent=error.message;}
+    finally{notificationPermissionBusy=false;controls();}
+  }
+  $("notification-permission-check").onclick=()=>executeNotificationPermission(async()=>{
+    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({requiredAccess:"full"});
+    if(!window.PilotageActionPermissionLotSetup?.create)throw Error("Le moteur sécurisé des permissions manque dans la publication.");
+    notificationPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionNotificationPermissionLot});
+    return notificationPermissionService.inspect();
+  });
+  $("notification-permission-install").onclick=()=>{
+    if(notificationPermissionBusy||$("notification-permission-install").disabled||!notificationPermissionService)return;
+    if(!window.confirm("Installer les 5 règles finales sur ACTIONS_NOTIFICATIONS uniquement ?"))return;
+    executeNotificationPermission(()=>notificationPermissionService.install({confirmed:true}));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

@@ -25,9 +25,10 @@
   <script src="../commun/action-circuit-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-attribution-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-event-permission-lot.js?v=1" defer></script>
-  <script src="../commun/action-permission-audit.js?v=5" defer></script>
+  <script src="../commun/action-notification-permission-lot.js?v=1" defer></script>
+  <script src="../commun/action-permission-audit.js?v=6" defer></script>
   <script src="../commun/action-permission-audit-service.js?v=2" defer></script>
-  <script src="../commun/action-permission-lot-setup.js?v=2" defer></script><script src="preparer.js?v=14" defer></script>
+  <script src="../commun/action-permission-lot-setup.js?v=2" defer></script><script src="preparer.js?v=15" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -140,5 +141,14 @@
     <label><input id="event-permission-confirm" type="checkbox"> Je confirme poursuivre depuis le lot CIRCUIT 2/4 contrôlé.</label>
     <button class="button button--primary" id="event-permission-install" type="button" disabled>Installer les 9 règles ACTIONS_EVENEMENTS</button>
     <p>Le journal reste immuable après création. Les lots CIRCUIT et ATTRIBUTIONS sont relus avant l’unique écriture groupée.</p>
+  </section>
+  <section class="card"><h2>14 · Permissions 2/4 — circuit 4/4</h2>
+    <p>Dernier petit lot : créer les notifications vérifiées, permettre au seul destinataire de les lire et de gérer leur état de lecture, puis refuser tout autre accès.</p>
+    <button class="button button--secondary" id="notification-permission-check" type="button">Vérifier les 5 règles NOTIFICATIONS</button>
+    <p id="notification-permission-status" role="status" aria-live="polite">Vérification requise après confirmation du lot ÉVÉNEMENTS.</p>
+    <ul id="notification-permission-findings"></ul>
+    <label><input id="notification-permission-confirm" type="checkbox"> Je confirme poursuivre depuis le lot CIRCUIT 3/4 contrôlé.</label>
+    <button class="button button--primary" id="notification-permission-install" type="button" disabled>Installer les 5 règles ACTIONS_NOTIFICATIONS</button>
+    <p>Les règles de confidentialité déjà présentes sont reconnues et conservées dans la politique finale. Aucun accès général au contenu des notifications n’est accordé.</p>
   </section>
 </main></body></html>
