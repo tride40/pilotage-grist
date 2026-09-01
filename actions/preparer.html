@@ -23,8 +23,10 @@
   <script src="../commun/action-table-schema-setup.js?v=1" defer></script>
   <script src="../commun/action-source-protection.js" defer></script>
   <script src="../commun/action-circuit-permission-lot.js?v=1" defer></script>
-  <script src="../commun/action-permission-audit.js?v=3" defer></script>
-  <script src="../commun/action-permission-audit-service.js?v=2" defer></script><script src="preparer.js?v=11" defer></script>
+  <script src="../commun/action-attribution-permission-lot.js?v=1" defer></script>
+  <script src="../commun/action-permission-audit.js?v=4" defer></script>
+  <script src="../commun/action-permission-audit-service.js?v=2" defer></script>
+  <script src="../commun/action-permission-lot-setup.js?v=2" defer></script><script src="preparer.js?v=13" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -119,5 +121,14 @@
     <label><input id="circuit-permission-confirm" type="checkbox"> Je confirme que le contrôle 1/4 ci-dessus est conforme.</label>
     <button class="button button--primary" id="circuit-permission-install" type="button" disabled>Installer les 9 règles ACTIONS_CIRCUIT</button>
     <p>Une seule écriture groupée sera envoyée puis toutes les métadonnées seront relues. En cas de résultat incertain, ne cliquez pas une seconde fois.</p>
+  </section>
+  <section class="card"><h2>12 · Permissions 2/4 — circuit 2/4</h2>
+    <p>Deuxième petit lot : autoriser uniquement la création et la mise à jour vérifiées des niveaux d’attribution, ainsi que leur lecture par les participants.</p>
+    <button class="button button--secondary" id="attribution-permission-check" type="button">Vérifier les 5 règles ATTRIBUTIONS</button>
+    <p id="attribution-permission-status" role="status" aria-live="polite">Vérification requise après confirmation du lot ACTIONS_CIRCUIT.</p>
+    <ul id="attribution-permission-findings"></ul>
+    <label><input id="attribution-permission-confirm" type="checkbox"> Je confirme poursuivre depuis le lot CIRCUIT 1/4 contrôlé.</label>
+    <button class="button button--primary" id="attribution-permission-install" type="button" disabled>Installer les 5 règles ACTIONS_ATTRIBUTIONS</button>
+    <p>Les règles ACTIONS_CIRCUIT sont relues avant l’écriture. Toutes les autres ressources doivent rester strictement inchangées.</p>
   </section>
 </main></body></html>

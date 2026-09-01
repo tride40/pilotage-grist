@@ -10,25 +10,7 @@
   let projectService, projectResult = null, projectBusy = false;
   let permissionService, permissionBusy = false;
   let circuitPermissionService, circuitPermissionResult = null, circuitPermissionBusy = false;
-  function createCircuitPermissionService({grist,mode,audit,lot}){
-    const documentId="f8iwcexDATAwBKsaG6gZRs";
-    if(!audit?.inspect||!lot?.inspect||!lot?.tableId)throw Error("Le lot CIRCUIT publié est incomplet. Rechargez la publication complète.");
-    let serviceBusy=false,preview=null,outcomeUncertain=false;
-    const rows=raw=>{
-      if(!raw||!Array.isArray(raw.id))throw Error("Lecture des métadonnées impossible.");
-      const columns=Object.entries(raw).filter(([,values])=>Array.isArray(values));
-      if(columns.some(([,values])=>values.length!==raw.id.length))throw Error("Métadonnées tronquées.");
-      return raw.id.map((_,index)=>Object.fromEntries(columns.map(([name,values])=>[name,values[index]])));
-    };
-    async function guard(){if(!mode||mode.isReadOnly())throw Error("Installation interdite en mode test.");mode.assertWritable();if(await grist.docApi.getDocName()!==documentId)throw Error("Document de base non autorisé.");}
-    async function snapshot(){await guard();const names=["_grist_Tables","_grist_Tables_column","_grist_ACLResources","_grist_ACLRules"],values=await Promise.all(names.map(async name=>rows(await grist.docApi.fetchTable(name))));await guard();return {documentId,tables:values[0],columns:values[1],resources:values[2],rules:values[3]};}
-    const report=result=>({tableId:lot.tableId,findings:[...result.findings],readyToInstall:result.readyToInstall,alreadyInstalled:result.alreadyInstalled,outcomeUncertain});
-    const outside=value=>{const ids=new Set(value.resources.filter(resource=>resource.tableId===lot.tableId).map(resource=>resource.id));return JSON.stringify({tables:value.tables,columns:value.columns,resources:value.resources,rules:value.rules.filter(rule=>!ids.has(rule.resource))});};
-    return Object.freeze({
-      async inspect(){if(serviceBusy)throw Error("Installation déjà en cours.");preview=null;const current=await snapshot(),result=lot.inspect(current);if(result.alreadyInstalled)return report(result);const checkpoint=audit.inspect(current);if(!checkpoint.readyForPermissionReview)return report({...result,readyToInstall:false,findings:[...checkpoint.findings,...result.findings]});if(result.readyToInstall)preview=JSON.stringify(current);return report(result);},
-      async install({confirmed=false}={}){if(serviceBusy)throw Error("Installation déjà en cours.");if(outcomeUncertain)throw Error("Résultat précédent incertain : contrôler le document avant toute nouvelle tentative.");if(!confirmed||!preview)throw Error(`Vérifier puis confirmer explicitement les règles ${lot.tableId}.`);serviceBusy=true;try{const current=await snapshot();if(JSON.stringify(current)!==preview){preview=null;throw Error("La structure ou les permissions ont changé : refaire la vérification.");}if(!audit.inspect(current).readyForPermissionReview)throw Error("Le contrôle préalable des permissions n’est plus conforme.");const result=lot.inspect(current);if(!result.readyToInstall||!result.actions.length)throw Error(`Lot ${lot.tableId} bloqué.`);await guard();preview=null;outcomeUncertain=true;await grist.docApi.applyUserActions(result.actions);const after=await snapshot(),verified=lot.inspect(after);if(!verified.alreadyInstalled||outside(current)!==outside(after))throw Error("La relecture ne confirme pas une modification isolée de la table attendue.");outcomeUncertain=false;return report(verified);}catch(error){if(outcomeUncertain)throw Error(`Ne pas relancer automatiquement. ${error.message}`);throw error;}finally{serviceBusy=false;}}
-    });
-  }
+  let attributionPermissionService, attributionPermissionResult = null, attributionPermissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -58,6 +40,9 @@
     $("circuit-permission-check").disabled = circuitPermissionBusy;
     $("circuit-permission-confirm").disabled = circuitPermissionBusy;
     $("circuit-permission-install").disabled = circuitPermissionBusy || !$("circuit-permission-confirm").checked || !circuitPermissionResult?.readyToInstall || circuitPermissionResult.alreadyInstalled || circuitPermissionResult.outcomeUncertain;
+    $("attribution-permission-check").disabled = attributionPermissionBusy;
+    $("attribution-permission-confirm").disabled = attributionPermissionBusy;
+    $("attribution-permission-install").disabled = attributionPermissionBusy || !$("attribution-permission-confirm").checked || !attributionPermissionResult?.readyToInstall || attributionPermissionResult.alreadyInstalled || attributionPermissionResult.outcomeUncertain;
   }
   function renderProject(value) {
     projectResult = value;
@@ -318,13 +303,40 @@
   $("circuit-permission-check").onclick=()=>executeCircuitPermission(async()=>{
     if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({requiredAccess:"full"});
-    circuitPermissionService??=createCircuitPermissionService({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionCircuitPermissionLot});
+    if(!window.PilotageActionPermissionLotSetup?.create)throw Error("Le moteur sécurisé des permissions manque dans la publication.");
+    circuitPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionCircuitPermissionLot});
     return circuitPermissionService.inspect();
   });
   $("circuit-permission-install").onclick=()=>{
     if(circuitPermissionBusy||$("circuit-permission-install").disabled||!circuitPermissionService)return;
     if(!window.confirm("Installer les 9 règles finales sur ACTIONS_CIRCUIT uniquement ?"))return;
     executeCircuitPermission(()=>circuitPermissionService.install({confirmed:true}));
+  };
+  $("attribution-permission-confirm").onchange=controls;
+  async function executeAttributionPermission(operation){
+    if(attributionPermissionBusy)return;
+    attributionPermissionBusy=true;controls();$("attribution-permission-status").textContent="Contrôle du deuxième lot de permissions en cours…";
+    try{
+      const value=await operation();attributionPermissionResult=value;
+      $("attribution-permission-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      $("attribution-permission-status").textContent=value.outcomeUncertain?"Résultat incertain : ne relancez pas l’installation."
+        :value.alreadyInstalled?"Circuit 2/4 confirmé : les 5 règles ACTIONS_ATTRIBUTIONS sont présentes et conformes."
+        :value.readyToInstall?"Circuit 2/4 prêt : 5 règles ordonnées, lot ACTIONS_CIRCUIT confirmé et autres ressources préservées."
+        :"Circuit 2/4 bloqué : examinez les écarts affichés.";
+    }catch(error){attributionPermissionResult=null;$("attribution-permission-findings").replaceChildren();$("attribution-permission-status").textContent=error.message;}
+    finally{attributionPermissionBusy=false;controls();}
+  }
+  $("attribution-permission-check").onclick=()=>executeAttributionPermission(async()=>{
+    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({requiredAccess:"full"});
+    if(!window.PilotageActionPermissionLotSetup?.create)throw Error("Le moteur sécurisé des permissions manque dans la publication.");
+    attributionPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionAttributionPermissionLot});
+    return attributionPermissionService.inspect();
+  });
+  $("attribution-permission-install").onclick=()=>{
+    if(attributionPermissionBusy||$("attribution-permission-install").disabled||!attributionPermissionService)return;
+    if(!window.confirm("Installer les 5 règles finales sur ACTIONS_ATTRIBUTIONS uniquement ?"))return;
+    executeAttributionPermission(()=>attributionPermissionService.install({confirmed:true}));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
