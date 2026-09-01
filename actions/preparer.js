@@ -11,6 +11,7 @@
   let permissionService, permissionBusy = false;
   let circuitPermissionService, circuitPermissionResult = null, circuitPermissionBusy = false;
   let attributionPermissionService, attributionPermissionResult = null, attributionPermissionBusy = false;
+  let eventPermissionService, eventPermissionResult = null, eventPermissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -43,6 +44,9 @@
     $("attribution-permission-check").disabled = attributionPermissionBusy;
     $("attribution-permission-confirm").disabled = attributionPermissionBusy;
     $("attribution-permission-install").disabled = attributionPermissionBusy || !$("attribution-permission-confirm").checked || !attributionPermissionResult?.readyToInstall || attributionPermissionResult.alreadyInstalled || attributionPermissionResult.outcomeUncertain;
+    $("event-permission-check").disabled = eventPermissionBusy;
+    $("event-permission-confirm").disabled = eventPermissionBusy;
+    $("event-permission-install").disabled = eventPermissionBusy || !$("event-permission-confirm").checked || !eventPermissionResult?.readyToInstall || eventPermissionResult.alreadyInstalled || eventPermissionResult.outcomeUncertain;
   }
   function renderProject(value) {
     projectResult = value;
@@ -337,6 +341,32 @@
     if(attributionPermissionBusy||$("attribution-permission-install").disabled||!attributionPermissionService)return;
     if(!window.confirm("Installer les 5 règles finales sur ACTIONS_ATTRIBUTIONS uniquement ?"))return;
     executeAttributionPermission(()=>attributionPermissionService.install({confirmed:true}));
+  };
+  $("event-permission-confirm").onchange=controls;
+  async function executeEventPermission(operation){
+    if(eventPermissionBusy)return;
+    eventPermissionBusy=true;controls();$("event-permission-status").textContent="Contrôle du troisième lot de permissions en cours…";
+    try{
+      const value=await operation();eventPermissionResult=value;
+      $("event-permission-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      $("event-permission-status").textContent=value.outcomeUncertain?"Résultat incertain : ne relancez pas l’installation."
+        :value.alreadyInstalled?"Circuit 3/4 confirmé : les 9 règles ACTIONS_EVENEMENTS sont présentes et conformes."
+        :value.readyToInstall?"Circuit 3/4 prêt : 9 règles ordonnées, lots précédents confirmés et autres ressources préservées."
+        :"Circuit 3/4 bloqué : examinez les écarts affichés.";
+    }catch(error){eventPermissionResult=null;$("event-permission-findings").replaceChildren();$("event-permission-status").textContent=error.message;}
+    finally{eventPermissionBusy=false;controls();}
+  }
+  $("event-permission-check").onclick=()=>executeEventPermission(async()=>{
+    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({requiredAccess:"full"});
+    if(!window.PilotageActionPermissionLotSetup?.create)throw Error("Le moteur sécurisé des permissions manque dans la publication.");
+    eventPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionEventPermissionLot});
+    return eventPermissionService.inspect();
+  });
+  $("event-permission-install").onclick=()=>{
+    if(eventPermissionBusy||$("event-permission-install").disabled||!eventPermissionService)return;
+    if(!window.confirm("Installer les 9 règles finales sur ACTIONS_EVENEMENTS uniquement ?"))return;
+    executeEventPermission(()=>eventPermissionService.install({confirmed:true}));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

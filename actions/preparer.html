@@ -24,9 +24,10 @@
   <script src="../commun/action-source-protection.js" defer></script>
   <script src="../commun/action-circuit-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-attribution-permission-lot.js?v=1" defer></script>
-  <script src="../commun/action-permission-audit.js?v=4" defer></script>
+  <script src="../commun/action-event-permission-lot.js?v=1" defer></script>
+  <script src="../commun/action-permission-audit.js?v=5" defer></script>
   <script src="../commun/action-permission-audit-service.js?v=2" defer></script>
-  <script src="../commun/action-permission-lot-setup.js?v=2" defer></script><script src="preparer.js?v=13" defer></script>
+  <script src="../commun/action-permission-lot-setup.js?v=2" defer></script><script src="preparer.js?v=14" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -130,5 +131,14 @@
     <label><input id="attribution-permission-confirm" type="checkbox"> Je confirme poursuivre depuis le lot CIRCUIT 1/4 contrôlé.</label>
     <button class="button button--primary" id="attribution-permission-install" type="button" disabled>Installer les 5 règles ACTIONS_ATTRIBUTIONS</button>
     <p>Les règles ACTIONS_CIRCUIT sont relues avant l’écriture. Toutes les autres ressources doivent rester strictement inchangées.</p>
+  </section>
+  <section class="card"><h2>13 · Permissions 2/4 — circuit 3/4</h2>
+    <p>Troisième petit lot : autoriser les six créations d’événements vérifiées et leur lecture par les participants. Aucune modification ou suppression du journal n’est accordée.</p>
+    <button class="button button--secondary" id="event-permission-check" type="button">Vérifier les 9 règles ÉVÉNEMENTS</button>
+    <p id="event-permission-status" role="status" aria-live="polite">Vérification requise après confirmation du lot ATTRIBUTIONS.</p>
+    <ul id="event-permission-findings"></ul>
+    <label><input id="event-permission-confirm" type="checkbox"> Je confirme poursuivre depuis le lot CIRCUIT 2/4 contrôlé.</label>
+    <button class="button button--primary" id="event-permission-install" type="button" disabled>Installer les 9 règles ACTIONS_EVENEMENTS</button>
+    <p>Le journal reste immuable après création. Les lots CIRCUIT et ATTRIBUTIONS sont relus avant l’unique écriture groupée.</p>
   </section>
 </main></body></html>
