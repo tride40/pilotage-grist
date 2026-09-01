@@ -36,7 +36,13 @@
   <script src="../commun/action-final-live-audit.js?v=1" defer></script>
   <script src="../commun/current-user.js?v=4" defer></script>
   <script src="../commun/action-real-data-preflight.js?v=1" defer></script>
-  <script src="preparer.js?v=22" defer></script>
+  <script src="../commun/action-deadlines.js?v=1" defer></script>
+  <script src="../commun/action-assignment.js?v=1" defer></script>
+  <script src="../commun/action-directory.js?v=1" defer></script>
+  <script src="../commun/action-associate-contexts.js?v=1" defer></script>
+  <script src="../commun/action-grist-assignment.js?v=1" defer></script>
+  <script src="../commun/action-creation-live-audit.js?v=1" defer></script>
+  <script src="preparer.js?v=23" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -204,5 +210,12 @@
     <p id="real-data-status" role="status" aria-live="polite">Contrôle requis avant la première création d’action dans le nouveau circuit.</p>
     <ul id="real-data-findings"></ul><ul id="real-data-confirmed"></ul><ul id="real-data-counts"></ul>
     <p>Pour reconnaître votre compte, une ligne technique temporaire est créée dans CONTEXTE_UTILISATEUR puis supprimée automatiquement. Aucune action, attribution, notification ou autre ligne métier n’est créée ou modifiée.</p>
+  </section>
+  <section class="card"><h2>21 · Données réelles — création et attribution 2/4</h2>
+    <p>Prévisualiser avec les projets et l’organisation réels tous les chemins de création autorisés pour votre rôle : agent direct, service ou pôle. Les opérations calculées restent uniquement en mémoire.</p>
+    <button class="button button--secondary" id="creation-preview-check" type="button">Prévisualiser création et attribution</button>
+    <p id="creation-preview-status" role="status" aria-live="polite">Prévisualisation requise avant d’activer le formulaire du nouveau circuit.</p>
+    <ul id="creation-preview-findings"></ul><ul id="creation-preview-confirmed"></ul><ul id="creation-preview-counts"></ul>
+    <p>Aucune action réelle n’est créée par ce contrôle. Les règles métier peuvent refuser certains chemins selon vos responsabilités dans chaque projet.</p>
   </section>
 </main></body></html>

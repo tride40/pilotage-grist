@@ -19,6 +19,7 @@
   let authorityPermissionService, authorityPermissionResult = null, authorityPermissionBusy = false;
   let finalPermissionService, finalPermissionBusy = false;
   let realDataService, realDataBusy = false;
+  let creationPreviewService, creationPreviewBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -67,6 +68,7 @@
     $("authority-permission-install").disabled = authorityPermissionBusy || !$("authority-permission-confirm").checked || !authorityPermissionResult?.readyToInstall || authorityPermissionResult.alreadyInstalled || authorityPermissionResult.outcomeUncertain;
     $("final-permission-check").disabled = finalPermissionBusy;
     $("real-data-check").disabled = realDataBusy;
+    $("creation-preview-check").disabled = creationPreviewBusy;
   }
   function renderProject(value) {
     projectResult = value;
@@ -495,6 +497,21 @@
       $("real-data-status").textContent=value.readyForRealData?"Données réelles 1/4 conformes : identité administrative reconnue, lectures autorisées et nouveau circuit encore vide.":"Données réelles 1/4 bloquées : examinez les écarts affichés avant toute création.";
     }catch(error){$("real-data-status").textContent=error.message;}
     finally{realDataBusy=false;controls();}
+  };
+  $("creation-preview-check").onclick=async()=>{
+    if(creationPreviewBusy)return;creationPreviewBusy=true;controls();$("creation-preview-status").textContent="Prévisualisation des chemins réels en cours…";$("creation-preview-findings").replaceChildren();$("creation-preview-confirmed").replaceChildren();$("creation-preview-counts").replaceChildren();
+    try{
+      if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+      await window.grist.ready({requiredAccess:"full"});
+      if(!window.PilotageActionCreationLiveAudit?.create||!window.PilotageCurrentUser?.identify)throw Error("Le prévisualiseur sécurisé de création manque dans la publication.");
+      creationPreviewService??=window.PilotageActionCreationLiveAudit.create({grist:window.grist,mode:window.PilotageTestMode,identify:options=>window.PilotageCurrentUser.identify(options)});
+      const value=await creationPreviewService.inspect();
+      const list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      list("creation-preview-findings",value.findings);list("creation-preview-confirmed",value.confirmed);
+      list("creation-preview-counts",[`Projets entièrement pilotés : ${value.counts.projects}`,`Scénarios autorisés pour votre rôle : ${value.counts.plans}`,`Vers un agent : ${value.counts.direct}`,`Vers un service : ${value.counts.services}`,`Vers un pôle : ${value.counts.poles}`]);
+      $("creation-preview-status").textContent=value.readyForCreation?"Données réelles 2/4 conformes : création et attribution initiale entièrement calculables, sans aucun enregistrement.":"Données réelles 2/4 bloquées : examinez les écarts de rôle ou d’organisation affichés.";
+    }catch(error){$("creation-preview-status").textContent=error.message;}
+    finally{creationPreviewBusy=false;controls();}
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
