@@ -56,12 +56,22 @@ Prévoir des composants cohérents pour :
 
 ## Formulaires d’ajout et de modification
 
+- Le formulaire « Nouveau projet » du Tableau de bord constitue le modèle visuel de référence pour tous les formulaires de création et de modification de l’application.
+- Afficher la fenêtre sur un fond assombri, dans un panneau blanc largement arrondi, centré sur ordinateur et occupant l’écran sur mobile.
+- Placer dans l’en-tête un surtitre métier en petites capitales, un titre explicite et un bouton de fermeture rond violet clair.
 - Organiser les formulaires longs en catégories visuelles clairement nommées et ordonnées.
+- Présenter chaque catégorie dans une carte blanche bordée et arrondie, avec un numéro dans une pastille violette, un titre court et une phrase d’aide.
+- Numéroter les catégories selon l’ordre réel de saisie. Les sections conditionnelles doivent être intégrées à une catégorie stable ou renumérotées lorsqu’elles apparaissent.
 - Chaque catégorie regroupe des champs qui appartiennent au même sujet métier : informations générales, classification, pilotage, calendrier, destinataires, etc.
 - Accompagner si utile le titre de catégorie d’une courte explication, sans alourdir la lecture.
 - Conserver ensemble les champs formant une même information, par exemple mois et année, trimestre et année, agent et élu pilotes.
 - Éviter les longues suites de champs sans séparation visuelle ainsi que les légendes qui chevauchent les bordures.
+- Utiliser un fond bleu très clair pour les sous-groupes, les listes de choix et les informations complémentaires.
+- Conserver les libellés au-dessus des champs, signaler clairement les champs obligatoires et afficher les erreurs près du formulaire sans effacer les valeurs saisies.
+- Fixer la barre d’actions en bas de la fenêtre : action secondaire à gauche et action principale violette à droite. Le libellé principal doit décrire l’effet réel, par exemple « Créer le projet », « Créer l’action » ou « Enregistrer l’interlocuteur ».
+- Le contenu central est la seule zone défilante : l’en-tête, le bouton de fermeture et la barre d’actions restent toujours visibles.
 - Sur mobile, empiler les groupes et les champs sans perdre leur ordre logique ni tronquer les valeurs usuelles telles que « Non renseigné ».
+- Toute nouvelle fenêtre de saisie doit reprendre ce gabarit avant d’introduire un style spécifique au métier.
 
 ## Grist
 
