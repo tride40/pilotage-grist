@@ -21,6 +21,7 @@
   let realDataService, realDataBusy = false;
   let creationPreviewService, creationPreviewBusy = false;
   let lifecyclePreviewService, lifecyclePreviewBusy = false;
+  let safetyPreviewService, safetyPreviewBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -71,6 +72,7 @@
     $("real-data-check").disabled = realDataBusy;
     $("creation-preview-check").disabled = creationPreviewBusy;
     $("lifecycle-preview-check").disabled = lifecyclePreviewBusy;
+    $("safety-preview-check").disabled = safetyPreviewBusy;
   }
   function renderProject(value) {
     projectResult = value;
@@ -528,6 +530,20 @@
       $("lifecycle-preview-status").textContent=value.readyForLifecycle?"Données réelles 3/4 conformes : le cycle complet et ses rôles ont été répétés sans aucun enregistrement.":"Données réelles 3/4 bloquées : examinez l’écart affiché avant toute activation.";
     }catch(error){$("lifecycle-preview-status").textContent=error.message;}
     finally{lifecyclePreviewBusy=false;controls();}
+  };
+  $("safety-preview-check").onclick=async()=>{
+    if(safetyPreviewBusy)return;safetyPreviewBusy=true;controls();$("safety-preview-status").textContent="Contrôle des échéances et notifications en cours…";$("safety-preview-findings").replaceChildren();$("safety-preview-confirmed").replaceChildren();$("safety-preview-counts").replaceChildren();
+    try{
+      if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+      await window.grist.ready({requiredAccess:"full"});
+      if(!window.PilotageActionSafetyLiveAudit?.create||!window.PilotageCurrentUser?.identify)throw Error("Le dernier contrôle sécurisé du circuit manque dans la publication.");
+      safetyPreviewService??=window.PilotageActionSafetyLiveAudit.create({grist:window.grist,mode:window.PilotageTestMode,identify:options=>window.PilotageCurrentUser.identify(options)});
+      const value=await safetyPreviewService.inspect(),list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      list("safety-preview-findings",value.findings);list("safety-preview-confirmed",value.confirmed);
+      list("safety-preview-counts",[`Niveaux d’échéance contrôlés : ${value.counts.deadlineLevels}`,`Notifications minimales calculées : ${value.counts.notifications}`,`Formules de confidentialité : ${value.counts.helperColumns}`,`Second envoi bloqué après incertitude : ${value.counts.retriesBlocked}`]);
+      $("safety-preview-status").textContent=value.readyForSafety?"Données réelles 4/4 conformes : échéances, notifications et résultat incertain sont sécurisés. Le raccordement aux données réelles est terminé.":"Données réelles 4/4 bloquées : examinez l’écart affiché avant de créer les pages fonctionnelles.";
+    }catch(error){$("safety-preview-status").textContent=error.message;}
+    finally{safetyPreviewBusy=false;controls();}
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

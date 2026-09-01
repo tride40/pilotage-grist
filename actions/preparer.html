@@ -44,7 +44,10 @@
   <script src="../commun/action-grist-assignment.js?v=1" defer></script>
   <script src="../commun/action-creation-live-audit.js?v=1" defer></script>
   <script src="../commun/action-lifecycle-live-audit.js?v=1" defer></script>
-  <script src="preparer.js?v=24" defer></script>
+  <script src="../commun/action-notification-integrity.js?v=1" defer></script>
+  <script src="../commun/action-grist-lifecycle.js?v=2" defer></script>
+  <script src="../commun/action-safety-live-audit.js?v=1" defer></script>
+  <script src="preparer.js?v=25" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -226,5 +229,12 @@
     <p id="lifecycle-preview-status" role="status" aria-live="polite">Répétition requise avant le contrôle des échéances et notifications.</p>
     <ul id="lifecycle-preview-findings"></ul><ul id="lifecycle-preview-confirmed"></ul><ul id="lifecycle-preview-counts"></ul>
     <p>Les rôles sont calculés depuis l’organisation réelle, mais chaque transition reste une simulation locale. Aucun journal, état ou notification n’est enregistré.</p>
+  </section>
+  <section class="card"><h2>23 · Données réelles — sécurité opérationnelle 4/4</h2>
+    <p>Dernière répétition avant les pages fonctionnelles : limites d’échéance entre créateur et responsable, notifications minimales et verrouillage après une réponse réseau incertaine.</p>
+    <button class="button button--secondary" id="safety-preview-check" type="button">Contrôler échéances et notifications</button>
+    <p id="safety-preview-status" role="status" aria-live="polite">Contrôle requis pour terminer le raccordement aux données réelles.</p>
+    <ul id="safety-preview-findings"></ul><ul id="safety-preview-confirmed"></ul><ul id="safety-preview-counts"></ul>
+    <p>Ce contrôle utilise un parcours service ou pôle calculé depuis l’organisation réelle. Il ne transmet aucune commande et ne provoque volontairement aucune erreur réseau.</p>
   </section>
 </main></body></html>
