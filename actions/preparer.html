@@ -19,7 +19,8 @@
   <script src="../commun/action-event-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-notification-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-account-schema-lot.js?v=1" defer></script>
-  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=6" defer></script>
+  <script src="../commun/action-project-schema-lot.js?v=1" defer></script>
+  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=7" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -89,5 +90,14 @@
     <label><input id="account-backup" type="checkbox"> Je confirme poursuivre depuis le lot NOTIFICATIONS contrôlé.</label>
     <button class="button button--primary" id="account-install" type="button" disabled>Ajouter la colonne Administrateur</button>
     <p>Les colonnes Email, Interlocuteur et Actif doivent rester strictement conformes. La désignation des administrateurs sera contrôlée avant l’installation des permissions.</p>
+  </section>
+  <section class="card"><h2>9 · Installer le lot 7 — PROJETS</h2>
+    <p>Dernier lot du schéma : budget et preuves techniques du rattachement contrôlé des agents aux projets.</p>
+    <button class="button button--secondary" id="project-check" type="button">Vérifier le lot PROJETS</button>
+    <p id="project-status" role="status" aria-live="polite">Vérification du lot requise.</p>
+    <ul id="project-findings"></ul><ul id="project-columns"></ul>
+    <label><input id="project-backup" type="checkbox"> Je confirme poursuivre depuis le lot COMPTES contrôlé.</label>
+    <button class="button button--primary" id="project-install" type="button" disabled>Ajouter les 6 colonnes PROJETS</button>
+    <p>Les pilotes et les listes d’associés existants sont relus avant l’ajout. Aucune ligne de projet ni donnée métier n’est modifiée.</p>
   </section>
 </main></body></html>

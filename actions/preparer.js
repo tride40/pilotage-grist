@@ -7,6 +7,7 @@
   let eventService, eventResult = null, eventBusy = false;
   let notificationService, notificationResult = null, notificationBusy = false;
   let accountService, accountResult = null, accountBusy = false;
+  let projectService, projectResult = null, projectBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -29,6 +30,18 @@
     $("account-check").disabled = accountBusy;
     $("account-backup").disabled = accountBusy;
     $("account-install").disabled = accountBusy || !$("account-backup").checked || !accountResult?.readyToInstall || accountResult.alreadyInstalled || accountResult.outcomeUncertain;
+    $("project-check").disabled = projectBusy;
+    $("project-backup").disabled = projectBusy;
+    $("project-install").disabled = projectBusy || !$("project-backup").checked || !projectResult?.readyToInstall || projectResult.alreadyInstalled || projectResult.outcomeUncertain;
+  }
+  function renderProject(value) {
+    projectResult = value;
+    $("project-findings").replaceChildren(...value.findings.map(text => { const li = document.createElement("li"); li.textContent = text; return li; }));
+    $("project-columns").replaceChildren(...value.columns.map(text => { const li = document.createElement("li"); li.textContent = `PROJETS.${text}`; return li; }));
+    $("project-status").textContent = value.outcomeUncertain ? "Résultat incertain : ne relancez pas l’installation."
+      : value.alreadyInstalled ? "Lot 7 confirmé : les six colonnes PROJETS sont présentes et conformes. Le schéma additif est terminé."
+      : value.readyToInstall ? `Lot 7 prêt : ${value.columns.length} ajout${value.columns.length > 1 ? "s" : ""} compatible${value.columns.length > 1 ? "s" : ""}, dépendance COMPTES et colonnes existantes confirmées.`
+      : "Lot 7 bloqué : examinez les écarts affichés.";
   }
   function renderAccount(value) {
     accountResult = value;
@@ -143,6 +156,13 @@
     catch (error) { accountResult = null; $("account-columns").replaceChildren(); $("account-findings").replaceChildren(); $("account-status").textContent = error.message; }
     finally { accountBusy = false; controls(); }
   }
+  async function executeProject(operation) {
+    if (projectBusy) return;
+    projectBusy = true; controls(); $("project-status").textContent = "Contrôle du lot PROJETS en cours…";
+    try { renderProject(await operation()); }
+    catch (error) { projectResult = null; $("project-columns").replaceChildren(); $("project-findings").replaceChildren(); $("project-status").textContent = error.message; }
+    finally { projectBusy = false; controls(); }
+  }
   $("backup").onchange = controls;
   $("source-backup").onchange = controls;
   $("attribution-backup").onchange = controls;
@@ -150,6 +170,7 @@
   $("event-backup").onchange = controls;
   $("notification-backup").onchange = controls;
   $("account-backup").onchange = controls;
+  $("project-backup").onchange = controls;
   $("check").onclick = () => execute(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
@@ -226,6 +247,17 @@
     if (accountBusy || $("account-install").disabled || !accountService) return;
     if (!window.confirm("Ajouter la colonne Administrateur au registre des comptes ? Aucun compte ne sera désigné et aucun droit ne sera modifié par cette étape.")) return;
     executeAccount(() => accountService.install({ confirmed: true }));
+  };
+  $("project-check").onclick = () => executeProject(async () => {
+    if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({ requiredAccess: "full" });
+    projectService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionProjectSchemaLot });
+    return projectService.inspect();
+  });
+  $("project-install").onclick = () => {
+    if (projectBusy || $("project-install").disabled || !projectService) return;
+    if (!window.confirm(`Ajouter les ${projectResult.columns.length} colonnes manquantes du lot PROJETS ? Aucune ligne de projet ne sera modifiée.`)) return;
+    executeProject(() => projectService.install({ confirmed: true }));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
