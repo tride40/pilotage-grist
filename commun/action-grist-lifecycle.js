@@ -240,6 +240,35 @@
         poles:org.poles.map(p=>({...p,name:data.POLES.find(r=>r.id===p.id).Pole||`Pôle ${p.id}`})),
         projects:data.PROJETS.map(p=>({id:p.id,name:p.Nom_projet||`Projet ${p.id}`}))};
       },
+      async notifications() {
+        if(busy)throw Error("Enregistrement en cours.");
+        await guard();const context=await identity();await confined([],context);
+        const [notices,actions,events]=await Promise.all(["ACTIONS_NOTIFICATIONS","ACTIONS","ACTIONS_EVENEMENTS"].map(fetch));
+        return notices.filter(notice=>notice.Destinataire===context.personId).map(notice=>{
+          const action=actions.find(row=>row.id===notice.Action),event=events.find(row=>row.id===notice.Evenement);
+          if(!action||!event||event.Action!==notice.Action||event.Operation!==notice.Type_notification)
+            throw Error("Notification absente, incomplète ou désynchronisée.");
+          return {id:notice.id,actionId:notice.Action,title:action.Action||`Action ${notice.Action}`,
+            type:notice.Type_notification,read:Boolean(notice.Lue),occurredAt:iso(event.Date_evenement),readAt:iso(notice.Date_lecture,true)};
+        }).sort((a,b)=>Number(a.read)-Number(b.read)||b.occurredAt.localeCompare(a.occurredAt)||b.id-a.id);
+      },
+      async markNotificationRead(notificationId) {
+        if(busy)throw Error("Enregistrement en cours.");
+        if(!positive(notificationId))throw Error("Notification invalide.");
+        latch.assertClear();busy=true;
+        try{
+          await guard();const context=await identity();await confined([],context);
+          const notices=await fetch("ACTIONS_NOTIFICATIONS"),matches=notices.filter(row=>row.id===notificationId&&row.Destinataire===context.personId);
+          if(matches.length!==1)throw Error("Notification absente ou non autorisée.");
+          if(matches[0].Lue)return {id:notificationId,read:true,alreadyRead:true};
+          const readAt=seconds(clock()),actions=[["UpdateRecord","ACTIONS_NOTIFICATIONS",notificationId,{Lue:true,Date_lecture:readAt}]];
+          await confined(actions,context);latch.markSubmitted();await grist.docApi.applyUserActions(actions);
+          const verified=(await fetch("ACTIONS_NOTIFICATIONS")).filter(row=>row.id===notificationId&&row.Destinataire===context.personId);
+          if(verified.length!==1||verified[0].Lue!==true||verified[0].Date_lecture!==readAt)
+            throw Error("Lecture de la notification non confirmée.");
+          latch.reconcile();return {id:notificationId,read:true,readAt:iso(readAt)};
+        }finally{busy=false;}
+      },
       async inspect(actionId) {
         if (busy) throw Error("Enregistrement en cours.");
         await guard();
