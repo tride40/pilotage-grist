@@ -2,6 +2,7 @@
 (function(root){
   const labels={to_assign:"À attribuer",in_progress:"En cours",additional_work:"Complément demandé",performed:"Réalisée à examiner",closed:"Clôturée",cancelled:"Annulée"};
   const verbs={perform:"Déclarer réalisée",close:"Clôturer",request_additional_work:"Demander un complément",cancel:"Annuler l’action",assign:"Attribuer"};
+  const eventLabels={create:"Création de l’action",assign:"Attribution de l’action",perform:"Réalisation déclarée",close:"Action clôturée",request_additional_work:"Complément demandé",cancel:"Action annulée"};
   const confirmations={
     create:"Créer cette action réelle dans le nouveau circuit ?",
     assign:"Enregistrer cette attribution réelle ?",
@@ -129,6 +130,7 @@
         const actors=group("Acteurs");detailLine(actors,"Créateur",personName(selected.creatorId));detailLine(actors,"Destinataire",targetName(selected));detailLine(actors,"Exécutant",selected.executorId?personName(selected.executorId):"À attribuer");detailLine(actors,"Service concerné",selected.serviceId?serviceName(selected.serviceId):null);detailLine(actors,"Agents associés",selected.associateIds?.length?selected.associateIds.map(personName).join(", "):"Aucun");
         const outcomeValues=[["Bilan",selected.result],["Motif du complément",selected.additionalWorkReason],["Motif de l’annulation",selected.cancellationReason],["Déclarée réalisée le",formatDate(selected.performedAt,true)],["Clôturée le",formatDate(selected.closedAt,true)],["Annulée le",formatDate(selected.cancelledAt,true)]];
         if(outcomeValues.some(([,value])=>value)){const outcome=group("Réalisation et suivi");outcomeValues.forEach(([label,value])=>detailLine(outcome,label,value));}
+        if(fresh.history?.length){const history=group("Historique");fresh.history.forEach(event=>{const entry=node("article",undefined,"circuit-history-entry");entry.append(node("h3",`${event.revision} · ${eventLabels[event.operation]||event.operation}`));detailLine(entry,"Auteur",personName(event.authorId));detailLine(entry,"Date",formatDate(event.occurredAt,true));if(event.from&&event.to)detailLine(entry,"Évolution",`${event.from} → ${event.to}`);detailLine(entry,"Précision",event.note);history.append(entry);});}
         if(fresh.operations?.length){const available=group("Actions disponibles"),bar=node("div",undefined,"circuit-controls");for(const operation of fresh.operations){const permitted=operation==="assign"?allowAssignment:allowLifecycle,b=button(verbs[operation],()=>{close();openCommand(fresh.row,operation);});b.disabled=!canWrite||!permitted||locked;bar.append(b);}available.append(bar);}
         disabled();dialog.showModal();resetDialogScroll();
       }catch(e){status.textContent=e.message;}finally{busy=false;disabled();}
