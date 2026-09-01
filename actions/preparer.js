@@ -18,6 +18,7 @@
   let accountPermissionService, accountPermissionBusy = false;
   let authorityPermissionService, authorityPermissionResult = null, authorityPermissionBusy = false;
   let finalPermissionService, finalPermissionBusy = false;
+  let realDataService, realDataBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -65,6 +66,7 @@
     $("authority-permission-confirm").disabled = authorityPermissionBusy;
     $("authority-permission-install").disabled = authorityPermissionBusy || !$("authority-permission-confirm").checked || !authorityPermissionResult?.readyToInstall || authorityPermissionResult.alreadyInstalled || authorityPermissionResult.outcomeUncertain;
     $("final-permission-check").disabled = finalPermissionBusy;
+    $("real-data-check").disabled = realDataBusy;
   }
   function renderProject(value) {
     projectResult = value;
@@ -477,6 +479,22 @@
   $("final-permission-check").onclick=async()=>{
     if(finalPermissionBusy)return;finalPermissionBusy=true;controls();$("final-permission-status").textContent="Validation générale en cours…";$("final-permission-findings").replaceChildren();$("final-permission-confirmed").replaceChildren();
     try{if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");await window.grist.ready({requiredAccess:"full"});if(!window.PilotageActionFinalLiveAudit?.create)throw Error("Le validateur général manque dans la publication.");finalPermissionService??=window.PilotageActionFinalLiveAudit.create({grist:window.grist});const value=await finalPermissionService.inspect();const list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));list("final-permission-findings",value.findings);list("final-permission-confirmed",value.confirmed);$("final-permission-status").textContent=value.readyForFinalValidation?`Validation générale conforme : ${value.managedRuleCount} règles gérées, schéma, héritage et administration confirmés.`:"Validation générale bloquée : examinez les écarts affichés.";}catch(error){$("final-permission-status").textContent=error.message;}finally{finalPermissionBusy=false;controls();}
+  };
+  $("real-data-check").onclick=async()=>{
+    if(realDataBusy)return;realDataBusy=true;controls();$("real-data-status").textContent="Identification et lectures réelles en cours…";$("real-data-findings").replaceChildren();$("real-data-confirmed").replaceChildren();$("real-data-counts").replaceChildren();
+    try{
+      if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+      await window.grist.ready({requiredAccess:"full"});
+      if(!window.PilotageActionRealDataPreflight?.create||!window.PilotageCurrentUser?.identify)throw Error("Le contrôle sécurisé des données réelles manque dans la publication.");
+      realDataService??=window.PilotageActionRealDataPreflight.create({grist:window.grist,mode:window.PilotageTestMode,identify:options=>window.PilotageCurrentUser.identify(options)});
+      const value=await realDataService.inspect();
+      const list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      list("real-data-findings",value.findings);list("real-data-confirmed",value.confirmed);
+      const labels={INTERLOCUTEURS:"Interlocuteurs accessibles",PROJETS:"Projets accessibles",ACTIONS:"Actions historiques",ACTIONS_CIRCUIT:"Circuits",ACTIONS_ATTRIBUTIONS:"Attributions",ACTIONS_EVENEMENTS:"Événements",ACTIONS_NOTIFICATIONS:"Notifications"};
+      list("real-data-counts",Object.entries(value.counts).filter(([,count])=>count>=0).map(([name,count])=>`${labels[name]} : ${count}`));
+      $("real-data-status").textContent=value.readyForRealData?"Données réelles 1/4 conformes : identité administrative reconnue, lectures autorisées et nouveau circuit encore vide.":"Données réelles 1/4 bloquées : examinez les écarts affichés avant toute création.";
+    }catch(error){$("real-data-status").textContent=error.message;}
+    finally{realDataBusy=false;controls();}
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

@@ -33,7 +33,10 @@
   <script src="../commun/action-permission-lot-setup.js?v=4" defer></script>
   <script src="../commun/action-legacy-live-audit.js?v=1" defer></script>
   <script src="../commun/action-account-live-audit.js?v=2" defer></script>
-  <script src="../commun/action-final-live-audit.js?v=1" defer></script><script src="preparer.js?v=21" defer></script>
+  <script src="../commun/action-final-live-audit.js?v=1" defer></script>
+  <script src="../commun/current-user.js?v=4" defer></script>
+  <script src="../commun/action-real-data-preflight.js?v=1" defer></script>
+  <script src="preparer.js?v=22" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -194,5 +197,12 @@
     <p id="final-permission-status" role="status" aria-live="polite">Validation générale requise avant les essais fonctionnels.</p>
     <ul id="final-permission-findings"></ul><ul id="final-permission-confirmed"></ul>
     <p>Cette validation ne crée, ne modifie et ne supprime aucune ligne ni aucune permission.</p>
+  </section>
+  <section class="card"><h2>20 · Données réelles — identité et lectures 1/4</h2>
+    <p>Premier raccordement fonctionnel : reconnaître votre compte réel et vérifier uniquement les compteurs des données que le futur circuit devra lire.</p>
+    <button class="button button--secondary" id="real-data-check" type="button">Vérifier mon identité et les lectures</button>
+    <p id="real-data-status" role="status" aria-live="polite">Contrôle requis avant la première création d’action dans le nouveau circuit.</p>
+    <ul id="real-data-findings"></ul><ul id="real-data-confirmed"></ul><ul id="real-data-counts"></ul>
+    <p>Pour reconnaître votre compte, une ligne technique temporaire est créée dans CONTEXTE_UTILISATEUR puis supprimée automatiquement. Aucune action, attribution, notification ou autre ligne métier n’est créée ou modifiée.</p>
   </section>
 </main></body></html>
