@@ -221,6 +221,7 @@
         await guard();const context=await identity(),current=await snapshot(null,false,context);
         return current.data.ACTIONS_CIRCUIT.map(c=>decode(current.data,c.Action).row)
           .filter(row=>row.visibleTo.includes(context.personId)).map(row=>({ ...row,
+            roles:{creator:row.creatorId===context.personId,executor:row.executorId===context.personId,assigner:row.assignerId===context.personId},
             operations:[...lifecycle.operations(row,context),...(row.state==="to_assign"&&[row.creatorId,row.assignerId].includes(context.personId)?["assign"]:[])],
           }));
       },
