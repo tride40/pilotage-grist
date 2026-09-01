@@ -13,7 +13,7 @@
     const findings=[],accountCount=length(raw.PILOTAGE_COMPTES,"PILOTAGE_COMPTES"),personCount=length(raw.INTERLOCUTEURS,"INTERLOCUTEURS");
     for(const name of ["Email","Interlocuteur","Actif","Administrateur"])if(!Array.isArray(raw.PILOTAGE_COMPTES[name])||raw.PILOTAGE_COMPTES[name].length!==accountCount)findings.push(`PILOTAGE_COMPTES.${name} est absente ou tronquée.`);
     for(const name of ["Actif","Interne_Mairie"])if(!Array.isArray(raw.INTERLOCUTEURS[name])||raw.INTERLOCUTEURS[name].length!==personCount)findings.push(`INTERLOCUTEURS.${name} est absente ou tronquée.`);
-    if(findings.length)return {accountCount,activeAccountCount:0,administratorCount:0,findings,readyForAuthorityPolicy:false,actions:[],writesBusinessRows:false};
+    if(findings.length)return {accountCount,activeAccountCount:0,administratorCount:0,counts:{accountCount,activeAccountCount:0,administratorCount:0},findings,readyForAuthorityPolicy:false,actions:[],writesBusinessRows:false};
     const seen=new Set();let activeAccountCount=0,administratorCount=0;
     for(let index=0;index<accountCount;index++){
       const address=email(raw.PILOTAGE_COMPTES.Email[index]),active=raw.PILOTAGE_COMPTES.Actif[index]===true,administrator=raw.PILOTAGE_COMPTES.Administrateur[index]===true,person=Number(refId(raw.PILOTAGE_COMPTES.Interlocuteur[index]));
@@ -22,7 +22,7 @@
       if(administrator){administratorCount++;if(!active)findings.push(`Administrateur ${raw.PILOTAGE_COMPTES.id[index]} : compte inactif.`);const personIndex=raw.INTERLOCUTEURS.id.indexOf(person);if(personIndex<0)findings.push(`Administrateur ${raw.PILOTAGE_COMPTES.id[index]} : interlocuteur introuvable.`);else if(raw.INTERLOCUTEURS.Actif[personIndex]!==true||raw.INTERLOCUTEURS.Interne_Mairie[personIndex]!==true)findings.push(`Administrateur ${raw.PILOTAGE_COMPTES.id[index]} : interlocuteur interne actif non confirmé.`);}
     }
     if(administratorCount<1)findings.push("Aucun administrateur actif n’est désigné.");
-    return {accountCount,activeAccountCount,administratorCount,findings,readyForAuthorityPolicy:findings.length===0,actions:[],writesBusinessRows:false};
+    return {accountCount,activeAccountCount,administratorCount,counts:{accountCount,activeAccountCount,administratorCount},findings,readyForAuthorityPolicy:findings.length===0,actions:[],writesBusinessRows:false};
   }
   function create({grist}){let busy=false;return Object.freeze({async inspect(){if(busy)throw Error("Contrôle déjà en cours.");busy=true;try{if(await grist.docApi.getDocName()!==documentId)throw Error("Document de base non autorisé.");const [accounts,people]=await Promise.all([grist.docApi.fetchTable("PILOTAGE_COMPTES"),grist.docApi.fetchTable("INTERLOCUTEURS")]);if(await grist.docApi.getDocName()!==documentId)throw Error("Le document a changé pendant le contrôle.");return review({PILOTAGE_COMPTES:accounts,INTERLOCUTEURS:people});}finally{busy=false;}}});}
   return Object.freeze({documentId,review,create});
