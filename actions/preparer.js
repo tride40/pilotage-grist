@@ -16,6 +16,7 @@
   let legacyService, legacyBusy = false;
   let sourcePermissionService, sourcePermissionResult = null, sourcePermissionBusy = false;
   let accountPermissionService, accountPermissionBusy = false;
+  let authorityPermissionService, authorityPermissionResult = null, authorityPermissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -59,6 +60,9 @@
     $("source-permission-confirm").disabled = sourcePermissionBusy;
     $("source-permission-install").disabled = sourcePermissionBusy || !$("source-permission-confirm").checked || !sourcePermissionResult?.readyToInstall || sourcePermissionResult.alreadyInstalled || sourcePermissionResult.outcomeUncertain;
     $("account-permission-check").disabled = accountPermissionBusy;
+    $("authority-permission-check").disabled = authorityPermissionBusy;
+    $("authority-permission-confirm").disabled = authorityPermissionBusy;
+    $("authority-permission-install").disabled = authorityPermissionBusy || !$("authority-permission-confirm").checked || !authorityPermissionResult?.readyToInstall || authorityPermissionResult.alreadyInstalled || authorityPermissionResult.outcomeUncertain;
   }
   function renderProject(value) {
     projectResult = value;
@@ -459,6 +463,15 @@
     }catch(error){$("account-permission-status").textContent=error.message;}
     finally{accountPermissionBusy=false;controls();}
   };
+  $("authority-permission-confirm").onchange=controls;
+  async function executeAuthorityPermission(operation){
+    if(authorityPermissionBusy)return;authorityPermissionBusy=true;controls();$("authority-permission-status").textContent="Contrôle des droits des projets et de l’organisation en cours…";
+    try{const value=await operation();authorityPermissionResult=value;$("authority-permission-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));$("authority-permission-status").textContent=value.outcomeUncertain?"Résultat incertain : ne relancez pas l’installation.":value.alreadyInstalled?"Projets et organisation 2/3 confirmés : les 41 règles d’autorité sont présentes et conformes.":value.readyToInstall?"Projets et organisation 2/3 prêts : 9 groupes et 41 règles ordonnées, comptes administrateurs confirmés.":"Projets et organisation 2/3 bloqués : examinez les écarts affichés.";}catch(error){authorityPermissionResult=null;$("authority-permission-findings").replaceChildren();$("authority-permission-status").textContent=error.message;}finally{authorityPermissionBusy=false;controls();}
+  }
+  $("authority-permission-check").onclick=()=>executeAuthorityPermission(async()=>{
+    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");await window.grist.ready({requiredAccess:"full"});if(!window.PilotageActionAuthorityPermissionLot?.inspect||!window.PilotageActionPermissionLotSetup?.create)throw Error("Le lot sécurisé des autorités manque dans la publication.");accountPermissionService??=window.PilotageActionAccountLiveAudit.create({grist:window.grist});authorityPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionAuthorityPermissionLot,liveAudit:accountPermissionService});return authorityPermissionService.inspect();
+  });
+  $("authority-permission-install").onclick=()=>{if(authorityPermissionBusy||$("authority-permission-install").disabled||!authorityPermissionService)return;if(!window.confirm("Installer en une seule fois les 41 règles d’autorité sur PROJETS, INTERLOCUTEURS, SERVICES et POLES ?"))return;executeAuthorityPermission(()=>authorityPermissionService.install({confirmed:true}));};
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
 })();

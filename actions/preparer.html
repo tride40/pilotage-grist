@@ -27,11 +27,12 @@
   <script src="../commun/action-event-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-notification-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-source-permission-lot.js?v=1" defer></script>
+  <script src="../commun/action-authority-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-permission-audit.js?v=6" defer></script>
   <script src="../commun/action-permission-audit-service.js?v=2" defer></script>
   <script src="../commun/action-permission-lot-setup.js?v=3" defer></script>
   <script src="../commun/action-legacy-live-audit.js?v=1" defer></script>
-  <script src="../commun/action-account-live-audit.js?v=1" defer></script><script src="preparer.js?v=18" defer></script>
+  <script src="../commun/action-account-live-audit.js?v=1" defer></script><script src="preparer.js?v=19" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -176,5 +177,14 @@
     <p id="account-permission-status" role="status" aria-live="polite">Contrôle requis avant les droits des projets.</p>
     <ul id="account-permission-findings"></ul><ul id="account-permission-counts"></ul>
     <p>Chaque administrateur doit correspondre à un compte actif, unique et rattaché à un interlocuteur interne actif.</p>
+  </section>
+  <section class="card"><h2>18 · Permissions 4/4 — projets et organisation 2/3</h2>
+    <p>Protéger les champs d’autorité de PROJETS, INTERLOCUTEURS, SERVICES et POLES. Les éditeurs conservent la lecture et les modifications ordinaires ; les opérations administratives restent réservées aux administrateurs désignés.</p>
+    <button class="button button--secondary" id="authority-permission-check" type="button">Vérifier les 41 règles d’autorité</button>
+    <p id="authority-permission-status" role="status" aria-live="polite">Vérification requise avant toute modification.</p>
+    <ul id="authority-permission-findings"></ul>
+    <label><input id="authority-permission-confirm" type="checkbox"> Je confirme poursuivre depuis le contrôle des comptes conforme.</label>
+    <button class="button button--primary" id="authority-permission-install" type="button" disabled>Installer les 41 règles d’autorité</button>
+    <p>Les neuf groupes de règles sont ajoutés en une seule écriture, puis toutes les permissions et le registre des comptes sont relus.</p>
   </section>
 </main></body></html>
