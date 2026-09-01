@@ -34,7 +34,7 @@
     element.append(heading,notice,toolbar,status,list,dialog);
     function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;}
     function close(){if(busy)return;dialog.close();form.reset();fields.replaceChildren();selected=null;currentCapability=false;currentOperation=null;opener?.focus();}
-    function open(title,capability,operation){if(busy||locked||!canWrite||!capability)return false;currentCapability=true;currentOperation=operation;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent=title;submit.textContent="Enregistrer";dialog.showModal();return true;}
+    function open(title,capability,operation){if(busy||locked||!canWrite||!capability)return false;currentCapability=true;currentOperation=operation;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent=title;submit.textContent="Enregistrer";disabled();dialog.showModal();return true;}
     function group(title){const e=node("fieldset");e.append(node("legend",title));fields.append(e);return e;}
     function field(parent,label,name,type="text",required=false){const wrap=node("label"),control=node(type==="select"?"select":type==="textarea"?"textarea":"input");control.name=name;if(control.tagName==="INPUT")control.type=type;control.required=required;wrap.append(node("span",label),control);parent.append(wrap);return control;}
     function destination(parent,withKind){
