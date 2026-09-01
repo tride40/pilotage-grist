@@ -14,8 +14,13 @@ except Exception:
   return []`;
   function definitions(){
     const revision=schema.schema().find(table=>table.tableId===tableId).columns.find(column=>column.id==="Revision_ecriture");
-    return [{...revision},...attribution.helperColumns().filter(column=>column.tableId===tableId).map(column=>({id:column.id,type:column.type,isFormula:column.isFormula,formula:column.formula||""})),
-      {id:"ACL_audience",type:"RefList:INTERLOCUTEURS",isFormula:true,formula:audience}];
+    return validateDefinitions([{...revision},...attribution.helperColumns().filter(column=>column.tableId===tableId).map(column=>({id:column.id,type:column.type,isFormula:column.isFormula,formula:column.formula||""})),
+      {id:"ACL_audience",type:"RefList:INTERLOCUTEURS",isFormula:true,formula:audience}]);
+  }
+  function validateDefinitions(values){
+    if(!Array.isArray(values)||values.length!==5||values.some(column=>!column||typeof column.id!=="string"||!column.id||typeof column.type!=="string"||typeof column.isFormula!=="boolean"||typeof column.formula!=="string")||new Set(values.map(column=>column.id)).size!==values.length)
+      throw Error("Définitions du lot ATTRIBUTIONS incomplètes : republier le schéma commun avant de poursuivre.");
+    return values;
   }
   function exact(actual,expected){return actual.type===expected.type&&Boolean(actual.isFormula)===expected.isFormula&&(actual.formula||"")===(expected.formula||"");}
   function inspect(metadata){
@@ -32,5 +37,5 @@ except Exception:
     return {findings,missing:missing.map(column=>column.id),alreadyInstalled,readyToInstall,
       actions:readyToInstall?missing.map(({id,...fields})=>["AddColumn",tableId,id,fields]):[]};
   }
-  return Object.freeze({tableId,definitions,inspect});
+  return Object.freeze({tableId,definitions,inspect,validateDefinitions});
 });

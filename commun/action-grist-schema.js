@@ -3,10 +3,10 @@
 // Additive STAGING plan only: empty new tables, owner-only table ACLs.
 // It does not enable the business workflow or certify production permissions.
 (function expose(root, factory) {
-  const api = factory();
+  const api = factory(typeof module === "object" && module.exports ? require("./action-notification-permissions.js") : root.PilotageActionNotificationPermissions);
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.PilotageActionGristSchema = api;
-})(typeof globalThis === "object" ? globalThis : this, function factory() {
+})(typeof globalThis === "object" ? globalThis : this, function factory(notificationPolicy) {
   const documentId = "f8iwcexDATAwBKsaG6gZRs";
   const ref = "Ref:INTERLOCUTEURS", refs = "RefList:INTERLOCUTEURS", time = "DateTime:Europe/Paris";
   const definitions = {
@@ -14,14 +14,15 @@
       Action: "Ref:ACTIONS", Version_circuit: "Int", Revision: "Int", Etape: "Choice",
       Createur: ref, Executant: ref, Responsable_destinataire: ref,
       Type_destinataire: "Choice", Agent_destinataire: ref, Service_destinataire: "Ref:SERVICES", Pole_destinataire: "Ref:POLES",
-      Service_contexte: "Ref:SERVICES", Superieur_direct: ref, Associes: refs,
+      Service_contexte: "Ref:SERVICES", Superieur_direct: ref, Associes: refs, Contextes_associes: "Text", Audience_initiale: refs,
       Date_realisation: time, Realisee_par: ref, Date_cloture: time, Date_annulation: time,
       Bilan: "Text", Motif_complement: "Text", Motif_annulation: "Text", Modifie_le: time,
     },
     ACTIONS_ATTRIBUTIONS: { Action: "Ref:ACTIONS", Niveau: "Int", Attributaire: ref, Destinataire: ref,
-      Service_contexte: "Ref:SERVICES", Date_attribution: time, Echeance: "Date" },
+      Service_contexte: "Ref:SERVICES", Date_attribution: time, Echeance: "Date", Revision_ecriture:"Int" },
     ACTIONS_EVENEMENTS: { Action: "Ref:ACTIONS", Cle_evenement: "Text", Revision: "Int", Auteur: ref,
-      Date_evenement: time, Operation: "Text", Etape_avant: "Text", Etape_apres: "Text", Precision: "Text" },
+      Date_evenement: time, Operation: "Text", Etape_avant: "Text", Etape_apres: "Text", Precision: "Text",
+      Revision_rattachement_projet: "Int", Membres_projet_avant: refs },
     ACTIONS_NOTIFICATIONS: { Action: "Ref:ACTIONS", Evenement: "Ref:ACTIONS_EVENEMENTS", Cle_notification: "Text",
       Destinataire: ref, Type_notification: "Text", Lue: "Bool", Date_lecture: time },
   };
@@ -44,6 +45,7 @@
     if (new Set(snapshot.tables.map(t => t.tableId)).size !== snapshot.tables.length) throw Error("Tables dupliquées.");
     for (const name of ["ACTIONS", "INTERLOCUTEURS", "PROJETS", "SERVICES", "POLES"]) if (!snapshot.tables.some(t => t.tableId === name)) throw Error(`Table source absente : ${name}.`);
     const findings = [], missing = [];
+    let notificationsAccess="owner";
     const check = (table, expected) => {
       const cols = snapshot.columns.filter(c => c.parentId === table.id);
       if (new Set(cols.map(c => c.colId)).size !== cols.length) throw Error(`Colonnes dupliquées : ${table.tableId}.`);
@@ -71,6 +73,30 @@
       if (resources.length !== 1 || resources[0].colIds !== "*") { findings.push(`${expected.tableId} : permissions de préparation à examiner`); continue; }
       const rules = snapshot.rules.filter(r => r.resource === resources[0].id).sort((a, b) => a.rulePos - b.rulePos);
       const owner = r => ["user.Access == OWNER", "user.Access in [OWNER]"].includes(r.aclFormula);
+      if(expected.tableId==="ACTIONS_NOTIFICATIONS"&&notificationPolicy
+        &&(notificationPolicy.matches(rules,{readOnly:true})||notificationPolicy.matches(rules))){
+        notificationsAccess=notificationPolicy.matches(rules,{readOnly:true})?"recipient-read":"recipient-read-state";
+        findings.push(...notificationPolicy.checkColumns(snapshot.columns.filter(c=>c.parentId===table.id),expected.columns));
+        // The identity mapping must remain owner-managed. Unknown rules need review.
+        const accountResources=snapshot.resources.filter(r=>r.tableId==="PILOTAGE_COMPTES");
+        const accountRules=accountResources.length===1?snapshot.rules.filter(r=>r.resource===accountResources[0].id).sort((a,b)=>a.rulePos-b.rulePos):[];
+        const compact=s=>String(s||"").replace(/\s/g,"");
+        const accountRead="user.IsLoggedIn and user.Access == EDITOR and user.PilotageCompte.id > 0 and user.PilotageCompte.Actif and rec.id == user.PilotageCompte.id";
+        const accounts=snapshot.tables.find(t=>t.tableId==="PILOTAGE_COMPTES");
+        for(const [colId,type]of Object.entries({Email:"Text",Interlocuteur:"Ref:INTERLOCUTEURS",Actif:"Bool"})){
+          const cols=snapshot.columns.filter(c=>accounts&&c.parentId===accounts.id&&c.colId===colId);
+          if(cols.length!==1||cols[0].type!==type||cols[0].isFormula!==false||(cols[0].formula||"")!=="")findings.push(`Registre des comptes : ${colId} incompatible.`);
+        }
+        if(accountResources.length!==1||accountResources[0].colIds!=="*"||accountRules.length!==3
+          ||!owner(accountRules[0])||accountRules[0].permissionsText!=="+CRUD"
+          ||compact(accountRules[1].aclFormula)!==compact(accountRead)||accountRules[1].permissionsText!=="+R"
+          ||accountRules[2].aclFormula!==""||accountRules[2].permissionsText!=="-CRUD"
+          ||accountRules.some((r,i)=>!Number.isFinite(r.rulePos)||(i&&r.rulePos<=accountRules[i-1].rulePos)))findings.push("Registre des comptes : protection propriétaire non confirmée.");
+        const attributes=snapshot.rules.filter(r=>r.userAttributes).map(r=>{try{return JSON.parse(r.userAttributes);}catch{return null;}});
+        const mapped=attributes.filter(a=>a?.name==="PilotageCompte");
+        if(mapped.length!==1||mapped[0].tableId!=="PILOTAGE_COMPTES"||mapped[0].lookupColId!=="Email"||mapped[0].charId!=="Email")findings.push("Appariement PilotageCompte non confirmé.");
+        continue;
+      }
       if (rules.length !== 2 || !owner(rules[0]) || rules[0].permissionsText !== "+CRUD"
         || rules[1].aclFormula !== "" || rules[1].permissionsText !== "-CRUD"
         || !Number.isFinite(rules[0].rulePos) || !Number.isFinite(rules[1].rulePos) || rules[0].rulePos >= rules[1].rulePos) findings.push(`${expected.tableId} : droits différents du confinement propriétaire`);
@@ -84,7 +110,7 @@
       findings.push("Une autorisation de modification de structure doit être examinée avant installation.");
     }
     return { missing, findings, readyToPrepare: findings.length === 0, alreadyPrepared: findings.length === 0 && missing.length === 0,
-      businessWorkflowEnabled: false, securityCertified: false };
+      notificationsAccess, businessWorkflowEnabled: false, securityCertified: false };
   }
   function plan(snapshot) {
     const report = inspect(snapshot);
