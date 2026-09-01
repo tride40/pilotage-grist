@@ -14,6 +14,7 @@
   let eventPermissionService, eventPermissionResult = null, eventPermissionBusy = false;
   let notificationPermissionService, notificationPermissionResult = null, notificationPermissionBusy = false;
   let legacyService, legacyBusy = false;
+  let sourcePermissionService, sourcePermissionResult = null, sourcePermissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -53,6 +54,9 @@
     $("notification-permission-confirm").disabled = notificationPermissionBusy;
     $("notification-permission-install").disabled = notificationPermissionBusy || !$("notification-permission-confirm").checked || !notificationPermissionResult?.readyToInstall || notificationPermissionResult.alreadyInstalled || notificationPermissionResult.outcomeUncertain;
     $("legacy-check").disabled = legacyBusy;
+    $("source-permission-check").disabled = sourcePermissionBusy;
+    $("source-permission-confirm").disabled = sourcePermissionBusy;
+    $("source-permission-install").disabled = sourcePermissionBusy || !$("source-permission-confirm").checked || !sourcePermissionResult?.readyToInstall || sourcePermissionResult.alreadyInstalled || sourcePermissionResult.outcomeUncertain;
   }
   function renderProject(value) {
     projectResult = value;
@@ -411,6 +415,33 @@
       $("legacy-status").textContent=value.readyForActionPolicy?"Héritage 1/2 conforme : 17 anciennes actions préservées à la révision 0, aucune ligne de circuit.":"Héritage 1/2 bloqué : examinez les écarts affichés.";
     }catch(error){$("legacy-status").textContent=error.message;}
     finally{legacyBusy=false;controls();}
+  };
+  $("source-permission-confirm").onchange=controls;
+  async function executeSourcePermission(operation){
+    if(sourcePermissionBusy)return;
+    sourcePermissionBusy=true;controls();$("source-permission-status").textContent="Contrôle des droits définitifs ACTIONS en cours…";
+    try{
+      const value=await operation();sourcePermissionResult=value;
+      $("source-permission-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      $("source-permission-status").textContent=value.outcomeUncertain?"Résultat incertain : ne relancez pas l’installation."
+        :value.alreadyInstalled?"Héritage 2/2 confirmé : les 9 règles ACTIONS sont présentes et les anciennes actions restent protégées."
+        :value.readyToInstall?"Héritage 2/2 prêt : 9 règles ordonnées et 17 anciennes actions confirmées, sans ligne de circuit."
+        :"Héritage 2/2 bloqué : examinez les écarts affichés.";
+    }catch(error){sourcePermissionResult=null;$("source-permission-findings").replaceChildren();$("source-permission-status").textContent=error.message;}
+    finally{sourcePermissionBusy=false;controls();}
+  }
+  $("source-permission-check").onclick=()=>executeSourcePermission(async()=>{
+    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({requiredAccess:"full"});
+    if(!window.PilotageActionPermissionLotSetup?.create||!window.PilotageActionSourcePermissionLot?.inspect)throw Error("Le lot sécurisé ACTIONS manque dans la publication.");
+    legacyService??=window.PilotageActionLegacyLiveAudit.create({grist:window.grist});
+    sourcePermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionSourcePermissionLot,liveAudit:legacyService});
+    return sourcePermissionService.inspect();
+  });
+  $("source-permission-install").onclick=()=>{
+    if(sourcePermissionBusy||$("source-permission-install").disabled||!sourcePermissionService)return;
+    if(!window.confirm("Installer les 9 règles définitives sur ACTIONS uniquement, après une nouvelle vérification des 17 anciennes actions ?"))return;
+    executeSourcePermission(()=>sourcePermissionService.install({confirmed:true}));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
