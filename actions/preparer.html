@@ -17,7 +17,8 @@
   <script src="../commun/action-attribution-schema-lot.js?v=2" defer></script>
   <script src="../commun/action-circuit-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-event-schema-lot.js?v=1" defer></script>
-  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=4" defer></script>
+  <script src="../commun/action-notification-schema-lot.js?v=1" defer></script>
+  <script src="../commun/action-table-schema-setup.js?v=1" defer></script><script src="preparer.js?v=5" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -69,5 +70,14 @@
     <label><input id="event-backup" type="checkbox"> Je confirme poursuivre depuis le lot CIRCUIT contrôlé.</label>
     <button class="button button--primary" id="event-install" type="button" disabled>Ajouter les 6 colonnes ÉVÉNEMENTS</button>
     <p>Le lot CIRCUIT doit rester strictement conforme. Aucune ligne du journal n’est lue ou modifiée pendant cet ajout de structure.</p>
+  </section>
+  <section class="card"><h2>7 · Installer le lot 5 — NOTIFICATIONS</h2>
+    <p>Ce lot ajoute les deux contrôles qui relient chaque notification à son événement et à son auteur réel.</p>
+    <button class="button button--secondary" id="notification-check" type="button">Vérifier le lot NOTIFICATIONS</button>
+    <p id="notification-status" role="status" aria-live="polite">Vérification du lot requise.</p>
+    <ul id="notification-findings"></ul><ul id="notification-columns"></ul>
+    <label><input id="notification-backup" type="checkbox"> Je confirme poursuivre depuis le lot ÉVÉNEMENTS contrôlé.</label>
+    <button class="button button--primary" id="notification-install" type="button" disabled>Ajouter les 2 colonnes NOTIFICATIONS</button>
+    <p>Le journal doit rester strictement conforme. Aucune notification existante n’est lue ou modifiée pendant cet ajout de structure.</p>
   </section>
 </main></body></html>

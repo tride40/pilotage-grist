@@ -5,6 +5,7 @@
   let attributionService, attributionResult = null, attributionBusy = false;
   let circuitService, circuitResult = null, circuitBusy = false;
   let eventService, eventResult = null, eventBusy = false;
+  let notificationService, notificationResult = null, notificationBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -21,6 +22,18 @@
     $("event-check").disabled = eventBusy;
     $("event-backup").disabled = eventBusy;
     $("event-install").disabled = eventBusy || !$("event-backup").checked || !eventResult?.readyToInstall || eventResult.alreadyInstalled || eventResult.outcomeUncertain;
+    $("notification-check").disabled = notificationBusy;
+    $("notification-backup").disabled = notificationBusy;
+    $("notification-install").disabled = notificationBusy || !$("notification-backup").checked || !notificationResult?.readyToInstall || notificationResult.alreadyInstalled || notificationResult.outcomeUncertain;
+  }
+  function renderNotification(value) {
+    notificationResult = value;
+    $("notification-findings").replaceChildren(...value.findings.map(text => { const li = document.createElement("li"); li.textContent = text; return li; }));
+    $("notification-columns").replaceChildren(...value.columns.map(text => { const li = document.createElement("li"); li.textContent = `ACTIONS_NOTIFICATIONS.${text}`; return li; }));
+    $("notification-status").textContent = value.outcomeUncertain ? "Résultat incertain : ne relancez pas l’installation."
+      : value.alreadyInstalled ? "Lot 5 confirmé : les deux colonnes NOTIFICATIONS sont présentes et conformes."
+      : value.readyToInstall ? "Lot 5 prêt : deux ajouts compatibles, dépendance ÉVÉNEMENTS confirmée."
+      : "Lot 5 bloqué : examinez les écarts affichés.";
   }
   function renderEvent(value) {
     eventResult = value;
@@ -103,11 +116,19 @@
     catch (error) { eventResult = null; $("event-columns").replaceChildren(); $("event-findings").replaceChildren(); $("event-status").textContent = error.message; }
     finally { eventBusy = false; controls(); }
   }
+  async function executeNotification(operation) {
+    if (notificationBusy) return;
+    notificationBusy = true; controls(); $("notification-status").textContent = "Contrôle du lot NOTIFICATIONS en cours…";
+    try { renderNotification(await operation()); }
+    catch (error) { notificationResult = null; $("notification-columns").replaceChildren(); $("notification-findings").replaceChildren(); $("notification-status").textContent = error.message; }
+    finally { notificationBusy = false; controls(); }
+  }
   $("backup").onchange = controls;
   $("source-backup").onchange = controls;
   $("attribution-backup").onchange = controls;
   $("circuit-backup").onchange = controls;
   $("event-backup").onchange = controls;
+  $("notification-backup").onchange = controls;
   $("check").onclick = () => execute(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
@@ -162,6 +183,17 @@
     if (eventBusy || $("event-install").disabled || !eventService) return;
     if (!window.confirm("Ajouter les six colonnes techniques du lot ÉVÉNEMENTS ? Le journal reste vide et protégé pendant cette préparation.")) return;
     executeEvent(() => eventService.install({ confirmed: true }));
+  };
+  $("notification-check").onclick = () => executeNotification(async () => {
+    if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({ requiredAccess: "full" });
+    notificationService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionNotificationSchemaLot });
+    return notificationService.inspect();
+  });
+  $("notification-install").onclick = () => {
+    if (notificationBusy || $("notification-install").disabled || !notificationService) return;
+    if (!window.confirm("Ajouter les deux colonnes techniques du lot NOTIFICATIONS ? Les notifications restent vides et protégées pendant cette préparation.")) return;
+    executeNotification(() => notificationService.install({ confirmed: true }));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
