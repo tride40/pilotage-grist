@@ -53,8 +53,8 @@
     const notice=node("p",banner,"circuit-notice"),status=node("p","");status.setAttribute("role","status");status.setAttribute("aria-live","polite");
     const toolbar=node("div",undefined,"circuit-toolbar"), search=node("input"), filter=node("select");
     search.type="search";search.placeholder="Rechercher une action";search.setAttribute("aria-label","Rechercher une action");
-    for(const [key,label] of [["open","Actions ouvertes"],["creator","Mes demandes en cours"],["review","À valider"],["all","Toutes les actions"],["history","Historique"]])option(filter,key,label);
-    filter.value=["open","creator","review","all","history"].includes(initialFilter)?initialFilter:"open";
+    for(const [key,label] of [["open","Actions ouvertes"],["executor","Mes actions à réaliser"],["creator","Mes demandes en cours"],["review","À valider"],["all","Toutes les actions"],["history","Historique"]])option(filter,key,label);
+    filter.value=["open","executor","creator","review","all","history"].includes(initialFilter)?initialFilter:"open";
     filter.setAttribute("aria-label","Afficher les actions");
     const refresh=button("Actualiser",()=>load());toolbar.append(search,filter,refresh);
     const list=node("section");list.setAttribute("aria-label","Liste des actions");
@@ -116,6 +116,7 @@
       const terminal=["closed","cancelled"].includes(r.state);
       const scope=filter.value==="all"||filter.value==="history"?filter.value==="all"||terminal
         :filter.value==="review"?Boolean(r.roles?.creator&&r.state==="performed")
+        :filter.value==="executor"?Boolean(r.roles?.executor&&!terminal)
         :filter.value==="creator"?Boolean(r.roles?.creator&&!terminal):!terminal;
       return scope&&`${r.title} ${r.projectTitle}`.toLocaleLowerCase("fr").includes(search.value.toLocaleLowerCase("fr"));});
       if(!shown.length)list.append(node("p","Aucune action dans cette vue.","circuit-empty"));
