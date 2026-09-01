@@ -9,8 +9,8 @@
     const identify = async () => window.PilotageCurrentUser.actionContext(await window.PilotageCurrentUser.identify());
     const service = window.PilotageActionGristLifecycle.create({ grist: window.grist, mode: window.PilotageTestMode, identify, requireFinalPermissions: true });
     const catalog = await service.catalog();
-    window.PilotageActionCircuitUI.mount({ element, service, catalog, canWrite: false,
-      banner: "Consultation réelle · La création sera activée après validation des quatre pages fonctionnelles." });
+    window.PilotageActionCircuitUI.mount({ element, service, catalog, canWrite: true, allowCreate: true, allowAssignment: true, allowLifecycle: false, confirmWrites: true,
+      banner: "Création et attribution actives · Réalisation, complément, clôture et annulation restent désactivés jusqu’à l’étape suivante." });
   } catch (error) {
     element.replaceChildren(); const status = document.createElement("p"); status.setAttribute("role", "alert"); status.textContent = error.message; element.append(status);
   }

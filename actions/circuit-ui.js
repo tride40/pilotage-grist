@@ -2,9 +2,9 @@
 (function(root){
   const labels={to_assign:"À attribuer",in_progress:"En cours",additional_work:"Complément demandé",performed:"Réalisée à examiner",closed:"Clôturée",cancelled:"Annulée"};
   const verbs={perform:"Déclarer réalisée",close:"Clôturer",request_additional_work:"Demander un complément",cancel:"Annuler l’action",assign:"Attribuer"};
-  function mount({element,service,catalog,canWrite=false,banner="Écritures désactivées : activation du circuit en attente."}){
+  function mount({element,service,catalog,canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente."}){
     const doc=element.ownerDocument, win=doc.defaultView;
-    let rows=[],busy=false,locked=false,selected=null,opener=null;
+    let rows=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null;
     const node=(tag,text,cls)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
     const button=(text,fn,cls="button button--secondary")=>{const e=node("button",text,cls);e.type="button";e.addEventListener("click",fn);return e;};
     const option=(select,value,label)=>{const e=node("option",label);e.value=value;select.append(e);};
@@ -24,9 +24,9 @@
     const controls=node("div",undefined,"circuit-controls"),back=button("Retour",()=>close()),submit=node("button","Enregistrer","button button--primary");submit.type="submit";
     controls.append(back,submit);form.append(formTitle,fields,error,controls);dialog.append(form);
     element.append(heading,notice,toolbar,status,list,dialog);
-    function disabled(){add.disabled=busy||locked||!canWrite;submit.disabled=busy||locked||!canWrite;refresh.disabled=busy;back.disabled=busy;}
-    function close(){if(busy)return;dialog.close();form.reset();fields.replaceChildren();selected=null;opener?.focus();}
-    function open(title){if(busy||locked||!canWrite)return false;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent=title;submit.textContent="Enregistrer";dialog.showModal();return true;}
+    function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;}
+    function close(){if(busy)return;dialog.close();form.reset();fields.replaceChildren();selected=null;currentCapability=false;currentOperation=null;opener?.focus();}
+    function open(title,capability,operation){if(busy||locked||!canWrite||!capability)return false;currentCapability=true;currentOperation=operation;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent=title;submit.textContent="Enregistrer";dialog.showModal();return true;}
     function group(title){const e=node("fieldset");e.append(node("legend",title));fields.append(e);return e;}
     function field(parent,label,name,type="text",required=false){const wrap=node("label"),control=node(type==="select"?"select":type==="textarea"?"textarea":"input");control.name=name;if(control.tagName==="INPUT")control.type=type;control.required=required;wrap.append(node("span",label),control);parent.append(wrap);return control;}
     function destination(parent,withKind){
@@ -45,7 +45,7 @@
       return ()=>({kind:kind?.value||"person",id:Number(target.value),...(context.value&&!(kind&&kind.value!=="person")?{serviceId:Number(context.value)}:{})});
     }
     let collect=null;
-    function openCreate(){if(!open("Nouvelle action"))return;selected=null;
+    function openCreate(){if(!open("Nouvelle action",allowCreate,"create"))return;selected=null;
       const subject=group("1 · Projet et demande"),project=field(subject,"Projet","project","select",true);
       option(project,"","Choisir un projet");catalog.projects.forEach(p=>option(project,p.id,p.name));field(subject,"Intitulé","title","text",true).maxLength=500;
       const recipient=group("2 · Attribution"),getTarget=destination(recipient,true);
@@ -58,10 +58,11 @@
         associates:items.filter(i=>i.check.checked).map(i=>({id:i.p.id,...(i.selector?{serviceId:Number(i.selector.value)}:{})}))});
     }
     async function openCommand(row,operation){
-      if(!canWrite||busy||locked)return;busy=true;disabled();
+      const capability=operation==="assign"?allowAssignment:allowLifecycle;
+      if(!canWrite||!capability||busy||locked)return;busy=true;disabled();
       try{const fresh=await service.inspect(row.id);selected=fresh.row;
         if(!fresh.operations.includes(operation))throw Error("Cette commande n’est plus disponible. Actualisez la liste.");
-        busy=false;if(!open(verbs[operation]))return;selected=fresh.row;
+        busy=false;if(!open(verbs[operation],capability,operation))return;selected=fresh.row;
         const details=group(selected.title);let target=null;
         if(operation==="assign")target=destination(details,false);
         const deadline=operation==="assign"?field(details,"Échéance (facultative)","deadline","date"):null;
@@ -77,10 +78,11 @@
       if(!shown.length)list.append(node("p","Aucune action dans cette vue.","circuit-empty"));
       shown.forEach(r=>{const card=node("article",undefined,"card circuit-card"),h=node("h2",r.title),meta=node("p",`${r.projectTitle} · ${labels[r.state]||r.state}`);
         card.append(h,meta);if(r.deadline)card.append(node("p",`Échéance : ${r.deadline}`));
-        const bar=node("div",undefined,"circuit-controls");for(const op of r.operations||[]){const b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
+        const bar=node("div",undefined,"circuit-controls");for(const op of r.operations||[]){const permitted=op==="assign"?allowAssignment:allowLifecycle,b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||!permitted||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
     }
     async function load(){if(busy)return;busy=true;disabled();try{rows=await service.list();status.textContent=`${rows.length} action(s) chargée(s).`;}catch(e){rows=[];status.textContent=e.message;}finally{busy=false;disabled();render();}}
-    form.addEventListener("submit",async event=>{event.preventDefault();if(busy||locked||!canWrite||!collect||!form.reportValidity())return;
+    form.addEventListener("submit",async event=>{event.preventDefault();if(busy||locked||!canWrite||!currentCapability||!collect||!form.reportValidity())return;
+      if(confirmWrites&&!win.confirm(currentOperation==="create"?"Créer cette action réelle dans le nouveau circuit ?":"Enregistrer cette attribution réelle dans le nouveau circuit ?"))return;
       busy=true;disabled();error.textContent="";
       try{await collect();busy=false;close();await load();status.textContent="Action enregistrée.";}
       catch(e){error.textContent=e.message;
