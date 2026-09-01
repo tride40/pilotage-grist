@@ -27,12 +27,13 @@
   <script src="../commun/action-event-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-notification-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-source-permission-lot.js?v=1" defer></script>
-  <script src="../commun/action-authority-permission-lot.js?v=1" defer></script>
+  <script src="../commun/action-authority-permission-lot.js?v=2" defer></script>
   <script src="../commun/action-permission-audit.js?v=7" defer></script>
   <script src="../commun/action-permission-audit-service.js?v=2" defer></script>
   <script src="../commun/action-permission-lot-setup.js?v=4" defer></script>
   <script src="../commun/action-legacy-live-audit.js?v=1" defer></script>
-  <script src="../commun/action-account-live-audit.js?v=2" defer></script><script src="preparer.js?v=20" defer></script>
+  <script src="../commun/action-account-live-audit.js?v=2" defer></script>
+  <script src="../commun/action-final-live-audit.js?v=1" defer></script><script src="preparer.js?v=21" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -186,5 +187,12 @@
     <label><input id="authority-permission-confirm" type="checkbox"> Je confirme poursuivre depuis le contrôle des comptes conforme.</label>
     <button class="button button--primary" id="authority-permission-install" type="button" disabled>Installer les 41 règles d’autorité</button>
     <p>Les neuf groupes de règles sont ajoutés en une seule écriture, puis toutes les permissions et le registre des comptes sont relus.</p>
+  </section>
+  <section class="card"><h2>19 · Permissions 4/4 — validation générale 3/3</h2>
+    <p>Dernière relecture en lecture seule : schéma, protections globales, règles gérées, héritage des 17 actions et compte administrateur.</p>
+    <button class="button button--secondary" id="final-permission-check" type="button">Lancer la validation générale</button>
+    <p id="final-permission-status" role="status" aria-live="polite">Validation générale requise avant les essais fonctionnels.</p>
+    <ul id="final-permission-findings"></ul><ul id="final-permission-confirmed"></ul>
+    <p>Cette validation ne crée, ne modifie et ne supprime aucune ligne ni aucune permission.</p>
   </section>
 </main></body></html>

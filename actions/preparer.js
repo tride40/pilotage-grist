@@ -17,6 +17,7 @@
   let sourcePermissionService, sourcePermissionResult = null, sourcePermissionBusy = false;
   let accountPermissionService, accountPermissionBusy = false;
   let authorityPermissionService, authorityPermissionResult = null, authorityPermissionBusy = false;
+  let finalPermissionService, finalPermissionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -63,6 +64,7 @@
     $("authority-permission-check").disabled = authorityPermissionBusy;
     $("authority-permission-confirm").disabled = authorityPermissionBusy;
     $("authority-permission-install").disabled = authorityPermissionBusy || !$("authority-permission-confirm").checked || !authorityPermissionResult?.readyToInstall || authorityPermissionResult.alreadyInstalled || authorityPermissionResult.outcomeUncertain;
+    $("final-permission-check").disabled = finalPermissionBusy;
   }
   function renderProject(value) {
     projectResult = value;
@@ -472,6 +474,10 @@
     if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");await window.grist.ready({requiredAccess:"full"});if(!window.PilotageActionAuthorityPermissionLot?.inspect||!window.PilotageActionPermissionLotSetup?.create)throw Error("Le lot sécurisé des autorités manque dans la publication.");accountPermissionService??=window.PilotageActionAccountLiveAudit.create({grist:window.grist});authorityPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionAuthorityPermissionLot,liveAudit:accountPermissionService});return authorityPermissionService.inspect();
   });
   $("authority-permission-install").onclick=()=>{if(authorityPermissionBusy||$("authority-permission-install").disabled||!authorityPermissionService)return;if(!window.confirm("Installer en une seule fois les 41 règles d’autorité sur PROJETS, INTERLOCUTEURS, SERVICES et POLES ?"))return;executeAuthorityPermission(()=>authorityPermissionService.install({confirmed:true}));};
+  $("final-permission-check").onclick=async()=>{
+    if(finalPermissionBusy)return;finalPermissionBusy=true;controls();$("final-permission-status").textContent="Validation générale en cours…";$("final-permission-findings").replaceChildren();$("final-permission-confirmed").replaceChildren();
+    try{if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");await window.grist.ready({requiredAccess:"full"});if(!window.PilotageActionFinalLiveAudit?.create)throw Error("Le validateur général manque dans la publication.");finalPermissionService??=window.PilotageActionFinalLiveAudit.create({grist:window.grist});const value=await finalPermissionService.inspect();const list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));list("final-permission-findings",value.findings);list("final-permission-confirmed",value.confirmed);$("final-permission-status").textContent=value.readyForFinalValidation?`Validation générale conforme : ${value.managedRuleCount} règles gérées, schéma, héritage et administration confirmés.`:"Validation générale bloquée : examinez les écarts affichés.";}catch(error){$("final-permission-status").textContent=error.message;}finally{finalPermissionBusy=false;controls();}
+  };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
 })();
