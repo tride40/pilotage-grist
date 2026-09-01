@@ -52,6 +52,7 @@
     const heading=node("header",undefined,"circuit-heading"), pageTitle=node("h1",title);
     const add=button("Nouvelle action",()=>openCreate(),"button button--primary");heading.append(pageTitle);if(showCreate)heading.append(add);
     const notice=node("p",banner,"circuit-notice"),status=node("p","");status.setAttribute("role","status");status.setAttribute("aria-live","polite");
+    const viewStatus=node("p","");viewStatus.setAttribute("role","status");viewStatus.setAttribute("aria-live","polite");
     const notificationPanel=node("section",undefined,"card circuit-notifications"),notificationTitle=node("h2","Notifications"),notificationStatus=node("p","");
     notificationStatus.setAttribute("role","status");notificationPanel.setAttribute("aria-label","Notifications non lues");notificationPanel.append(notificationTitle,notificationStatus);
     const toolbar=node("div",undefined,"circuit-toolbar"), search=node("input"), filter=node("select");
@@ -66,7 +67,7 @@
     const fields=node("div",undefined,"circuit-form-fields"),error=node("p",undefined,"circuit-form-error");error.setAttribute("role","alert");
     const controls=node("div",undefined,"circuit-controls"),back=button("Retour",()=>close()),submit=node("button","Enregistrer","button button--primary");submit.type="submit";
     controls.append(back,submit);form.append(formTitle,fields,error,controls);dialog.append(form);
-    element.append(heading,notice,...(showNotifications?[notificationPanel]:[]),toolbar,status,list,dialog);
+    element.append(heading,notice,...(showNotifications?[notificationPanel]:[]),toolbar,status,viewStatus,list,dialog);
     function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;notificationButtons.forEach(item=>{item.button.disabled=busy||(item.requiresWrite&&(locked||!canWrite));});}
     function showSubmit(visible){submit.hidden=!visible;submit.style.display=visible?"":"none";}
     function resetDialogScroll(){dialog.scrollTop=0;form.scrollTop=0;fields.scrollTop=0;}
@@ -146,7 +147,8 @@
         :filter.value==="executor"?Boolean(r.roles?.executor&&!terminal)
         :filter.value==="creator"?Boolean(r.roles?.creator&&!terminal):!terminal;
       return scope&&searchableText(r).includes(normalizeText(search.value));});
-      if(!shown.length)list.append(node("p","Aucune action dans cette vue.","circuit-empty"));
+      viewStatus.textContent=`${shown.length} action(s) affichée(s) sur ${rows.length}.`;
+      if(!shown.length)list.append(node("p",search.value.trim()?"Aucune action ne correspond à votre recherche.":"Aucune action dans cette vue.","circuit-empty"));
       shown.forEach(r=>{const card=node("article",undefined,"card circuit-card"),h=node("h2",r.title),meta=node("p",`${r.projectTitle} · ${labels[r.state]||r.state}`);
         card.append(h,meta);if(r.deadline)card.append(node("p",`Échéance : ${formatDate(r.deadline)}${isOverdue(r)?" · En retard":""}`));if(r.performedAt)card.append(node("p",`Réalisation déclarée : ${formatDate(r.performedAt,true)}${r.performedBy?` par ${personName(r.performedBy)}`:""}`));
         const bar=node("div",undefined,"circuit-controls");bar.append(button("Voir le détail",()=>openDetail(r)));for(const op of r.operations||[]){const permitted=op==="assign"?allowAssignment:allowLifecycle,b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||!permitted||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
@@ -160,7 +162,7 @@
     function chooseSmartFilter(){if(!smartFilter)return;const active=row=>!["closed","cancelled"].includes(row.state);filter.value=rows.some(row=>row.roles?.creator&&row.state==="performed")?"review"
         :rows.some(row=>row.roles?.executor&&active(row))?"executor"
         :rows.some(row=>row.roles?.creator&&active(row))?"creator":"open";smartFilter=false;}
-    async function load(){if(busy)return;busy=true;disabled();try{const values=await Promise.all([service.list(),showNotifications&&typeof service.notifications==="function"?service.notifications():[]]);rows=values[0];notifications=values[1];chooseSmartFilter();status.textContent=`${rows.length} action(s) chargée(s).`;}catch(e){rows=[];notifications=[];status.textContent=e.message;}finally{busy=false;renderNotifications();disabled();render();}}
+    async function load(){if(busy)return;busy=true;disabled();try{const values=await Promise.all([service.list(),showNotifications&&typeof service.notifications==="function"?service.notifications():[]]);rows=values[0];notifications=values[1];chooseSmartFilter();status.textContent="";}catch(e){rows=[];notifications=[];status.textContent=e.message;}finally{busy=false;renderNotifications();disabled();render();}}
     form.addEventListener("submit",async event=>{event.preventDefault();if(busy||locked||!canWrite||!currentCapability||!collect||!form.reportValidity())return;
       if(confirmWrites&&!win.confirm(confirmations[currentOperation]||"Enregistrer cette opération réelle ?"))return;
       busy=true;disabled();error.textContent="";
