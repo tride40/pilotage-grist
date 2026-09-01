@@ -7,10 +7,11 @@
   const api=factory(
     common?require("./action-project-schema-lot.js"):root.PilotageActionProjectSchemaLot,
     common?require("./action-notification-permissions.js"):root.PilotageActionNotificationPermissions,
-    common?require("./action-source-protection.js"):root.PilotageActionSourceProtection
+    common?require("./action-source-protection.js"):root.PilotageActionSourceProtection,
+    common?require("./action-circuit-permission-lot.js"):root.PilotageActionCircuitPermissionLot
   );
   if(common)module.exports=api;else root.PilotageActionPermissionAudit=api;
-})(typeof globalThis==="object"?globalThis:this,function factory(projectLot,notificationPolicy,sourceProtection){
+})(typeof globalThis==="object"?globalThis:this,function factory(projectLot,notificationPolicy,sourceProtection,circuitPermissionLot){
   const documentId="f8iwcexDATAwBKsaG6gZRs";
   const protectedTables=["ACTIONS_CIRCUIT","ACTIONS_ATTRIBUTIONS","ACTIONS_EVENEMENTS","ACTIONS_NOTIFICATIONS"];
   const compact=value=>String(value||"").replace(/\s/g,"");
@@ -26,7 +27,7 @@
   }
   function staging(rows){return rows?.length===2&&owner(rows[0])&&rows[0].permissionsText==="+CRUD"&&rows[1].aclFormula===""&&rows[1].permissionsText==="-CRUD";}
   function inspect(snapshot){
-    if(!projectLot?.inspect||!notificationPolicy?.matches||!sourceProtection?.condition)
+    if(!projectLot?.inspect||!notificationPolicy?.matches||!sourceProtection?.condition||!circuitPermissionLot?.matches)
       throw Error("Un module de contrôle des permissions manque dans la publication. Rechargez la version complète avant de poursuivre.");
     if(snapshot?.documentId!==documentId)throw Error("Contrôle réservé au document de base autorisé.");
     for(const label of ["tables","columns","resources","rules"])validate(snapshot[label],label);
@@ -67,7 +68,8 @@
       const resources=snapshot.resources.filter(resource=>resource.tableId===tableId&&resource.colIds==="*");
       if(resources.length!==1){findings.push(`${tableId} : ressource de permission absente ou dupliquée.`);continue;}
       const rows=ordered(snapshot,resources[0]);
-      const valid=tableId==="ACTIONS_NOTIFICATIONS"?(staging(rows)||notificationPolicy.matches(rows)||notificationPolicy.matches(rows,{readOnly:true})):staging(rows);
+      const valid=tableId==="ACTIONS_NOTIFICATIONS"?(staging(rows)||notificationPolicy.matches(rows)||notificationPolicy.matches(rows,{readOnly:true}))
+        :tableId==="ACTIONS_CIRCUIT"?(staging(rows)||circuitPermissionLot.matches(rows)):staging(rows);
       if(!valid)findings.push(`${tableId} : règles préparatoires à examiner.`);
       else confirmed.push(`${tableId} : protection préparatoire conforme`);
     }
