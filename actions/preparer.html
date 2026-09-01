@@ -28,7 +28,8 @@
   <script src="../commun/action-notification-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-permission-audit.js?v=6" defer></script>
   <script src="../commun/action-permission-audit-service.js?v=2" defer></script>
-  <script src="../commun/action-permission-lot-setup.js?v=2" defer></script><script src="preparer.js?v=15" defer></script>
+  <script src="../commun/action-permission-lot-setup.js?v=2" defer></script>
+  <script src="../commun/action-legacy-live-audit.js?v=1" defer></script><script src="preparer.js?v=16" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -150,5 +151,12 @@
     <label><input id="notification-permission-confirm" type="checkbox"> Je confirme poursuivre depuis le lot CIRCUIT 3/4 contrôlé.</label>
     <button class="button button--primary" id="notification-permission-install" type="button" disabled>Installer les 5 règles ACTIONS_NOTIFICATIONS</button>
     <p>Les règles de confidentialité déjà présentes sont reconnues et conservées dans la politique finale. Aucun accès général au contenu des notifications n’est accordé.</p>
+  </section>
+  <section class="card"><h2>15 · Permissions 3/4 — héritage 1/2</h2>
+    <p>Contrôle en lecture seule des compteurs et marqueurs techniques. Aucun titre, résultat, commentaire ou contenu métier n’est affiché.</p>
+    <button class="button button--secondary" id="legacy-check" type="button">Contrôler les 17 anciennes actions</button>
+    <p id="legacy-status" role="status" aria-live="polite">Contrôle requis avant de préparer les droits ACTIONS.</p>
+    <ul id="legacy-findings"></ul><ul id="legacy-counts"></ul>
+    <p>Les quatre tables du nouveau circuit doivent être encore vides et chaque ancienne action doit rester à la révision 0, sans circuit actif.</p>
   </section>
 </main></body></html>

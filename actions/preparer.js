@@ -13,6 +13,7 @@
   let attributionPermissionService, attributionPermissionResult = null, attributionPermissionBusy = false;
   let eventPermissionService, eventPermissionResult = null, eventPermissionBusy = false;
   let notificationPermissionService, notificationPermissionResult = null, notificationPermissionBusy = false;
+  let legacyService, legacyBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -51,6 +52,7 @@
     $("notification-permission-check").disabled = notificationPermissionBusy;
     $("notification-permission-confirm").disabled = notificationPermissionBusy;
     $("notification-permission-install").disabled = notificationPermissionBusy || !$("notification-permission-confirm").checked || !notificationPermissionResult?.readyToInstall || notificationPermissionResult.alreadyInstalled || notificationPermissionResult.outcomeUncertain;
+    $("legacy-check").disabled = legacyBusy;
   }
   function renderProject(value) {
     projectResult = value;
@@ -397,6 +399,18 @@
     if(notificationPermissionBusy||$("notification-permission-install").disabled||!notificationPermissionService)return;
     if(!window.confirm("Installer les 5 règles finales sur ACTIONS_NOTIFICATIONS uniquement ?"))return;
     executeNotificationPermission(()=>notificationPermissionService.install({confirmed:true}));
+  };
+  $("legacy-check").onclick=async()=>{
+    if(legacyBusy)return;legacyBusy=true;controls();$("legacy-status").textContent="Contrôle des marqueurs historiques en cours…";$("legacy-findings").replaceChildren();$("legacy-counts").replaceChildren();
+    try{
+      if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+      await window.grist.ready({requiredAccess:"full"});legacyService??=window.PilotageActionLegacyLiveAudit.create({grist:window.grist});const value=await legacyService.inspect();
+      $("legacy-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      const labels={actions:"Actions historiques",circuits:"Circuits",assignments:"Attributions",events:"Événements",notifications:"Notifications"};
+      $("legacy-counts").replaceChildren(...Object.entries(value.counts).map(([name,count])=>{const li=document.createElement("li");li.textContent=`${labels[name]} : ${count}`;return li;}));
+      $("legacy-status").textContent=value.readyForActionPolicy?"Héritage 1/2 conforme : 17 anciennes actions préservées à la révision 0, aucune ligne de circuit.":"Héritage 1/2 bloqué : examinez les écarts affichés.";
+    }catch(error){$("legacy-status").textContent=error.message;}
+    finally{legacyBusy=false;controls();}
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();
