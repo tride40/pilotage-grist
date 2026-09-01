@@ -275,6 +275,10 @@
         const context=await identity(), current=await snapshot(actionId,false,context);
         const row=current.decoded.row;
         return {row,operations:[...lifecycle.operations(row,context),...(row.visibleTo.includes(context.personId)&&row.state==="to_assign"&&[row.creatorId,row.assignerId].includes(context.personId)?["assign"]:[])],
+          history:current.events.filter(event=>event.Action===actionId).sort((a,b)=>a.Revision-b.Revision).map(event=>({
+            revision:event.Revision,authorId:event.Auteur,occurredAt:iso(event.Date_evenement),operation:event.Operation,
+            from:event.Etape_avant||null,to:event.Etape_apres||null,note:event.Precision||"",
+          })),
           outcomeUncertain:latch.isUncertain(),ownerStagingOnly:true,businessWorkflowEnabled:false};
       },
       execute:(actionId,input)=>execute(actionId,input),
