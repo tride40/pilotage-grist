@@ -10,6 +10,27 @@
     request_additional_work:"Demander réellement un complément sur cette action ?",
     cancel:"Annuler réellement cette action ?"
   };
+  function diagnosticDetails(error){
+    const seen=new WeakSet();
+    function clean(value,depth=0){
+      if(value===null||["string","number","boolean"].includes(typeof value))return value;
+      if(depth>=4||typeof value!=="object")return undefined;
+      if(seen.has(value))return "[référence circulaire]";
+      seen.add(value);
+      if(Array.isArray(value))return value.slice(0,20).map(item=>clean(item,depth+1)).filter(item=>item!==undefined);
+      const result={};
+      for(const key of Object.getOwnPropertyNames(value).slice(0,30)){
+        if(["stack","message"].includes(key))continue;
+        let item;try{item=clean(value[key],depth+1);}catch{item="[illisible]";}
+        if(item!==undefined)result[key]=item;
+      }
+      return result;
+    }
+    const details=clean(error);
+    if(!details||typeof details!=="object"||!Object.keys(details).length)return "";
+    const text=JSON.stringify(details);
+    return text.length>2000?`${text.slice(0,2000)}…`:text;
+  }
   function failureMessage(error){
     const message=typeof error?.message==="string"&&error.message.trim()?error.message.trim():"Erreur Grist non précisée.";
     const details=error?.details, raw=details?.memos;
@@ -17,7 +38,8 @@
       .filter(value=>typeof value==="string").map(value=>value.trim()).filter(Boolean))];
     const code=typeof error?.code==="string"&&error.code.trim()?error.code.trim():"";
     const diagnostic=[code&&`code ${code}`,...memos].filter(Boolean).join(" · ");
-    return diagnostic?`${message} (${diagnostic})`:message;
+    const rawDetails=diagnosticDetails(error);
+    return [diagnostic?`${message} (${diagnostic})`:message,rawDetails&&`Détails techniques : ${rawDetails}`].filter(Boolean).join("\n");
   }
   function mount({element,service,catalog,canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente."}){
     const doc=element.ownerDocument, win=doc.defaultView;
@@ -111,5 +133,5 @@
     disabled();const ready=load();
     return {ready,refresh:load,dispose(){locked=true;canWrite=false;rows=[];element.replaceChildren();}};
   }
-  root.PilotageActionCircuitUI=Object.freeze({mount,failureMessage});
+  root.PilotageActionCircuitUI=Object.freeze({mount,failureMessage,diagnosticDetails});
 })(typeof globalThis==="object"?globalThis:this);
