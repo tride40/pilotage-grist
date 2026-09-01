@@ -11,7 +11,7 @@
     const catalog=await service.catalog();
     window.PilotageActionCircuitUI.mount({
       element,service,catalog,canWrite:true,allowCreate:true,allowAssignment:true,allowLifecycle:true,confirmWrites:true,
-      title:"Actions",initialFilter:"open",showCreate:true,
+      title:"Actions",initialFilter:"open",showCreate:true,showNotifications:true,
       banner:"Créez et suivez les actions selon votre rôle. Utilisez les filtres pour retrouver ce que vous devez réaliser, vos demandes et les validations en attente."
     });
   }catch(error){

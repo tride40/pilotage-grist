@@ -41,9 +41,9 @@
     const rawDetails=diagnosticDetails(error);
     return [diagnostic?`${message} (${diagnostic})`:message,rawDetails&&`Détails techniques : ${rawDetails}`].filter(Boolean).join("\n");
   }
-  function mount({element,service,catalog={projects:[],people:[],services:[],poles:[]},canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente.",title="Circuit des actions",initialFilter="open",showCreate=true}){
+  function mount({element,service,catalog={projects:[],people:[],services:[],poles:[]},canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente.",title="Circuit des actions",initialFilter="open",showCreate=true,showNotifications=false}){
     const doc=element.ownerDocument, win=doc.defaultView;
-    let rows=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null;
+    let rows=[],notifications=[],notificationButtons=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null;
     const node=(tag,text,cls)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
     const button=(text,fn,cls="button button--secondary")=>{const e=node("button",text,cls);e.type="button";e.addEventListener("click",fn);return e;};
     const option=(select,value,label)=>{const e=node("option",label);e.value=value;select.append(e);};
@@ -51,6 +51,8 @@
     const heading=node("header",undefined,"circuit-heading"), pageTitle=node("h1",title);
     const add=button("Nouvelle action",()=>openCreate(),"button button--primary");heading.append(pageTitle);if(showCreate)heading.append(add);
     const notice=node("p",banner,"circuit-notice"),status=node("p","");status.setAttribute("role","status");status.setAttribute("aria-live","polite");
+    const notificationPanel=node("section",undefined,"card circuit-notifications"),notificationTitle=node("h2","Notifications"),notificationStatus=node("p","");
+    notificationStatus.setAttribute("role","status");notificationPanel.setAttribute("aria-label","Notifications non lues");notificationPanel.append(notificationTitle,notificationStatus);
     const toolbar=node("div",undefined,"circuit-toolbar"), search=node("input"), filter=node("select");
     search.type="search";search.placeholder="Rechercher une action";search.setAttribute("aria-label","Rechercher une action");
     for(const [key,label] of [["open","Actions ouvertes"],["executor","Mes actions à réaliser"],["creator","Mes demandes en cours"],["review","À valider"],["all","Toutes les actions"],["history","Historique"]])option(filter,key,label);
@@ -63,8 +65,8 @@
     const fields=node("div",undefined,"circuit-form-fields"),error=node("p",undefined,"circuit-form-error");error.setAttribute("role","alert");
     const controls=node("div",undefined,"circuit-controls"),back=button("Retour",()=>close()),submit=node("button","Enregistrer","button button--primary");submit.type="submit";
     controls.append(back,submit);form.append(formTitle,fields,error,controls);dialog.append(form);
-    element.append(heading,notice,toolbar,status,list,dialog);
-    function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;}
+    element.append(heading,notice,...(showNotifications?[notificationPanel]:[]),toolbar,status,list,dialog);
+    function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;notificationButtons.forEach(item=>item.disabled=busy||locked||!canWrite);}
     function close(){if(busy)return;dialog.close();form.reset();fields.replaceChildren();selected=null;currentCapability=false;currentOperation=null;opener?.focus();}
     function open(title,capability,operation){if(busy||locked||!canWrite||!capability)return false;currentCapability=true;currentOperation=operation;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent=title;submit.textContent="Enregistrer";disabled();dialog.showModal();return true;}
     function group(title){const e=node("fieldset");e.append(node("legend",title));fields.append(e);return e;}
@@ -124,7 +126,13 @@
         card.append(h,meta);if(r.deadline)card.append(node("p",`Échéance : ${r.deadline}`));
         const bar=node("div",undefined,"circuit-controls");for(const op of r.operations||[]){const permitted=op==="assign"?allowAssignment:allowLifecycle,b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||!permitted||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
     }
-    async function load(){if(busy)return;busy=true;disabled();try{rows=await service.list();status.textContent=`${rows.length} action(s) chargée(s).`;}catch(e){rows=[];status.textContent=e.message;}finally{busy=false;disabled();render();}}
+    function showAction(notification){filter.value="all";search.value=notification.title;render();list.scrollIntoView({block:"start",behavior:"smooth"});}
+    function renderNotifications(){if(!showNotifications)return;notificationButtons=[];notificationPanel.replaceChildren(notificationTitle,notificationStatus);const unread=notifications.filter(item=>!item.read);notificationTitle.textContent=`Notifications${unread.length?` (${unread.length})`:""}`;
+      notificationStatus.textContent=unread.length?`${unread.length} notification(s) non lue(s).`:"Aucune notification non lue.";
+      unread.forEach(item=>{const card=node("article",undefined,"circuit-notification"),label=({create:"Nouvelle action",assign:"Action attribuée",perform:"Action déclarée réalisée",close:"Action clôturée",request_additional_work:"Complément demandé",cancel:"Action annulée"})[item.type]||"Mise à jour de l’action";
+        card.append(node("h3",item.title),node("p",label));const controls=node("div",undefined,"circuit-controls"),view=button("Afficher l’action",()=>showAction(item)),read=button("Marquer comme lue",()=>markRead(item.id));notificationButtons.push(view,read);controls.append(view,read);card.append(controls);notificationPanel.append(card);});disabled();}
+    async function markRead(id){if(busy||locked||!canWrite||typeof service.markNotificationRead!=="function")return;busy=true;disabled();try{await service.markNotificationRead(id);busy=false;await load();status.textContent="Notification marquée comme lue.";}catch(e){locked=true;status.textContent=failureMessage(e);}finally{busy=false;disabled();}}
+    async function load(){if(busy)return;busy=true;disabled();try{const values=await Promise.all([service.list(),showNotifications&&typeof service.notifications==="function"?service.notifications():[]]);rows=values[0];notifications=values[1];status.textContent=`${rows.length} action(s) chargée(s).`;}catch(e){rows=[];notifications=[];status.textContent=e.message;}finally{busy=false;renderNotifications();disabled();render();}}
     form.addEventListener("submit",async event=>{event.preventDefault();if(busy||locked||!canWrite||!currentCapability||!collect||!form.reportValidity())return;
       if(confirmWrites&&!win.confirm(confirmations[currentOperation]||"Enregistrer cette opération réelle ?"))return;
       busy=true;disabled();error.textContent="";
