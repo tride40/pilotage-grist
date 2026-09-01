@@ -287,13 +287,13 @@ domTest("fiche de consultation sans rang ; formulaire catégorisé et champs con
     const f=p.doc.querySelector("#person-form");
     assert.equal(f.elements.Fonction_elu.value,"Adjoint au maire");assert.equal(f.elements.Rang.value,"2");assert.equal(f.elements.Rang.closest("label").hidden,false);
     assert.equal(f.elements.Delegation.closest("label").hidden,false);assert.equal(f.elements.Fonction.closest("label").hidden,true);
-    assert.equal(f.querySelectorAll(".directory-form-section").length,5);
+    assert.equal(f.querySelectorAll(".directory-form-section").length,4);
     input(p,'#person-form [name="Fonction_elu"]',"Conseiller délégué","change");
     assert.equal(f.elements.Rang.closest("label").hidden,true);assert.equal(f.elements.Delegation.closest("label").hidden,false);
     input(p,'#person-form [name="Fonction_elu"]',"Conseiller municipal","change");
     assert.equal(f.elements.Delegation.closest("label").hidden,true);
     input(p,'#person-form [name="Role_interne"]',"Agent","change");
-    assert.equal(f.elements.Fonction_elu.closest("section").hidden,true);assert.equal(f.elements.Fonction.closest("label").hidden,false);
+    assert.equal(f.elements.Fonction_elu.closest(".directory-mandate-fields").hidden,true);assert.equal(f.elements.Fonction.closest("label").hidden,false);
     assert.deepEqual(p.errors,[]);
   }finally{p.cleanup();}
 });
@@ -360,7 +360,7 @@ domTest("ajout d’un élu et suppression d’un rang existant",async()=>{
 domTest("les agents restent modifiables avant préparation des champs des élus",async()=>{
   const p=await page({live:true,missingMandate:true});try{
     await openEdit(p,"Camille Martin");
-    const f=p.doc.querySelector("#person-form");assert.equal(f.elements.Fonction_elu.closest("section").hidden,true);
+    const f=p.doc.querySelector("#person-form");assert.equal(f.elements.Fonction_elu.closest(".directory-mandate-fields").hidden,true);
     const memberships=JSON.stringify(p.tables.SERVICES.map(s=>s.Agents));
     input(p,'#person-form [name="Fonction"]',"Responsable de l’aménagement");await save(p);
     assert.equal(p.doc.querySelector("#person-dialog").open,false);

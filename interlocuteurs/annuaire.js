@@ -131,25 +131,26 @@ window.MunicipalDirectory=(()=>{
     input.name=name;if(type!=="select")input.type=type;
     box.append(textElement("span",label,"form-field__label"),input);return box;
   }
-  function formSection(title,...children){
-    const box=element("section","directory-form-section");box.append(textElement("h3",title),...children);return box;
+  function formSection(number,title,subtitle,...children){
+    const box=element("section","directory-form-section"),heading=element("div","directory-form-heading"),copy=element("div");
+    copy.append(textElement("h3",title),textElement("span",subtitle));heading.append(textElement("p",String(number)),copy);box.append(heading,...children);return box;
   }
   function formGrid(...children){const grid=element("div","directory-form-grid");grid.append(...children);return grid;}
   function formLayout(){
     const f=ui.form.elements,wrap=name=>f[name].closest("label");
     const role=wrap("Role_interne"),internal=wrap("Interne_Mairie"),active=wrap("Actif");
-    const identity=formSection("Identité et profil",formGrid(wrap("Prenom"),wrap("Nom")),internal,role);
     oldFunctionField=wrap("Fonction");
-    const position=formSection("Activité et rattachement",formGrid(wrap("Organisme"),oldFunctionField),ui.personServicesField);
     const roleField=field("Fonction élu","Fonction_elu","select");roleField.lastChild.append(option("","Non renseigné"),...M.FUNCTIONS.map(value=>option(value,value)));
     delegationField=field("Délégation","Delegation");delegationField.lastChild.placeholder="Ex. Urbanisme et aménagement";
     rankField=field("Rang des adjoints","Rang","number");rankField.lastChild.min="1";rankField.lastChild.step="1";rankField.lastChild.inputMode="numeric";
     rankField.append(textElement("small","Sert uniquement au classement des adjoints. Jamais affiché sur les cartes ou la fiche de consultation.","directory-muted"));
     legacyHint=textElement("p","","directory-legacy");
-    mandateSection=formSection("Mandat et délégation",formGrid(roleField,delegationField),rankField,legacyHint);
-    const notes=formSection("Notes et état",wrap("Notes"),active);
-    const contact=formSection("Coordonnées",formGrid(wrap("Email"),wrap("Telephone")));
-    const body=ui.form.querySelector(".form-grid");body.replaceChildren(identity,mandateSection,position,contact,notes);body.classList.add("directory-form-body");
+    mandateSection=element("div","directory-mandate-fields");mandateSection.append(textElement("h4","Mandat et délégation"),formGrid(roleField,delegationField),rankField,legacyHint);
+    const identity=formSection(1,"Identité et profil","Nom, profil et appartenance municipale",formGrid(wrap("Prenom"),wrap("Nom")),internal,role);
+    const position=formSection(2,"Activité et rattachement","Fonction, organisme et services",formGrid(wrap("Organisme"),oldFunctionField),mandateSection,ui.personServicesField);
+    const contact=formSection(3,"Coordonnées","Moyens de contact",formGrid(wrap("Email"),wrap("Telephone")));
+    const notes=formSection(4,"Notes et état","Informations complémentaires et disponibilité",wrap("Notes"),active);
+    const body=ui.form.querySelector(".form-grid");body.replaceChildren(identity,position,contact,notes);body.classList.add("directory-form-body");
     f.Fonction_elu.addEventListener("change",refreshMandate);
   }
   function refreshMandate(){

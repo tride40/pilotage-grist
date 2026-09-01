@@ -51,7 +51,7 @@
 .directory-toolbar input{font-size:1rem;font-weight:400}
 .directory-form-body{grid-template-columns:minmax(0,1fr)!important;padding:2px}
 .directory-form-section{display:grid;gap:1rem;min-width:0;padding:1rem;border:1px solid var(--color-border);border-radius:var(--radius-md)}
-.directory-form-section>h3{margin:0;font-size:1rem;color:var(--color-navigation)}
+.directory-form-heading{display:flex;align-items:center;gap:.75rem}.directory-form-heading>p{display:grid;flex:0 0 2rem;width:2rem;height:2rem;place-items:center;margin:0;border-radius:50%;background:var(--color-primary-soft);color:var(--color-primary);font-size:.8rem;font-weight:800}.directory-form-heading h3{margin:0;font-size:1rem;color:var(--color-navigation)}.directory-form-heading span{display:block;margin-top:.25rem;color:var(--color-text-muted);font-size:.78rem}.directory-mandate-fields{display:grid;gap:1rem;padding:1rem;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface-muted)}.directory-mandate-fields h4{margin:0;font-size:.88rem}
 .directory-form-grid{display:grid;gap:1rem;min-width:0}.directory-form-grid>*{min-width:0}
 .directory-form-section .form-field--wide{grid-column:auto}
 .directory-form-section .form-field--toggle{margin:0}
