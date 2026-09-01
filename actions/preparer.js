@@ -22,6 +22,7 @@
   let creationPreviewService, creationPreviewBusy = false;
   let lifecyclePreviewService, lifecyclePreviewBusy = false;
   let safetyPreviewService, safetyPreviewBusy = false;
+  let editorTransitionService, editorTransitionResult = null, editorTransitionBusy = false;
   function controls() {
     $("check").disabled = busy;
     $("backup").disabled = busy;
@@ -73,6 +74,9 @@
     $("creation-preview-check").disabled = creationPreviewBusy;
     $("lifecycle-preview-check").disabled = lifecyclePreviewBusy;
     $("safety-preview-check").disabled = safetyPreviewBusy;
+    $("editor-transition-check").disabled = editorTransitionBusy;
+    $("editor-transition-confirm").disabled = editorTransitionBusy;
+    $("editor-transition-install").disabled = editorTransitionBusy || !$("editor-transition-confirm").checked || !editorTransitionResult?.readyToInstall || editorTransitionResult.alreadyInstalled || editorTransitionResult.outcomeUncertain;
   }
   function renderProject(value) {
     projectResult = value;
@@ -544,6 +548,32 @@
       $("safety-preview-status").textContent=value.readyForSafety?"Données réelles 4/4 conformes : échéances, notifications et résultat incertain sont sécurisés. Le raccordement aux données réelles est terminé.":"Données réelles 4/4 bloquées : examinez l’écart affiché avant de créer les pages fonctionnelles.";
     }catch(error){$("safety-preview-status").textContent=error.message;}
     finally{safetyPreviewBusy=false;controls();}
+  };
+  $("editor-transition-confirm").onchange=controls;
+  async function executeEditorTransition(operation){
+    if(editorTransitionBusy)return;
+    editorTransitionBusy=true;controls();$("editor-transition-status").textContent="Contrôle du correctif en cours…";
+    try{
+      const value=await operation();editorTransitionResult=value;
+      $("editor-transition-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
+      $("editor-transition-status").textContent=value.outcomeUncertain?"Résultat incertain : ne relancez pas l’installation."
+        :value.alreadyInstalled?"Correctif confirmé : les transitions des éditeurs utilisent les contrôles ordonnés."
+        :value.readyToInstall?`Correctif prêt : ${value.changedRules} règles et trois formules techniques seront adaptées en une seule écriture.`
+        :"Correctif bloqué : examinez l’écart affiché.";
+    }catch(error){editorTransitionResult=null;$("editor-transition-findings").replaceChildren();$("editor-transition-status").textContent=error.message;}
+    finally{editorTransitionBusy=false;controls();}
+  }
+  $("editor-transition-check").onclick=()=>executeEditorTransition(async()=>{
+    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
+    await window.grist.ready({requiredAccess:"full"});
+    if(!window.PilotageActionEditorTransitionMigration?.create)throw Error("Le correctif des transitions manque dans la publication.");
+    editorTransitionService??=window.PilotageActionEditorTransitionMigration.create({grist:window.grist,mode:window.PilotageTestMode});
+    return editorTransitionService.inspect();
+  });
+  $("editor-transition-install").onclick=()=>{
+    if(editorTransitionBusy||$("editor-transition-install").disabled||!editorTransitionService)return;
+    if(!window.confirm("Installer le correctif des transitions éditeurs ? Aucune ligne métier ne sera modifiée."))return;
+    executeEditorTransition(()=>editorTransitionService.install({confirmed:true}));
   };
   // No automatic read or write at load; both stages are explicit user actions.
   controls();

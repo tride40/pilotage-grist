@@ -10,21 +10,21 @@
   <script src="../commun/action-notification-permissions.js?v=2" defer></script>
   <script src="../commun/action-grist-schema.js?v=2" defer></script>
   <script src="../commun/action-grist-setup.js" defer></script>
-  <script src="../commun/action-source-permissions.js" defer></script>
-  <script src="../commun/action-source-schema-lot.js" defer></script>
+  <script src="../commun/action-source-permissions.js?v=2" defer></script>
+  <script src="../commun/action-source-schema-lot.js?v=2" defer></script>
   <script src="../commun/action-source-schema-setup.js" defer></script>
   <script src="../commun/action-attribution-permissions.js" defer></script>
   <script src="../commun/action-attribution-schema-lot.js?v=2" defer></script>
   <script src="../commun/action-circuit-schema-lot.js?v=1" defer></script>
-  <script src="../commun/action-event-schema-lot.js?v=1" defer></script>
-  <script src="../commun/action-notification-schema-lot.js?v=1" defer></script>
+  <script src="../commun/action-event-schema-lot.js?v=2" defer></script>
+  <script src="../commun/action-notification-schema-lot.js?v=2" defer></script>
   <script src="../commun/action-account-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-project-schema-lot.js?v=1" defer></script>
   <script src="../commun/action-table-schema-setup.js?v=1" defer></script>
   <script src="../commun/action-source-protection.js" defer></script>
-  <script src="../commun/action-circuit-permission-lot.js?v=1" defer></script>
+  <script src="../commun/action-circuit-permission-lot.js?v=2" defer></script>
   <script src="../commun/action-attribution-permission-lot.js?v=1" defer></script>
-  <script src="../commun/action-event-permission-lot.js?v=1" defer></script>
+  <script src="../commun/action-event-permission-lot.js?v=2" defer></script>
   <script src="../commun/action-notification-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-source-permission-lot.js?v=1" defer></script>
   <script src="../commun/action-authority-permission-lot.js?v=2" defer></script>
@@ -47,7 +47,8 @@
   <script src="../commun/action-notification-integrity.js?v=1" defer></script>
   <script src="../commun/action-grist-lifecycle.js?v=2" defer></script>
   <script src="../commun/action-safety-live-audit.js?v=1" defer></script>
-  <script src="preparer.js?v=25" defer></script>
+  <script src="../commun/action-editor-transition-migration.js?v=1" defer></script>
+  <script src="preparer.js?v=26" defer></script>
 </head>
 <body><main>
   <p class="kicker">Administration · Document de base</p><h1>Préparer le circuit des actions</h1>
@@ -236,5 +237,14 @@
     <p id="safety-preview-status" role="status" aria-live="polite">Contrôle requis pour terminer le raccordement aux données réelles.</p>
     <ul id="safety-preview-findings"></ul><ul id="safety-preview-confirmed"></ul><ul id="safety-preview-counts"></ul>
     <p>Ce contrôle utilise un parcours service ou pôle calculé depuis l’organisation réelle. Il ne transmet aucune commande et ne provoque volontairement aucune erreur réseau.</p>
+  </section>
+  <section class="card"><h2>24 · Correctif — transitions des éditeurs</h2>
+    <p>Corriger l’ordre des contrôles Grist pour permettre à l’exécutant de déclarer une action réalisée, sans réduire les contrôles de rôle, de révision, d’étape et de notification.</p>
+    <button class="button button--secondary" id="editor-transition-check" type="button">Vérifier le correctif</button>
+    <p id="editor-transition-status" role="status" aria-live="polite">Vérification requise avant toute modification.</p>
+    <ul id="editor-transition-findings"></ul>
+    <label><input id="editor-transition-confirm" type="checkbox"> Je confirme disposer d’une sauvegarde actuelle et appliquer ce correctif aux permissions.</label>
+    <button class="button button--primary" id="editor-transition-install" type="button" disabled>Installer le correctif</button>
+    <p>Une seule écriture groupée ajoute un contrôle serveur et adapte huit règles existantes. Aucune action, aucun événement et aucune notification métier ne sont modifiés.</p>
   </section>
 </main></body></html>
