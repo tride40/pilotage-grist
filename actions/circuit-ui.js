@@ -49,26 +49,39 @@
     const button=(text,fn,cls="button button--secondary")=>{const e=node("button",text,cls);e.type="button";e.addEventListener("click",fn);return e;};
     const option=(select,value,label)=>{const e=node("option",label);e.value=value;select.append(e);};
     element.replaceChildren();
-    const heading=node("header",undefined,"circuit-heading"), pageTitle=node("h1",title);
-    const add=button("Nouvelle action",()=>openCreate(),"button button--primary");heading.append(pageTitle);if(showCreate)heading.append(add);
-    const notice=node("p",banner,"circuit-notice"),status=node("p","");status.setAttribute("role","status");status.setAttribute("aria-live","polite");
+    const heading=node("header",undefined,"circuit-heading"), headingCopy=node("div",undefined,"circuit-heading__copy"), pageTitle=node("h1",title);
+    const eyebrow=node("p","SUIVI OPÉRATIONNEL","circuit-eyebrow"),notice=node("p",banner,"circuit-heading__subtitle");
+    headingCopy.append(eyebrow,pageTitle,notice);
+    const add=button("+ Nouvelle action",()=>openCreate(),"button button--primary circuit-add");heading.append(headingCopy);if(showCreate)heading.append(add);
+    const status=node("p","");status.setAttribute("role","status");status.setAttribute("aria-live","polite");status.className="circuit-status";
     const viewStatus=node("p","");viewStatus.setAttribute("role","status");viewStatus.setAttribute("aria-live","polite");
+    viewStatus.className="circuit-view-status";
+    const summaryPanel=node("section",undefined,"circuit-summary");summaryPanel.setAttribute("aria-label","Synthèse des actions");
+    const summaryCards={};
+    for(const [key,label,tone] of [["todo","À réaliser","blue"],["review","À valider","purple"],["late","En retard","red"],["unread","Non lues","amber"]]){
+      const card=node("article",undefined,`circuit-kpi circuit-kpi--${tone}`),caption=node("p",label),value=node("strong","0");
+      card.append(caption,value);summaryPanel.append(card);summaryCards[key]=value;
+    }
     const notificationPanel=node("section",undefined,"card circuit-notifications"),notificationTitle=node("h2","Notifications"),notificationStatus=node("p","");
     notificationStatus.setAttribute("role","status");notificationPanel.setAttribute("aria-label","Notifications non lues");notificationPanel.append(notificationTitle,notificationStatus);
-    const toolbar=node("div",undefined,"circuit-toolbar"), search=node("input"), filter=node("select");
+    const toolbarPanel=node("section",undefined,"circuit-toolbar-panel"),toolbar=node("div",undefined,"circuit-toolbar"), search=node("input"), filter=node("select");
     search.type="search";search.placeholder="Rechercher une action";search.setAttribute("aria-label","Rechercher une action");
     for(const [key,label] of [["open","Actions ouvertes"],["executor","Mes actions à réaliser"],["creator","Mes demandes en cours"],["review","À valider"],["all","Toutes les actions"],["history","Historique"]])option(filter,key,label);
     filter.value=["open","executor","creator","review","all","history"].includes(initialFilter)?initialFilter:"open";
     filter.setAttribute("aria-label","Afficher les actions");
-    const refresh=button("Actualiser",()=>load());toolbar.append(search,filter,refresh);
-    const list=node("section");list.setAttribute("aria-label","Liste des actions");
+    const searchWrap=node("label",undefined,"circuit-filter"),filterWrap=node("label",undefined,"circuit-filter");
+    searchWrap.append(node("span","Rechercher"),search);filterWrap.append(node("span","Vue"),filter);
+    const refresh=button("Actualiser",()=>load());toolbar.append(searchWrap,filterWrap,refresh);toolbarPanel.append(toolbar);
+    const list=node("section",undefined,"circuit-list");list.setAttribute("aria-label","Liste des actions");
     const dialog=node("dialog");dialog.setAttribute("aria-labelledby","circuit-form-title");
     const form=node("form"),formTitle=node("h2");formTitle.id="circuit-form-title";
+    const dialogHeader=node("header",undefined,"circuit-dialog-header"),dialogHeading=node("div"),dialogEyebrow=node("p","ACTIONS","circuit-eyebrow"),dialogClose=button("×",()=>close(),"circuit-dialog-close");
+    dialogClose.setAttribute("aria-label","Fermer");dialogHeading.append(dialogEyebrow,formTitle);dialogHeader.append(dialogHeading,dialogClose);
     const fields=node("div",undefined,"circuit-form-fields"),error=node("p",undefined,"circuit-form-error");error.setAttribute("role","alert");
     const controls=node("div",undefined,"circuit-controls"),back=button("Retour",()=>close()),submit=node("button","Enregistrer","button button--primary");submit.type="submit";
-    controls.append(back,submit);form.append(formTitle,fields,error,controls);dialog.append(form);
-    element.append(heading,notice,...(showNotifications?[notificationPanel]:[]),toolbar,status,viewStatus,list,dialog);
-    function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;notificationButtons.forEach(item=>{item.button.disabled=busy||(item.requiresWrite&&(locked||!canWrite));});}
+    controls.append(back,submit);form.append(dialogHeader,fields,error,controls);dialog.append(form);
+    element.append(heading,summaryPanel,...(showNotifications?[notificationPanel]:[]),toolbarPanel,status,viewStatus,list,dialog);
+    function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;dialogClose.disabled=busy;notificationButtons.forEach(item=>{item.button.disabled=busy||(item.requiresWrite&&(locked||!canWrite));});}
     function showSubmit(visible){submit.hidden=!visible;submit.style.display=visible?"":"none";}
     function resetDialogScroll(){dialog.scrollTop=0;form.scrollTop=0;fields.scrollTop=0;}
     function close(){if(busy)return;dialog.close();form.reset();fields.replaceChildren();selected=null;currentCapability=false;currentOperation=null;showSubmit(true);back.textContent="Retour";resetDialogScroll();opener?.focus();}
@@ -128,6 +141,13 @@
     function normalizeText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr");}
     function searchableText(row){return normalizeText([row.title,row.projectTitle,labels[row.state]||row.state,personName(row.creatorId),row.executorId&&personName(row.executorId),targetName(row),row.serviceId&&serviceName(row.serviceId),...(row.associateIds||[]).map(personName)].filter(Boolean).join(" "));}
     function compareRows(a,b){const overdue=Number(isOverdue(b))-Number(isOverdue(a));if(overdue)return overdue;if(a.deadline&&b.deadline&&a.deadline!==b.deadline)return a.deadline.localeCompare(b.deadline);if(Boolean(a.deadline)!==Boolean(b.deadline))return a.deadline?-1:1;const updated=String(b.updatedAt||"").localeCompare(String(a.updatedAt||""));return updated||String(a.title||"").localeCompare(String(b.title||""),"fr");}
+    function renderSummary(){
+      const active=row=>!["closed","cancelled"].includes(row.state);
+      summaryCards.todo.textContent=rows.filter(row=>row.roles?.executor&&active(row)).length;
+      summaryCards.review.textContent=rows.filter(row=>row.roles?.creator&&row.state==="performed").length;
+      summaryCards.late.textContent=rows.filter(isOverdue).length;
+      summaryCards.unread.textContent=notifications.filter(item=>!item.read).length;
+    }
     async function openDetail(row){
       if(busy)return;busy=true;disabled();
       try{const fresh=await service.inspect(row.id);selected=fresh.row;opener=doc.activeElement;form.reset();fields.replaceChildren();error.textContent="";formTitle.textContent="Détail de l’action";currentCapability=false;currentOperation="view";showSubmit(false);back.textContent="Retour à la liste";
@@ -141,7 +161,7 @@
         disabled();dialog.showModal();resetDialogScroll();
       }catch(e){status.textContent=e.message;}finally{busy=false;disabled();}
     }
-    function render(){list.replaceChildren();const shown=rows.filter(r=>{
+    function render(){renderSummary();list.replaceChildren();const shown=rows.filter(r=>{
       const terminal=["closed","cancelled"].includes(r.state);
       const scope=filter.value==="all"||filter.value==="history"?filter.value==="all"||terminal
         :filter.value==="review"?Boolean(r.roles?.creator&&r.state==="performed")
@@ -150,9 +170,10 @@
       return scope&&searchableText(r).includes(normalizeText(search.value));}).sort(compareRows);
       viewStatus.textContent=`${shown.length} action(s) affichée(s) sur ${rows.length}.`;
       if(!shown.length)list.append(node("p",search.value.trim()?"Aucune action ne correspond à votre recherche.":"Aucune action dans cette vue.","circuit-empty"));
-      shown.forEach(r=>{const card=node("article",undefined,"card circuit-card"),h=node("h2",r.title),meta=node("p",`${r.projectTitle} · ${labels[r.state]||r.state}`);
-        card.append(h,meta);if(r.deadline)card.append(node("p",`Échéance : ${formatDate(r.deadline)}${isOverdue(r)?" · En retard":""}`));if(r.performedAt)card.append(node("p",`Réalisation déclarée : ${formatDate(r.performedAt,true)}${r.performedBy?` par ${personName(r.performedBy)}`:""}`));
-        const bar=node("div",undefined,"circuit-controls");bar.append(button("Voir le détail",()=>openDetail(r)));for(const op of r.operations||[]){const permitted=op==="assign"?allowAssignment:allowLifecycle,b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||!permitted||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
+      shown.forEach(r=>{const late=isOverdue(r),card=node("article",undefined,`card circuit-card circuit-card--${late?"late":r.state}`),top=node("div",undefined,"circuit-card__top"),project=node("span",r.projectTitle||"Sans projet","circuit-chip"),state=node("span",late?"En retard":labels[r.state]||r.state,`circuit-badge circuit-badge--${late?"late":r.state}`),h=node("h2",r.title);
+        top.append(project,state);card.append(top,h);
+        const facts=node("div",undefined,"circuit-card__facts");detailLine(facts,"Destinataire",targetName(r));if(r.deadline)detailLine(facts,"Échéance",formatDate(r.deadline));if(r.performedAt)detailLine(facts,"Réalisation déclarée",`${formatDate(r.performedAt,true)}${r.performedBy?` par ${personName(r.performedBy)}`:""}`);card.append(facts);
+        const bar=node("div",undefined,"circuit-controls circuit-card__actions");bar.append(button("Voir la fiche",()=>openDetail(r),"button button--primary"));for(const op of r.operations||[]){const permitted=op==="assign"?allowAssignment:allowLifecycle,b=button(verbs[op],()=>openCommand(r,op));b.disabled=!canWrite||!permitted||busy||locked;bar.append(b);}card.append(bar);list.append(card);});
     }
     function showAction(notification){const row=rows.find(item=>item.id===notification.actionId);if(!row){status.textContent="Cette action n’est plus disponible dans votre vue. Actualisez la page.";return;}openDetail(row);}
     function renderNotifications(){if(!showNotifications)return;notificationButtons=[];notificationPanel.replaceChildren(notificationTitle,notificationStatus);const unread=notifications.filter(item=>!item.read);notificationTitle.textContent=`Notifications${unread.length?` (${unread.length})`:""}`;
