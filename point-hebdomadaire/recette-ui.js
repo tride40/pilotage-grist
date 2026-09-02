@@ -69,7 +69,7 @@
     const disabled = controls.map(control => control.disabled); controls.forEach(control => { control.disabled = true; });
     try {
       data = await operation();
-      if (window.PilotageTestMode.isReadOnly()) throw Error("Le mode test a changé. Rechargez la page.");
+      window.PilotageGristWrite.assertWritable();
       render(); $("status").textContent = "Enregistré dans votre espace personnel.";
       busy = false; if (returnToList) back();
     } catch (error) {
@@ -84,7 +84,7 @@
     try {
       if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de recette Grist.");
       await window.grist.ready({ requiredAccess: "full" });
-      service = window.RecetteTasks.create({ grist: window.grist, mode: window.PilotageTestMode, identify: () => window.PilotageCurrentUser.identify() });
+      service = window.RecetteTasks.create({ grist: window.grist, mode: window.PilotageGristWrite, identify: () => window.PilotageCurrentUser.identify() });
       data = await service.initialize();
       render(); workspace.hidden = false; $("status").textContent = "Vos tâches sont enregistrées dans Grist, sans notification partagée.";
     } catch (error) { forget(); $("status").textContent = error.message; }
@@ -99,9 +99,6 @@
     if (!input.title.trim()) { $("form-error").textContent = "L’intitulé est obligatoire."; return; }
     run(() => service.save(selected, input), true);
   };
-  window.addEventListener("storage", () => {
-    if (window.PilotageTestMode?.isReadOnly()) { forget(); $("status").textContent = "Mode test modifié : les tâches privées ont été masquées. Rechargez la page."; }
-  });
   // No private task or draft is persisted in browser storage.
   load();
 })();
