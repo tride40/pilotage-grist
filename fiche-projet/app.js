@@ -248,8 +248,8 @@ function renderProject(view) {
 
 function renderHubLinks(projectId) {
   const context = window.PilotageContext;
-  const links = [["#hub-actions", "../actions/"], ["#hub-meetings", "../reunions/"]];
-  links.forEach(([selector, path]) => { const link = document.querySelector(selector); if (link) link.href = context?.url(path, { projectId, mode: "project" }) || `${path}?projectId=${encodeURIComponent(projectId)}&mode=project`; });
+  const links = [["#hub-actions", "actions"], ["#hub-meetings", "meetings"]];
+  links.forEach(([selector, tool]) => { const link = document.querySelector(selector); if (!link) return; link.href = context.projectToolUrl(tool, projectId); link.target = "_top"; link.onclick = () => context.rememberToolProject(tool, { id: projectId }); });
 }
 
 function renderProjectBadges(project) {
