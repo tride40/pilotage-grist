@@ -104,7 +104,7 @@ async function archiveInstruction(row,reason){const fields=writableFields({Statu
 async function writeAction(action, successMessage) {
   if (state.busy) return; state.busy = true; setInteractiveDisabled(true);
   try {
-    if (state.demo) applyDemoAction(action); else await withTimeout(window.PilotageTestMode.applyUserActions([action]), "écriture dans Grist");
+    if (state.demo) applyDemoAction(action); else await withTimeout(window.PilotageGristWrite.applyUserActions([action]), "écriture dans Grist");
     if (!state.demo) await reloadTables(state.project.id); else render(); showFeedback(successMessage);
   } catch (error) { showFeedback(`Écriture impossible — ${exactError(error)}`, true); }
   finally { state.busy = false; setInteractiveDisabled(false); }
