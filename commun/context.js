@@ -4,7 +4,18 @@
   const PROJECT_PAGE_URL = "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/10";
   const PROJECT_STORAGE_KEY = "pilotage-grist:selected-project";
   const params = new URLSearchParams(window.location.search);
-  const projectId = params.get("projectId") || params.get("projet") || "";
+  // Les paramètres de la page Grist ne sont pas transmis à son widget.
+  // Transmettre le projet aux réunions dans cette fenêtre, une seule fois.
+  const MEETING_CONTEXT_KEY = "pilotage-grist:meeting-navigation";
+  function pendingMeetingProject() {
+    if (!/\/reunions\/(?:index\.html)?$/.test(window.location.pathname || "")) return "";
+    try {
+      const pending = JSON.parse(sessionStorage.getItem(MEETING_CONTEXT_KEY) || "null");
+      sessionStorage.removeItem(MEETING_CONTEXT_KEY);
+      return pending && Date.now() - pending.at < 60000 ? String(pending.id) : "";
+    } catch (_) { return ""; }
+  }
+  const projectId = params.get("projectId") || params.get("projet") || pendingMeetingProject();
   const mode = params.get("mode") === "project" || projectId ? "project" : "global";
 
   function url(path, options = {}) {
@@ -37,7 +48,21 @@
 
   function projectPageUrl(actualProjectId) {
     if (params.get("demo") === "1" && window.self === window.top) return url("../fiche-projet/", { projectId: actualProjectId, mode: "project" });
-    return PROJECT_PAGE_URL;
+    return window.PilotageNavigation?.applicationUrl(PROJECT_PAGE_URL) || `${PROJECT_PAGE_URL}?style=singlePage`;
+  }
+
+  function projectToolUrl(tool, actualProjectId) {
+    if (params.get("demo") === "1" && window.self === window.top) {
+      return url(tool === "actions" ? "../actions/actions.html" : "../reunions/", { projectId: actualProjectId, mode: "project" });
+    }
+    return window.PilotageNavigation.pageUrl(tool);
+  }
+
+  function rememberToolProject(tool, project) {
+    rememberProject(project);
+    if (tool === "meetings" && project?.id) {
+      try { sessionStorage.setItem(MEETING_CONTEXT_KEY, JSON.stringify({ id: project.id, at: Date.now() })); } catch (_) { /* Le sélecteur de projet reste disponible. */ }
+    }
   }
 
   function configureProjectReturn(link, project) {
@@ -50,5 +75,5 @@
     return true;
   }
 
-  window.PilotageContext = Object.freeze({ projectId, mode, isProjectMode: mode === "project", url, selectProject, isValidProjectContext, rememberProject, projectPageUrl, configureProjectReturn });
+  window.PilotageContext = Object.freeze({ projectId, mode, isProjectMode: mode === "project", url, selectProject, isValidProjectContext, rememberProject, projectPageUrl, configureProjectReturn, projectToolUrl, rememberToolProject });
 }());
