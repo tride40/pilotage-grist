@@ -16,7 +16,7 @@
     if(!audit?.inspect||!lot?.inspect||!lot?.tableId)throw Error("Lot de permissions invalide.");
     const targetTableIds=new Set(Array.isArray(lot.tableIds)&&lot.tableIds.length?lot.tableIds:[lot.tableId]);
     let busy=false,preview=null,livePreview=null,outcomeUncertain=false;
-    async function guard(){if(!mode||mode.isReadOnly())throw Error("Installation interdite en mode test.");mode.assertWritable();if(await grist.docApi.getDocName()!==documentId)throw Error("Document de base non autorisé.");}
+    async function guard(){if(!mode||mode.isReadOnly())throw Error("Installation indisponible : la passerelle d’écriture Grist n’est pas prête.");mode.assertWritable();if(await grist.docApi.getDocName()!==documentId)throw Error("Document de base non autorisé.");}
     async function snapshot(){await guard();const names=["_grist_Tables","_grist_Tables_column","_grist_ACLResources","_grist_ACLRules"];const values=await Promise.all(names.map(async name=>rows(await grist.docApi.fetchTable(name))));await guard();return {documentId,tables:values[0],columns:values[1],resources:values[2],rules:values[3]};}
     function report(result){return {tableId:lot.tableId,findings:[...result.findings],readyToInstall:result.readyToInstall,alreadyInstalled:result.alreadyInstalled,outcomeUncertain};}
     const liveReady=value=>value?.readyForActionPolicy===true||value?.readyForAuthorityPolicy===true;

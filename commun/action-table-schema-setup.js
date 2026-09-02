@@ -14,7 +14,7 @@
   function create({grist,mode,lot}){
     if(!lot||typeof lot.inspect!=="function"||typeof lot.tableId!=="string")throw Error("Lot de schéma invalide.");
     let busy=false,preview=null,outcomeUncertain=false;
-    async function guard(){if(!mode||mode.isReadOnly())throw Error("Installation interdite en mode test.");mode.assertWritable();if(await grist.docApi.getDocName()!==schema.documentId)throw Error("Document de base non autorisé.");}
+    async function guard(){if(!mode||mode.isReadOnly())throw Error("Installation indisponible : la passerelle d’écriture Grist n’est pas prête.");mode.assertWritable();if(await grist.docApi.getDocName()!==schema.documentId)throw Error("Document de base non autorisé.");}
     async function snapshot(){await guard();const [tables,columns]=await Promise.all(["_grist_Tables","_grist_Tables_column"].map(async table=>rows(await grist.docApi.fetchTable(table))));await guard();return {tables,columns};}
     function report(result){return {tableId:lot.tableId,findings:[...result.findings],columns:[...result.missing],alreadyInstalled:result.alreadyInstalled,readyToInstall:result.readyToInstall,outcomeUncertain};}
     return Object.freeze({

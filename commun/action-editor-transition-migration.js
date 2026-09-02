@@ -92,7 +92,7 @@
   function create({grist,mode}){
     let busy=false,preview=null,outcomeUncertain=false;
     async function guard(){
-      if(!mode||mode.isReadOnly())throw Error("Installation interdite en mode test.");
+      if(!mode||mode.isReadOnly())throw Error("Installation indisponible : la passerelle d’écriture Grist n’est pas prête.");
       mode.assertWritable();
       if(await grist.docApi.getDocName()!==documentId)throw Error("Document de base non autorisé.");
     }

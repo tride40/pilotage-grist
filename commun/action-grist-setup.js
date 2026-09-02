@@ -15,7 +15,7 @@
   function create({ grist, mode }) {
     let busy = false, preview = null, outcomeUncertain = false;
     async function guard() {
-      if (!mode || mode.isReadOnly()) throw Error("Préparation interdite en mode test.");
+      if (!mode || mode.isReadOnly()) throw Error("Préparation indisponible : la passerelle d’écriture Grist n’est pas prête.");
       mode.assertWritable();
       if (await grist.docApi.getDocName() !== schema.documentId) throw Error("Document de base non autorisé.");
     }
