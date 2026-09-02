@@ -4,7 +4,6 @@ const EXPECTED={
   INTERLOCUTEURS:{Nom_complet:"Text",Interne_Mairie:"Bool",Role_interne:"Choice",Actif:"Bool"},
   SERVICES:{Nom_service:"Text",Actif:"Bool"},
   ACTIONS:{Projet:"Ref:PROJETS",Action:"Text",Statut:{type:"Choice",choices:["À attribuer","À faire","En cours","Réalisée","Non aboutie"]},Demandee_par:"Ref:INTERLOCUTEURS",Attribuee_a:"Ref:INTERLOCUTEURS",Service_destinataire:"Ref:SERVICES",Echeance:"Date",Date_fin:"Date",Resultat:"Text",Raison_non_aboutie:"Text",Reunion_origine:"Ref:REUNIONS"},
-  CONSIGNES_POLITIQUES:{Projet:"Ref:PROJETS",Consigne:"Text",Emetteur:"Ref:INTERLOCUTEURS",Destinataires:"RefList:INTERLOCUTEURS",Services_destinataires:"RefList:SERVICES",Statut:{type:"Choice",choices:["Active","Archivée"]},Date_emission:"Date",Date_archivage:"Date",Motif_archivage:"Text"},
   ARBITRAGES_DECISIONS:{Projet:"Ref:PROJETS",Sujet:"Text",Question_a_trancher:"Text",Statut:"Choice",Reunion_origine:"Ref:REUNIONS"},
   REUNIONS:{Projet:"Ref:PROJETS",Date_reunion:"DateTime",Objet:"Text",Participants:"RefList:INTERLOCUTEURS",Compte_rendu:"Text",Points_cles:"Text"},
   JALONS:{Projet:"Ref:PROJETS",Jalon:"Text",Ordre:"Int",Date_prevue:"Date",Franchi:"Bool",Date_reelle:"Date",A_retenir:"Text",Reunion_origine:"Ref:REUNIONS"},
@@ -15,7 +14,7 @@ const EXPECTED={
   REUNIONS_VERSIONS:{Reunion:"Ref:REUNIONS",Numero_version:"Int",Compte_rendu:"Text",Points_cles:"Text",Auteur:"Ref:INTERLOCUTEURS",Date_version:"DateTime",Motif_modification:"Text",Demandeur:"Ref:INTERLOCUTEURS",Approbateur:"Ref:INTERLOCUTEURS",Statut_demande:{type:"Choice",choices:["Approuvée"]}},
   AVANCEMENTS:{Projet:"Ref:PROJETS",Date_evenement:"DateTime",Type_entree:{type:"Choice",choices:["Avancement","Information","Changement de pilote","Changement d’objectif","Changement de statut","Clôture du projet","Réouverture du projet","Jalon franchi","Blocage levé","Vigilance levée","Décision prise"]},Titre:"Text",Description:"Text",Source_table:"Text",Source_id:"Int",Automatique:"Bool"}
 };
-const LEGACY={PROJETS:["Pourcentage_avancement","Avancement","Priorite","Categorie"],ACTIONS:["Priorite","Type_action","Controle","Commentaire"],CONSIGNES_POLITIQUES:["Priorite","Echeance","Controle","Retour"],REUNIONS:["Type_reunion","CR_finalise","Decisions_prises","Suites","Actions","Engagements","Arbitrage_attendu"]};
+const LEGACY={PROJETS:["Pourcentage_avancement","Avancement","Priorite","Categorie"],ACTIONS:["Priorite","Type_action","Controle","Commentaire"],REUNIONS:["Type_reunion","CR_finalise","Decisions_prises","Suites","Actions","Engagements","Arbitrage_attendu"]};
 const $=selector=>document.querySelector(selector),ui={state:$("#state"),content:$("#content"),summary:$("#summary"),results:$("#results"),legacy:$("#legacy-list"),run:$("#run"),export:$("#export"),verdict:document.querySelector(".verdict"),verdictTitle:$("#verdict-title"),verdictText:$("#verdict-text")};
 let currentSchema=null;
 ui.run.addEventListener("click",run);ui.export.addEventListener("click",exportSchema);run();
