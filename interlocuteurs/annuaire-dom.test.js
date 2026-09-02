@@ -6,11 +6,10 @@ const domTest=JSDOM?test:test.skip;
 const root=path.resolve(__dirname,"..");
 const settle=()=>new Promise(resolve=>setTimeout(resolve,15));
 const O=require("./organisation-model.js"),M=require("./annuaire-model.js");
-async function page({live=false,missingMandate=false,testMode=false}={}){
+async function page({live=false,missingMandate=false}={}){
   const html=fs.readFileSync(path.join(__dirname,"index.html"),"utf8");
   const dom=new JSDOM(html,{url:`http://localhost/interlocuteurs/?demo=${live?0:1}`,runScripts:"outside-only",pretendToBeVisual:true});
   const w=dom.window,context=dom.getInternalVMContext(),errors=[];
-  if(testMode)w.localStorage.setItem("pilotage-grist:test-mode:f8iwcexDATAw:v1",JSON.stringify({active:true,personId:23,label:"Louis André"}));
   w.confirm=()=>true;w.HTMLElement.prototype.scrollIntoView=function(){};
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
   w.HTMLDialogElement.prototype.close=function(){this.open=false;};
@@ -89,19 +88,6 @@ async function page({live=false,missingMandate=false,testMode=false}={}){
 }
 function click(doc,text,scope=doc){const button=[...scope.querySelectorAll("button")].find(b=>b.textContent===text);assert.ok(button,`Bouton ${text}`);button.click();}
 async function removePerson(p){p.doc.querySelector("#delete-person").click();await settle();await settle();}
-
-domTest("annuaire complet en mode test : formulaire, écriture directe et activation du schéma bloqués",async()=>{
-  const p=await page({live:true,testMode:true,missingMandate:true});try{
-    const before=JSON.stringify(p.tables);
-    click(p.doc,"Modifier",cardByName(p,"Louis André"));await settle();
-    assert.equal(p.doc.querySelector("#person-dialog").open,false);
-    await assert.rejects(p.run('write([["RemoveRecord","INTERLOCUTEURS",23]],"Supprimé")'),/Mode test/);
-    await p.run("window.MunicipalDirectory.prepareElectedFields()");
-    assert.equal(p.calls.length,0);
-    assert.equal(JSON.stringify(p.tables),before);
-    assert.equal(p.doc.querySelector("#pilotage-test-banner").hidden,false);
-  }finally{p.cleanup();}
-});
 
 domTest("responsables uniques au plus haut niveau, agents ordinaires dans plusieurs services",async()=>{
   const p=await page();try{

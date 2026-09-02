@@ -87,7 +87,7 @@
         state.people = state.people.filter(row=>Number(row.id)!==id);
       } else {
         submitted = true;
-        await window.PilotageTestMode.applyUserActions([["RemoveRecord",TABLE,id]]);
+        await window.PilotageGristWrite.applyUserActions([["RemoveRecord",TABLE,id]]);
       }
       deleted = true;
       state.selected = null;
