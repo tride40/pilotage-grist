@@ -124,24 +124,7 @@ Si la relation multiple ne peut être maintenue proprement des deux côtés, cr�
 
 Tri recommandé : retard, échéance croissante, sans échéance à la fin ; aucune apparence dévalorisante pour ces dernières. Une demande à un service naît `À attribuer`, puis le responsable affecte une personne ou crée plusieurs actions.
 
-## 5. CONSIGNES_POLITIQUES
-
-| # | Titre visible | ID technique | Type cible | Options / relation | Action |
-|---:|---|---|---|---|---|
-| 1 | Projet | `Projet` | Ref:PROJETS | OBS | C |
-| 2 | Consigne | `Consigne` | Text | obligatoire, OBS | C |
-| 3 | Émetteur | `Emetteur` | Ref:INTERLOCUTEURS | obligatoire, OBS | C |
-| 4 | Destinataires | `Destinataires` | RefList:INTERLOCUTEURS | au moins personnes ou services ; OBS | C |
-| 5 | Services destinataires | `Services_destinataires` | RefList:SERVICES | reste attachée au service | N |
-| 6 | Date d'émission | `Date_emission` | DateTime + initialisation | `NOW()` ; nouveaux enregistrements | N/A |
-| 7 | État | `Statut` | Choice | Active; Archivée | M - OBS |
-| 8 | Date d'archivage | `Date_archivage` | DateTime | automatique | N |
-| 9 | Motif d'archivage | `Motif_archivage` | Text | facultatif | N |
-| 10 | Réunion d'origine | `Reunion_origine` | Ref:REUNIONS | si utile ; OBS alias | C/M |
-| 11 | Responsable | `Responsable` | Ref | compatibilité V2 | R après migration |
-| 12 | Priorité, échéance, contrôle, retour | IDs observés `Priorite`, `Echeance`, `Controle_requis`, `Retour_attendu`, `Retour_service` | divers | anciennes fonctions | R |
-
-## 6. JALONS - nouvelle table
+## 5. JALONS - nouvelle table
 
 | # | Titre visible | ID technique | Type | Options / formule | Action |
 |---:|---|---|---|---|---|
@@ -268,8 +251,7 @@ Après migration, masquer puis retirer les anciens pseudo-objets et leurs colonn
 
 - Tous les widgets lisent `PROJETS`; `fiche-projet`, `dashboard` et `point-hebdomadaire` agrègent plusieurs tables.
 - `actions` écrit actuellement `Type_action`, `Nature_action`, `Priorite`, `Controle_requis`, `Controle_effectue`, `Commentaire` : adapter le widget avant retrait.
-- `consignes` écrit encore `Retour_service` et les statuts de contrôle : adapter avant retrait.
-- `reunions` peut créer ACTIONS, CONSIGNES et ARBITRAGES et accepte trois identifiants de réunion d'origine : migrer vers un seul.
+- `reunions` peut créer des ACTIONS et ARBITRAGES et accepte trois identifiants de réunion d'origine : migrer vers un seul.
 - `point-hebdomadaire` dépend explicitement des anciennes priorités, contrôles et `Point_hebdo` : remplacer par Mon pilotage avant retrait.
 - `Type_interlocuteur` n'est plus lu ni écrit par les widgets V3 et peut être supprimé après sauvegarde du document.
 - Les démonstrations contiennent encore `Point_vigilance`, `Priorite`, `CR_finalise`, champs de suites de réunion et anciens statuts.
@@ -278,7 +260,7 @@ Après migration, masquer puis retirer les anciens pseudo-objets et leurs colonn
 
 1. [ ] Sauvegarder et inventorier le schéma réel (y compris formules, vues et ACL).
 2. [ ] Créer SERVICES, JALONS, BLOCAGES, VIGILANCES, ATTENTES_EXTERNES, RELANCES_ATTENTES et REUNIONS_VERSIONS.
-3. [ ] Ajouter les nouvelles colonnes à PROJETS, INTERLOCUTEURS, ACTIONS, CONSIGNES, DÉCISIONS et JOURNAL.
+3. [ ] Ajouter les nouvelles colonnes à PROJETS, INTERLOCUTEURS, ACTIONS, DÉCISIONS et JOURNAL.
 4. [ ] Migrer catégories vers thématiques, responsables vers attribués, services/personnes, prochaine étape vers jalons et alertes textuelles vers objets dédiés.
 5. [ ] Adapter les widgets et vérifier toutes les écritures Grist.
 6. [ ] Tester création et passage En cours, changement de pilotes, actions de service, clôtures, journal automatique et permissions.

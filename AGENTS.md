@@ -48,7 +48,6 @@ Prévoir des composants cohérents pour :
 - Carte réunion
 - Interlocuteur
 - Action à suivre
-- Consigne politique
 - Arbitrage
 - Bouton principal
 - Alerte
@@ -81,7 +80,6 @@ Le projet s'appuie sur les tables suivantes :
 - INTERLOCUTEURS
 - REUNIONS
 - ACTIONS
-- CONSIGNES_POLITIQUES
 - ARBITRAGES_DECISIONS
 - AVANCEMENTS
 

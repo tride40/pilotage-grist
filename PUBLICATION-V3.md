@@ -23,7 +23,6 @@ Cette compatibilité sert uniquement à accompagner la migration. Elle ne valide
 
 - `PROJETS` : `Nom_projet`, `Statut`, `Elu_pilote` et `Agent_pilote` (ou ancien `Responsable` pendant la migration).
 - `ACTIONS` : `Projet`, `Action`, `Statut`, `Demandee_par`, `Attribuee_a`, `Service_destinataire`, `Echeance`, `Date_fin`, `Resultat`, `Raison_non_aboutie`.
-- `CONSIGNES_POLITIQUES` : `Projet`, `Consigne`, `Emetteur`, `Destinataires`, `Statut`, `Date_emission`, `Date_archivage`, `Motif_archivage`.
 - `INTERLOCUTEURS` : identité, `Interne_Mairie`, `Role_interne`, `Actif`.
 
 ## Tables nécessaires pour la V3 complète
@@ -51,8 +50,7 @@ Cette compatibilité sert uniquement à accompagner la migration. Elle ne valide
 - [ ] Créer une action attribuée à une personne.
 - [ ] Créer une action adressée à un service : statut `À attribuer`.
 - [ ] Terminer une action sans résultat, puis classer une autre `Non aboutie` avec raison obligatoire.
-- [ ] Créer et archiver une consigne sans priorité, échéance ni contrôle.
-- [ ] Vérifier que Mon pilotage agrège décisions, blocages, vigilances, attentes, jalons, actions et consignes.
+- [ ] Vérifier que Mon pilotage agrège décisions, blocages, vigilances, attentes, jalons et actions.
 - [ ] Vérifier qu'un projet Terminé ou Abandonné disparaît de Mon pilotage sans altérer ses objets.
 - [ ] Créer une réunion et vérifier que ses conséquences sont de vrais objets liés.
 - [ ] Vérifier le verrouillage et la version du compte rendu.
