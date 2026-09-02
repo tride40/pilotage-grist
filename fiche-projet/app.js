@@ -558,8 +558,31 @@ function renderProjectSelector() {
   const selected = String(appState.selectedProject?.id || ""); ui.selector.replaceChildren(...(appState.tables.PROJETS || []).map((project) => option(project.id, textOr(project.Nom_projet, `Projet ${project.id}`)))); ui.selector.value = selected; ui.selector.disabled = Boolean(window.PilotageContext?.isProjectMode);
 }
 function option(value,label){const item=document.createElement("option");item.value=value;item.textContent=label;return item;}
+function formSection(number,title,help,body){
+  const section=element("section","form-section"),heading=element("div","form-section__heading"),copy=element("div");
+  const headingId=`${String(title).toLocaleLowerCase("fr-FR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")}-${number}`;
+  heading.append(textElement("p",number),copy);copy.append(textElement("h3",title));copy.querySelector("h3").id=headingId;copy.append(textElement("span",help));
+  section.setAttribute("aria-labelledby",headingId);section.append(heading,body);return section;
+}
+function fieldGrid(fields,className="form-grid"){const grid=element("div",className);grid.append(...fields.filter(Boolean));return grid;}
+function projectField(name){
+  const definition=PROJECT_FIELDS.find(([field])=>field===name);if(!definition||!projectHasColumn(name)||(name==="Responsable"&&projectHasColumn("Agent_pilote")))return null;
+  const[,label,type]=definition;return formField(name,label,type,appState.selectedProject[name]);
+}
+function calendarGroup(title,fields){const group=element("section","calendar-group");group.append(textElement("h4",title),fieldGrid(fields));return group;}
+function journalProjectContext(label="Projet"){const context=element("div","journal-context form-field--wide");context.append(textElement("span",label,"item-label"),textElement("strong",textOr(appState.selectedProject?.Nom_projet,"Projet")));return context;}
 function openProjectForm() {
-  ui.editFields.replaceChildren(...PROJECT_FIELDS.filter(([name]) => projectHasColumn(name) && !(name === "Responsable" && projectHasColumn("Agent_pilote"))).map(([name, label, type]) => formField(name, label, type, appState.selectedProject[name])));
+  const calendar=element("div","calendar-groups");
+  calendar.append(
+    calendarGroup("Lancement",[projectField("Mois_lancement"),projectField("Annee_lancement")]),
+    calendarGroup("Objectif de réalisation",[projectField("Trimestre_objectif"),projectField("Annee_objectif")])
+  );
+  ui.editFields.replaceChildren(
+    formSection(1,"Informations générales","Identité et finalité du projet",fieldGrid([projectField("Nom_projet"),projectField("Description"),projectField("Objectif_politique")])),
+    formSection(2,"Classification","Statut, domaines concernés et éventuel motif de clôture",fieldGrid([projectField("Statut"),projectField("Thematiques"),projectField("Motif_abandon")])),
+    formSection(3,"Pilotage","Responsables et personnes associées au projet",fieldGrid([projectField("Agent_pilote"),projectField("Responsable"),projectField("Elu_pilote"),projectField("Agents_associes"),projectField("Elus_associes"),projectField("Services_concernes"),projectField("Interlocuteurs_externes")])),
+    formSection(4,"Calendrier","Lancement et objectif de réalisation",calendar)
+  );
   const fallback = PROJECT_CHOICE_FIELDS.filter((field) => !(appState.metadata?.choices?.[field] || []).length);
   ui.editDialog.querySelector(".form-message").textContent = fallback.length ? `Choix Grist indisponibles pour ${fallback.join(", ")} : valeurs existantes et valeurs sûres proposées.` : "";
   ui.editDialog.showModal();
@@ -640,7 +663,7 @@ async function saveDecision(event) {
 
 function openJournalForm(row = null, initialType = "") {
   appState.editingJournalId = row?.id ?? null; appState.journalActionSource = null; ui.trackingForm.reset();
-  ui.trackingDialog.querySelector("#tracking-title").textContent = row ? "Modifier l’entrée du journal" : "Ajouter au journal";
+  ui.trackingDialog.querySelector("#tracking-title").textContent = row ? "Modifier l’entrée du journal" : "Nouvelle entrée de journal";
   ui.trackingDialog.querySelector("[type=submit]").textContent = row ? "Enregistrer la modification" : "Ajouter l’entrée";
   ui.trackingFields.replaceChildren();
   const type = journalType(row || {});
@@ -648,7 +671,13 @@ function openJournalForm(row = null, initialType = "") {
     const hidden = document.createElement("input"); hidden.type = "hidden"; hidden.name = "Type_entree"; hidden.value = type;
     const context = element("div", "journal-context form-field--wide"); context.append(textElement("span", "Type d’entrée", "item-label"), makeBadge(type, journalKind(type)));
     const content = formField("Contenu", "Texte de l’entrée", "textarea", journalContent(row)); content.querySelector("textarea").required = true;
-    const date = formField("Date_MAJ", "Date", "date", row.Date_MAJ || row.Date); ui.trackingFields.append(hidden, context, content, date);
+    const date = formField("Date_MAJ", "Date", "date", row.Date_MAJ || row.Date);
+    ui.trackingFields.append(
+      hidden,
+      formSection(1,"Contexte","Projet et nature de l’entrée",fieldGrid([journalProjectContext(),context])),
+      formSection(2,"Contenu","Information conservée dans le journal",fieldGrid([content])),
+      formSection(3,"Datation","Date à laquelle l’information doit apparaître",fieldGrid([date]))
+    );
     ui.trackingDialog.querySelector(".form-message").textContent = ""; ui.trackingDialog.showModal(); content.querySelector("textarea").focus(); return;
   }
   const typeField = formField("Type_entree", "Type d’entrée", "choice", type); const typeSelect = typeField.querySelector("select"); typeSelect.replaceChildren(...JOURNAL_TYPES.map((item) => option(item, item)));
@@ -656,8 +685,12 @@ function openJournalForm(row = null, initialType = "") {
   const contentField = formField("Contenu", "Qu’est-ce qui a changé ?", "textarea", ""); contentField.querySelector("textarea").required = true;
   contentField.querySelector("textarea").addEventListener("input", (event) => { delete event.currentTarget.dataset.automatic; });
   const dateField = formField("Date_MAJ", "Date", "date", row?.Date_MAJ || row?.Date || new Date());
-  const dynamic = element("div", "journal-dynamic form-grid form-field--wide");
-  ui.trackingFields.append(typeField, dynamic, contentField, dateField);
+  const dynamic = element("div", "journal-dynamic form-grid form-field--wide"),contentGrid=fieldGrid([dynamic,contentField]);
+  ui.trackingFields.append(
+    formSection(1,"Contexte","Projet concerné et type d’information",fieldGrid([journalProjectContext(),typeField])),
+    formSection(2,"Contenu","Élément utile à conserver dans la mémoire du projet",contentGrid),
+    formSection(3,"Datation","Date de référence de cette entrée",fieldGrid([dateField]))
+  );
   const refresh = () => {
     const prompts = { Avancement: "Quel avancement souhaitez-vous consigner ?", Information: "Quelle information souhaitez-vous consigner ?" };
     const textarea = contentField.querySelector("textarea"); contentField.querySelector(".form-field__label").textContent = prompts[typeSelect.value] || "Qu’est-ce qui a changé ?";
@@ -690,8 +723,14 @@ function openJournalResolution(source, type) {
   const hidden = document.createElement("input"); hidden.type = "hidden"; hidden.name = "Type_entree"; hidden.value = type;
   const context = element("div", "journal-context form-field--wide"); context.append(textElement("span", "Entrée concernée", "item-label"), textElement("strong", journalContent(source)));
   const content = formField("Contenu", prompts[type][1], "textarea", ""); content.querySelector("textarea").required = true;
-  const date = formField("Date_MAJ", "Date", "date", new Date()); ui.trackingFields.append(hidden, context, content, date);
-  if (type === "Décision prise") ui.trackingFields.append(formField("Decisionnaire", "Décisionnaire", "elu", source.Decisionnaire || appState.selectedProject.Elu_pilote));
+  const date = formField("Date_MAJ", "Date", "date", new Date()),contentFields=[content];
+  if (type === "Décision prise") contentFields.push(formField("Decisionnaire", "Décisionnaire", "elu", source.Decisionnaire || appState.selectedProject.Elu_pilote));
+  ui.trackingFields.append(
+    hidden,
+    formSection(1,"Contexte","Projet et entrée à clôturer",fieldGrid([journalProjectContext(),context])),
+    formSection(2,"Résolution","Information qui explique la clôture",fieldGrid(contentFields)),
+    formSection(3,"Datation","Date de prise d’effet",fieldGrid([date]))
+  );
   ui.trackingDialog.querySelector(".form-message").textContent = ""; ui.trackingDialog.showModal(); content.querySelector("textarea").focus();
 }
 function journalSchema() {
