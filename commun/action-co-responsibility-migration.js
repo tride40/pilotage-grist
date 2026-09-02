@@ -77,7 +77,7 @@
       const actual=column(snapshot,item);
       if(exactColumn(actual,item))return;
       if(exactColumn(actual,legacyColumns[index]))actions.push(["ModifyColumn",item.tableId,item.id,{type:item.type,isFormula:true,formula:item.formula}]);
-      else findings.push(`Formule inattendue : ${item.tableId}.${item.id}.`);
+      else findings.push(`Formule inattendue : ${item.tableId}.${item.id}.\n${actual&&actual.formula?actual.formula:"(formule absente)"}`);
     });
     const circuitRows=ordered(snapshot,targetCircuitResource),targetAssign=targetCircuitRules.findIndex(rule=>rule.key==="assign-U"),actualAssign=circuitRows[targetAssign];
     if(!targetCircuitResource)findings.push("Ressource de permissions ACTIONS_CIRCUIT introuvable.");
