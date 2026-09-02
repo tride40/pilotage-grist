@@ -14,7 +14,7 @@
   function create({ grist, mode, identify }) {
     let account = null, projects = [], tasks = [], email = "", busy = false;
     function guard() {
-      if (!mode || mode.isReadOnly()) throw Error("Les tâches privées sont masquées en mode test. Revenez à votre compte réel.");
+      if (!mode || mode.isReadOnly()) throw Error("L’écriture dans Grist n’est pas disponible.");
       mode.assertWritable();
     }
     async function context() {
