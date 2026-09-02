@@ -8,7 +8,7 @@ const test = require("node:test");
 const root = path.resolve(__dirname, "..");
 const pages = [
   "index.html", "accueil/index.html", "dashboard/index.html", "fiche-projet/index.html",
-  "reunions/index.html", "actions/index.html", "consignes/index.html",
+  "reunions/index.html", "actions/index.html",
   "interlocuteurs/index.html", "point-hebdomadaire/index.html", "diagnostic-v3/index.html",
 ];
 
@@ -33,7 +33,7 @@ test("toutes les ressources locales référencées par les pages existent", () =
 
 test("la page technique référence chaque module publié", () => {
   const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-  for (const folder of ["accueil", "dashboard", "fiche-projet", "reunions", "actions", "consignes", "interlocuteurs", "point-hebdomadaire", "diagnostic-v3"]) {
+  for (const folder of ["accueil", "dashboard", "fiche-projet", "reunions", "actions", "interlocuteurs", "point-hebdomadaire", "diagnostic-v3"]) {
     assert.match(html, new RegExp(`href=["']${folder}/["']`), `${folder} doit être accessible`);
   }
   assert.doesNotMatch(html, />Prévu</);
@@ -89,12 +89,8 @@ test("les actions conservent seulement la recherche de l’attributaire", () => 
 });
 
 test("les auteurs des créations sont déterminés silencieusement", () => {
-  const instructionsHtml = fs.readFileSync(path.join(root, "consignes/index.html"), "utf8");
-  const instructionsSource = fs.readFileSync(path.join(root, "consignes/app.js"), "utf8");
   const meetingsSource = fs.readFileSync(path.join(root, "reunions/app.js"), "utf8");
   const projectSource = fs.readFileSync(path.join(root, "fiche-projet/app.js"), "utf8");
-  assert.doesNotMatch(instructionsHtml, /name="Emetteur"/);
-  assert.match(instructionsSource, /Emetteur: author/);
   assert.doesNotMatch(meetingsSource, /\["Saisi_par","Saisi par","person"\]/);
   assert.doesNotMatch(meetingsSource, /\["Demandeur","Modification demandée par"/);
   assert.match(meetingsSource, /values\.Demandeur=author/);
@@ -161,7 +157,7 @@ test("les actions de désactivation demandent une confirmation", () => {
 });
 
 test("tous les écrans chargent les styles d’accessibilité courants", () => {
-  const pages = ["index.html", "accueil/index.html", "actions/index.html", "consignes/index.html", "dashboard/index.html", "diagnostic-v3/index.html", "fiche-projet/index.html", "interlocuteurs/index.html", "point-hebdomadaire/index.html", "reunions/index.html"];
+  const pages = ["index.html", "accueil/index.html", "actions/index.html", "dashboard/index.html", "diagnostic-v3/index.html", "fiche-projet/index.html", "interlocuteurs/index.html", "point-hebdomadaire/index.html", "reunions/index.html"];
   for (const page of pages) {
     const html = fs.readFileSync(path.join(root, page), "utf8");
     assert.match(html, /components\.css\?v=12/, page);
@@ -186,12 +182,10 @@ test("le tableau de bord distingue les données incomplètes des vraies valeurs"
   assert.doesNotMatch(css, /\.dashboard \{[^}]*margin-top:\s*calc\([^}]*-1/);
 });
 
-test("la sélection directe utilise le libellé Projet", () => {
-  for (const page of ["actions/app.js", "consignes/app.js"]) {
-    const source = fs.readFileSync(path.join(root, page), "utf8");
-    assert.doesNotMatch(source, /Projet imposé/, page);
-    assert.match(source, /isProjectMode\s*\?\s*"Projet"\s*:\s*"Vue globale"/, page);
-  }
+test("la sélection directe des actions utilise le libellé Projet", () => {
+  const page = "actions/app.js", source = fs.readFileSync(path.join(root, page), "utf8");
+  assert.doesNotMatch(source, /Projet imposé/, page);
+  assert.match(source, /isProjectMode\s*\?\s*"Projet"\s*:\s*"Vue globale"/, page);
 });
 
 test("les nouveaux jalons utilisent la table dédiée", () => {
