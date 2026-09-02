@@ -55,7 +55,7 @@
     '  audience = [p.id for p in circuit.Audience_initiale]\n  if not audience or len(set(audience)) != len(audience):\n    return False\n  expected.extend(audience)\n  if rec.Operation == "assign":\n    chain = list(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=rec.Action))\n    if not chain:\n      return False');
   expected.find(column=>column.id==="ACL_transition_autorisee").formula=expected.find(column=>column.id==="ACL_transition_autorisee").formula.replace(
     " and isinstance(rec.Precision, str) and rec.Precision.strip())",
-    " and isinstance(rec.Precision, str))"
+    " and (rec.Precision is None or isinstance(rec.Precision, str)))"
   );
   function definitions(){return expected.map(column=>({...column}));}
   function exact(actual,target){return actual.type===target.type&&Boolean(actual.isFormula)===target.isFormula&&(actual.formula||"")===(target.formula||"");}
