@@ -1,7 +1,7 @@
 "use strict";
 
 const REQUIRED_RELATED_TABLES = [
-  "PROJETS", "INTERLOCUTEURS", "REUNIONS", "ACTIONS", "CONSIGNES_POLITIQUES",
+  "PROJETS", "INTERLOCUTEURS", "REUNIONS", "ACTIONS",
   "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
 const OPTIONAL_RELATED_TABLES = ["SERVICES", "JALONS", "BLOCAGES", "VIGILANCES", "ATTENTES_EXTERNES", "RELANCES_ATTENTES", "REUNIONS_VERSIONS"];
@@ -27,7 +27,6 @@ const ui = {
   vigilance: document.querySelector("#vigilance-panel"),
   updates: document.querySelector("#updates-list"),
   journalSearch: document.querySelector("#journal-search"), journalTypeFilter: document.querySelector("#journal-type-filter"), journalStateFilter: document.querySelector("#journal-state-filter"), journalResults: document.querySelector("#journal-results"), showAllJournal: document.querySelector("#show-all-journal"),
-  instructions: document.querySelector("#instructions-list"),
   meetings: document.querySelector("#meetings-list"),
   actions: document.querySelector("#actions-list"),
   milestones: document.querySelector("#milestones-list"), milestoneButton: document.querySelector("#add-milestone"),
@@ -138,7 +137,6 @@ function buildProjectView(project, tables) {
   const projectId = project.id;
   const linked = (tableName) => tables[tableName].filter((row) => isLinkedToProject(row, projectId));
   const updates = sortJournalRows(linked("AVANCEMENTS"));
-  const instructions = linked("CONSIGNES_POLITIQUES").sort(compareInstructions);
   const meetings = sortByDate(linked("REUNIONS"), ["Date_reunion", "Date"]);
   const actions = linked("ACTIONS").filter(isOpenAction).sort(compareActions);
   const arbitrations = linked("ARBITRAGES_DECISIONS").sort(compareArbitrations);
@@ -146,11 +144,10 @@ function buildProjectView(project, tables) {
   return {
     project,
     updates,
-    instructions: instructions.slice(0, 5),
     meetings: meetings.slice(0, 3),
     actions,
     arbitrations,
-    contacts: collectContacts(project, { instructions, meetings, actions }, tables.INTERLOCUTEURS),
+    contacts: collectContacts(project, { meetings, actions }, tables.INTERLOCUTEURS),
   };
 }
 
@@ -168,14 +165,6 @@ function referenceIds(value) {
 
 function hasReferenceValue(value) {
   return hasValue(value) && Number(value) !== 0;
-}
-
-function compareInstructions(a, b) {
-  return instructionScore(b) - instructionScore(a) || dateValue(b.Echeance) - dateValue(a.Echeance);
-}
-
-function instructionScore(row) {
-  return Number(!isTrue(row.Validee)) + Number(isTrue(row.A_controler)) * 2 + Number(isTrue(row.En_retard)) * 4;
 }
 
 function compareActions(a, b) {
@@ -210,23 +199,10 @@ function sortJournalRows(rows) {
   return [...rows].sort((a, b) => dateValue(firstField(b, ["Date_evenement", "Date_MAJ", "Date"])) - dateValue(firstField(a, ["Date_evenement", "Date_MAJ", "Date"])) || dateValue(b.Cree_le) - dateValue(a.Cree_le) || (Number(b.id) || 0) - (Number(a.id) || 0));
 }
 
-function buildTimeline(updates, meetings, instructions, arbitrations) {
-  const events = [
-    ...updates.map((row) => timelineEvent(journalType(row)||"Journal", row.Date_evenement||row.Date_MAJ, journalContent(row))),
-    ...meetings.map((row) => timelineEvent("Réunion", row.Date_reunion, row.Objet || row.Points_cles)),
-    ...instructions.map((row) => timelineEvent("Consigne politique", row.Date_MAJ || row.Echeance, row.Consigne)),
-    ...arbitrations.map((row) => timelineEvent("Décision", row.Date_MAJ || row.Echeance_decision, row.Sujet || row.Question_a_trancher)),
-  ].filter((event) => hasValue(event.date));
-  return events.sort((a, b) => dateValue(b.date) - dateValue(a.date));
-}
-
-function timelineEvent(type, date, text) { return { type, date, text }; }
-
 function collectContacts(project, related, people) {
   const values = [project.Agent_pilote,project.Responsable,project.Elu_pilote,project.Agents_associes,project.Elus_associes,project.Interlocuteurs_externes];
   related.meetings.forEach((row) => values.push(row.Participants));
   related.actions.forEach((row) => values.push(row.Attribuee_a,row.Demandee_par,row.Responsable));
-  related.instructions.forEach((row) => values.push(row.Emetteur,row.Destinataires,row.Responsable));
   const identifiers = values.flatMap(referenceIds).filter(hasValue);
   const found = new Map();
 
@@ -260,7 +236,6 @@ function renderProject(view) {
   renderProjectBadges(project);
   renderHeroPeople(project);
   renderUpdates(view.updates);
-  renderInstructions(view.instructions);
   renderMeetings(view.meetings);
   renderActions(view.actions);
   renderMilestones(project.id);
@@ -273,7 +248,7 @@ function renderProject(view) {
 
 function renderHubLinks(projectId) {
   const context = window.PilotageContext;
-  const links = [["#hub-actions", "../actions/"], ["#hub-meetings", "../reunions/"], ["#hub-instructions", "../consignes/"]];
+  const links = [["#hub-actions", "../actions/"], ["#hub-meetings", "../reunions/"]];
   links.forEach(([selector, path]) => { const link = document.querySelector(selector); if (link) link.href = context?.url(path, { projectId, mode: "project" }) || `${path}?projectId=${encodeURIComponent(projectId)}&mode=project`; });
 }
 
@@ -365,17 +340,6 @@ function journalEntryState(row, rows) {
   if (!JOURNAL_RESOLUTION_TYPES[journalType(row)] && journalType(row) !== "Prochaine étape") return "";
   const resolvedByChild = rows.some((candidate) => referenceIds(candidate.Entree_parent).some((id) => String(id) === String(row.id)) && ["deblocage", "vigilance levee", "decision prise", "etape franchie"].includes(normalizeText(journalType(candidate))));
   return resolvedByChild || normalizeText(row.Etat_entree) === "resolu" ? "Résolu" : "Ouvert";
-}
-
-function renderInstructions(rows) {
-  renderCollection(ui.instructions, rows, "Aucune consigne liée à ce projet.", (row) => {
-    const card = makeItemCard(textOr(row.Consigne, "Consigne"), row.Echeance);
-    if (isTrue(row.En_retard)) card.root.classList.add("item-card--danger");
-    else if (isTrue(row.A_controler)) card.root.classList.add("item-card--warning");
-    appendBadges(card.meta, [[row.Statut, statusKind(row.Statut)]]);
-    appendFields(card.body, [["Émetteur", personValue(row.Emetteur)], ["Destinataires", personValue(row.Destinataires || row.Responsable)]]);
-    return card.root;
-  });
 }
 
 function renderMeetings(rows) {

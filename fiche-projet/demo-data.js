@@ -44,9 +44,6 @@ window.PROJECT_SHEET_DEMO = {
       { id: 103, Projet: 1, Date_MAJ: "2026-08-25", Cree_le: "2026-08-25T12:00:00", Type_entree: "Prochaine étape", Contenu: "Valider le scénario d’aménagement des espaces publics", Date_prochaine_etape: "2026-09-18", Entree_parent: 0, Etat_entree: "Ouvert", Decisionnaire: 0, Saisi_par: 10, Avancement: 0 },
       { id: 104, Projet: 1, Date_MAJ: "2026-08-25", Cree_le: "2026-08-25T11:00:00", Type_entree: "Prochaine étape", Contenu: "Préparer la consultation des entreprises", Date_prochaine_etape: "2026-10-05", Entree_parent: 0, Etat_entree: "Ouvert", Decisionnaire: 0, Saisi_par: 10, Avancement: 0 },
     ],
-    CONSIGNES_POLITIQUES: [
-      { id: 201, Projet: 1, Date_MAJ: "2026-08-20", Consigne: "Préserver une présence végétale forte dans les espaces publics.", Statut: "En cours", Priorite: "Haute", Echeance: "2026-09-15", Responsable: 10, Retour_service: "Déclinaison intégrée au plan-guide.", A_controler: true, En_retard: false, Validee: false },
-    ],
     REUNIONS: [
       { id: 301, Projet: 1, Date_reunion: "2026-08-22", Objet: "Comité de pilotage du plan-guide", Type_reunion: "COPIL", Participants: ["L", 10, 11, 12], Points_cles: "Paysage, stationnement et calendrier de concertation.", Decisions_prises: "Validation du principe de mail planté.", Arbitrage_attendu: "Organisation définitive du stationnement." },
     ],
