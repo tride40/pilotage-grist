@@ -64,7 +64,7 @@
     const table=snapshot.tables.filter(item=>item.tableId===target.tableId);if(table.length!==1)return null;
     const matches=snapshot.columns.filter(item=>item.parentId===table[0].id&&item.colId===target.id);return matches.length===1?matches[0]:null;
   }
-  const exactColumn=(actual,target)=>actual&&actual.type===target.type&&Boolean(actual.isFormula)===target.isFormula&&(actual.formula||"")===(target.formula||"");
+  const exactColumn=(actual,target)=>actual&&actual.type===target.type&&(actual.formula||"")===(target.formula||"");
   function resource(snapshot,tableId,colIds){const matches=snapshot.resources.filter(item=>item.tableId===tableId&&item.colIds===colIds);return matches.length===1?matches[0]:null;}
   function ordered(snapshot,parent){return parent?snapshot.rules.filter(rule=>rule.resource===parent.id).sort((a,b)=>a.rulePos-b.rulePos):[];}
   function exactRules(actual,target){return actual.length===target.length&&actual.every((rule,index)=>rule.permissionsText===target[index].permissionsText&&compact(rule.aclFormula)===compact(target[index].aclFormula));}
