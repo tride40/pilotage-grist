@@ -68,19 +68,34 @@
   function resource(snapshot,tableId,colIds){const matches=snapshot.resources.filter(item=>item.tableId===tableId&&item.colIds===colIds);return matches.length===1?matches[0]:null;}
   function ordered(snapshot,parent){return parent?snapshot.rules.filter(rule=>rule.resource===parent.id).sort((a,b)=>a.rulePos-b.rulePos):[];}
   function exactRules(actual,target){return actual.length===target.length&&actual.every((rule,index)=>rule.permissionsText===target[index].permissionsText&&compact(rule.aclFormula)===compact(target[index].aclFormula));}
+  const exactRule=(actual,target)=>Boolean(actual)&&actual.permissionsText===target.permissionsText&&compact(actual.aclFormula)===compact(target.aclFormula);
   function inspect(snapshot){
     if(!snapshot||!["tables","columns","resources","rules"].every(key=>Array.isArray(snapshot[key])))throw Error("Métadonnées incomplètes.");
     const targetCircuitResource=resource(snapshot,"ACTIONS_CIRCUIT","*"),targetPoleResource=resource(snapshot,"POLES",targetPoleAuthority.colIds),legacyPoleResource=resource(snapshot,"POLES",legacyPoleAuthority.colIds);
-    const target=targetColumns.every(item=>exactColumn(column(snapshot,item),item))&&exactRules(ordered(snapshot,targetCircuitResource),targetCircuitRules)&&targetPoleResource&&exactRules(ordered(snapshot,targetPoleResource),targetPoleAuthority.rules);
-    if(target)return {findings:[],readyToInstall:false,alreadyInstalled:true,actions:[],changed:0};
-    const legacy=legacyColumns.every(item=>exactColumn(column(snapshot,item),item))&&exactRules(ordered(snapshot,targetCircuitResource),legacyCircuitRules)&&legacyPoleResource&&exactRules(ordered(snapshot,legacyPoleResource),legacyPoleAuthority.rules);
-    if(!legacy)return {findings:["Les règles installées ne correspondent pas exactement à la version précédente attendue. Aucun changement n’est proposé."],readyToInstall:false,alreadyInstalled:false,actions:[],changed:0};
-    const actions=targetColumns.map(item=>["ModifyColumn",item.tableId,item.id,{type:item.type,isFormula:true,formula:item.formula}]);
-    const circuitRows=ordered(snapshot,targetCircuitResource),targetAssign=targetCircuitRules.findIndex(rule=>rule.key==="assign-U");
-    actions.push(["UpdateRecord","_grist_ACLRules",circuitRows[targetAssign].id,{aclFormula:targetCircuitRules[targetAssign].aclFormula}]);
-    actions.push(["UpdateRecord","_grist_ACLResources",legacyPoleResource.id,{colIds:targetPoleAuthority.colIds}]);
-    const authorityRows=ordered(snapshot,legacyPoleResource),unchanged=targetPoleAuthority.rules.findIndex(rule=>rule.key==="unchanged-editor");
-    actions.push(["UpdateRecord","_grist_ACLRules",authorityRows[unchanged].id,{aclFormula:targetPoleAuthority.rules[unchanged].aclFormula}]);
+    const findings=[],actions=[];
+    targetColumns.forEach((item,index)=>{
+      const actual=column(snapshot,item);
+      if(exactColumn(actual,item))return;
+      if(exactColumn(actual,legacyColumns[index]))actions.push(["ModifyColumn",item.tableId,item.id,{type:item.type,isFormula:true,formula:item.formula}]);
+      else findings.push(`Formule inattendue : ${item.tableId}.${item.id}.`);
+    });
+    const circuitRows=ordered(snapshot,targetCircuitResource),targetAssign=targetCircuitRules.findIndex(rule=>rule.key==="assign-U"),actualAssign=circuitRows[targetAssign];
+    if(!targetCircuitResource)findings.push("Ressource de permissions ACTIONS_CIRCUIT introuvable.");
+    else if(!exactRule(actualAssign,targetCircuitRules[targetAssign])){
+      if(exactRule(actualAssign,legacyCircuitRules[targetAssign]))actions.push(["UpdateRecord","_grist_ACLRules",actualAssign.id,{aclFormula:targetCircuitRules[targetAssign].aclFormula}]);
+      else findings.push("Règle d’attribution ACTIONS_CIRCUIT inattendue.");
+    }
+    if(targetPoleResource&&legacyPoleResource)findings.push("Deux ressources de permissions POLES concurrentes.");
+    const poleResource=targetPoleResource||legacyPoleResource;
+    if(!poleResource)findings.push("Ressource de permissions POLES introuvable.");
+    const unchanged=targetPoleAuthority.rules.findIndex(rule=>rule.key==="unchanged-editor"),authorityRows=ordered(snapshot,poleResource),actualUnchanged=authorityRows[unchanged];
+    if(poleResource&&!exactRule(actualUnchanged,targetPoleAuthority.rules[unchanged])){
+      if(exactRule(actualUnchanged,legacyPoleAuthority.rules[unchanged]))actions.push(["UpdateRecord","_grist_ACLRules",actualUnchanged.id,{aclFormula:targetPoleAuthority.rules[unchanged].aclFormula}]);
+      else findings.push("Règle de protection des responsables de pôle inattendue.");
+    }
+    if(legacyPoleResource)actions.push(["UpdateRecord","_grist_ACLResources",legacyPoleResource.id,{colIds:targetPoleAuthority.colIds}]);
+    if(findings.length)return {findings,readyToInstall:false,alreadyInstalled:false,actions:[],changed:0};
+    if(!actions.length)return {findings:[],readyToInstall:false,alreadyInstalled:true,actions:[],changed:0};
     return {findings:[],readyToInstall:true,alreadyInstalled:false,actions,changed:actions.length};
   }
   function create({grist,mode}){
