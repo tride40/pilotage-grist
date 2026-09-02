@@ -26,14 +26,14 @@
   superior = circuit.Superieur_direct.id
   if superior:
     expected.append(superior)
+  audience = [p.id for p in circuit.Audience_initiale]
+  if not audience or len(set(audience)) != len(audience):
+    return False
+  expected.extend(audience)
   if rec.Operation == "assign":
-    audience = [p.id for p in circuit.Audience_initiale]
-    if not audience or len(set(audience)) != len(audience):
-      return False
     chain = list(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=rec.Action))
     if not chain:
       return False
-    expected.extend(audience)
     expected.extend(level.Attributaire.id for level in chain)
     expected.extend(level.Destinataire.id for level in chain)
   if rec.Operation == "cancel":

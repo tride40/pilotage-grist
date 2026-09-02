@@ -82,7 +82,7 @@
       from: row.state, to: target, operation: command.type, note, revision: patch.revision };
     // Notifications contain a pointer, not private notes or blockage content.
     // Their source must still be read through server permissions on opening.
-    const recipients = unique([row.creatorId, row.executorId ?? row.assignerId, ...row.associateIds, ...row.pilotIds,
+    const recipients = unique([row.creatorId, row.executorId ?? row.assignerId, ...row.initialAudience, ...row.associateIds, ...row.pilotIds,
       ...(row.superiorId === null ? [] : [row.superiorId]), ...(command.type === "cancel" ? row.chainIds : [])]);
     const notifications = recipients.filter(id => id !== context.personId).map(id => ({
       key: `${eventKey}:recipient:${id}`, recipientId: id, actionId: row.id, eventKey,

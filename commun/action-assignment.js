@@ -48,8 +48,8 @@
       const sid = selectedServiceId ?? choices[0];
       if (!choices.includes(sid)) throw Error("Service sans rattachement à cet agent.");
       const s = service(sid), pôle = pole(s.poleId);
-      // A pole head reports upwards to DGS, not downwards to a service head.
-      const chain = pôle.headId === personId ? [data.dgsId] : [s.headId, pôle.headId, data.dgsId];
+      // Les deux responsables de pôle sont co-responsables et relèvent directement de la DGS.
+      const chain = pôle.managerIds.includes(personId) ? [data.dgsId] : [s.headId, ...pôle.managerIds, data.dgsId];
       return { personId, serviceId: sid, superiorId: unique(chain).find(pid => pid !== personId) ?? null };
     }
     return { person, pole, service, context };
@@ -68,22 +68,25 @@
     const p = org.person(actorId);
     if (p.kind === "elected") return [project.electedPilotId, ...project.electedAssociateIds].includes(actorId);
     if (actorId === data.dgsId) return true;
-    if (target.kind === "pole") return org.pole(target.id).headId === actorId;
+    if (target.kind === "pole") return org.pole(target.id).managerIds.includes(actorId);
     if (target.serviceId === null) return false;
     const s = org.service(target.serviceId);
-    return s.headId === actorId || org.pole(s.poleId).headId === actorId;
+    return s.headId === actorId || org.pole(s.poleId).managerIds.includes(actorId);
   }
   function destination(target, org) {
     if (!target || !id(target.id)) throw Error("Destinataire requis.");
-    if (target.kind === "person") return { ...org.context(target.id, target.serviceId), kind: "person", id: target.id };
+    if (target.kind === "person") {
+      const context = org.context(target.id, target.serviceId), pole = context.serviceId ? org.pole(org.service(context.serviceId).poleId) : null;
+      return { ...context, kind: "person", id: target.id, managerIds: pole?.managerIds || [] };
+    }
     if (target.kind === "service") {
       const s = org.service(target.id), p = org.pole(s.poleId);
-      return { kind: "service", id: s.id, personId: s.headId, serviceId: s.id,
-        superiorId: unique([p.headId, org.dgsId]).find(pid => pid !== s.headId) };
+      return { kind: "service", id: s.id, personId: s.headId, serviceId: s.id, managerIds: p.managerIds,
+        superiorId: p.managerIds.includes(s.headId) ? org.dgsId : p.headId };
     }
     if (target.kind === "pole") {
       const p = org.pole(target.id);
-      return { kind: "pole", id: p.id, personId: p.headId, serviceId: null, superiorId: org.dgsId === p.headId ? null : org.dgsId };
+      return { kind: "pole", id: p.id, personId: p.headId, serviceId: null, managerIds: p.managerIds, superiorId: org.dgsId === p.headId ? null : org.dgsId };
     }
     throw Error("Type de destinataire invalide.");
   }
@@ -123,7 +126,7 @@
       state: executorId === null ? "to_assign" : "in_progress", targetKind: target.kind, targetId: target.id,
       serviceId: target.serviceId, superiorId: target.superiorId ?? null, associateIds, associateContexts, pilotIds, chainIds: [context.personId],
       revision: 1, updatedAt: allocation.at, deadline, deadlineChain,
-      visibleTo: unique([context.personId, target.personId, ...pilotIds, ...associateIds, ...(target.superiorId == null ? [] : [target.superiorId])]) };
+      visibleTo: unique([context.personId, target.personId, ...(target.managerIds || []), ...pilotIds, ...associateIds, ...(target.superiorId == null ? [] : [target.superiorId])]) };
     // First deadline belongs to the real creator, never a submitted owner id.
     const members = [...associateIds, ...(executorId === null ? [] : [executorId])].filter(pid => !project.agentIds.includes(pid) && pid !== project.agentPilotId);
     return output(row, context.personId, "create", allocation.at, row.visibleTo, members);
@@ -133,7 +136,7 @@
     if (!ids(row?.visibleTo) || !row.visibleTo.includes(context.personId)) throw Error("Action inaccessible.");
     if (row.projectId !== project.id || row.state !== "to_assign" || !id(row.revision) || row.revision >= Number.MAX_SAFE_INTEGER
       || input?.expectedRevision !== row.revision || !date(input.at) || !date(row.updatedAt) || input.at < row.updatedAt) throw Error("Étape ou révision invalide : relire l’action.");
-    if (![row.creatorId, row.assignerId].includes(context.personId)) throw Error("Seul le créateur ou le responsable destinataire peut attribuer.");
+    if (context.personId !== row.creatorId && !canManage(row, context.personId, org)) throw Error("Seul le créateur ou un responsable du périmètre destinataire peut attribuer.");
     const target = destination({ ...input.target, kind: "person" }, org);
     if (!allowed(context.personId, project, target, data, org)) throw Error("Attribution hors du périmètre autorisé.");
     if (row.targetKind === "service" && target.serviceId !== row.targetId) throw Error("L’agent doit appartenir au service destinataire.");
@@ -157,5 +160,17 @@
     return output(next, context.personId, "assign", input.at, next.visibleTo,
       project.agentIds.includes(target.id) || project.agentPilotId === target.id ? [] : [target.id], { expectedRevision: row.revision });
   }
-  return Object.freeze({ create, assign });
+  function canManage(row, actorId, org) {
+    if (row?.targetKind === "pole") return org.pole(row.targetId).managerIds.includes(actorId);
+    if (row?.targetKind === "service") {
+      const service = org.service(row.targetId), pole = org.pole(service.poleId);
+      return service.headId === actorId || pole.managerIds.includes(actorId);
+    }
+    return false;
+  }
+  function canAssign(data, project, row, context) {
+    const org = setup(data, project, context);
+    return row?.state === "to_assign" && (row.creatorId === context.personId || canManage(row, context.personId, org));
+  }
+  return Object.freeze({ create, assign, canAssign });
 });

@@ -103,6 +103,10 @@
     }
     return finish(data,plan,actions,loaded.source,"À attribuer");
   }
+  function canAssign(data,row,context){
+    const loaded=project(data,row.projectId);
+    return domain.canAssign(loaded.org,loaded.project,row,context);
+  }
   // Capture expected records BEFORE the write. A post-write discrepancy must
   // leave the caller uncertain, never silently overwrite or retry the batch.
   // This owner-staging check does not replace server permissions.
@@ -195,5 +199,5 @@
     }
     return true;
   }
-  return Object.freeze({creation,attribution,prepareConfirmation,validateSourceWrites});
+  return Object.freeze({creation,attribution,canAssign,prepareConfirmation,validateSourceWrites});
 });

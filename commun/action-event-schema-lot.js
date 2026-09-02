@@ -49,6 +49,10 @@
     "formula": "try:\n  return rec.Action.ACL_audience if rec.Action.id else []\nexcept Exception:\n  return []"
   }
 ];
+  const notificationColumn=expected.find(column=>column.id==="ACL_notifications_coherentes");
+  notificationColumn.formula=notificationColumn.formula.replace(
+    '  if rec.Operation == "assign":\n    audience = [p.id for p in circuit.Audience_initiale]\n    if not audience or len(set(audience)) != len(audience):\n      return False\n    chain = list(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=rec.Action))\n    if not chain:\n      return False\n    expected.extend(audience)',
+    '  audience = [p.id for p in circuit.Audience_initiale]\n  if not audience or len(set(audience)) != len(audience):\n    return False\n  expected.extend(audience)\n  if rec.Operation == "assign":\n    chain = list(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=rec.Action))\n    if not chain:\n      return False');
   expected.find(column=>column.id==="ACL_transition_autorisee").formula=expected.find(column=>column.id==="ACL_transition_autorisee").formula.replace(
     " and isinstance(rec.Precision, str) and rec.Precision.strip())",
     " and isinstance(rec.Precision, str))"

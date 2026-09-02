@@ -47,9 +47,12 @@
       if (p.id === dgsId) throw Error("La DGS ne doit pas être rattachée à un service ou diriger un pôle.");
       return p;
     }
-    const poles = records(tables.POLES).filter(p => bool(p.Actif)).map(p => ({
-      id: p.id, active: true, headId: nonDgs(p.Responsable).id,
-    }));
+    const poles = records(tables.POLES).filter(p => bool(p.Actif)).map(p => {
+      const headId = nonDgs(p.Responsable).id;
+      const deputyId = p.Responsable_adjoint ? nonDgs(p.Responsable_adjoint).id : null;
+      if (deputyId === headId) throw Error("Le responsable et son adjoint doivent être distincts.");
+      return { id: p.id, active: true, headId, deputyId, managerIds: [headId, ...(deputyId ? [deputyId] : [])] };
+    });
     const services = records(tables.SERVICES).filter(s => bool(s.Actif)).map(s => {
       const pole = poles.find(p => p.id === s.Pole);
       if (!pole) throw Error("Pôle actif manquant pour un service.");
@@ -60,8 +63,8 @@
       for (const pid of new Set([...refs(s.Agents), headId])) nonDgs(pid, false).serviceIds.push(s.id);
       return { id: s.id, active: true, headId, poleId: pole.id };
     });
-    for (const pole of poles) {
-      if (!byId.get(pole.headId).serviceIds.length) throw Error("Responsable de pôle sans service actif de rattachement.");
+    for (const pole of poles) for (const managerId of pole.managerIds) {
+      if (!byId.get(managerId).serviceIds.length) throw Error("Responsable de pôle sans service actif de rattachement.");
     }
     return { dgsId, people: people.map(({dgs, ...p}) => p), services, poles };
   }

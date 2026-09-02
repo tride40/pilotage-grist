@@ -153,7 +153,7 @@
   },
   {
     "tableId": "POLES",
-    "colIds": "Actif,Responsable",
+    "colIds": "Actif,Responsable,Responsable_adjoint",
     "rules": [
       {
         "key": "owner",
@@ -167,7 +167,7 @@
       },
       {
         "key": "unchanged-editor",
-        "aclFormula": "user.IsLoggedIn and user.Access == EDITOR and newRec.Actif == rec.Actif and newRec.Responsable == rec.Responsable",
+        "aclFormula": "user.IsLoggedIn and user.Access == EDITOR and newRec.Actif == rec.Actif and newRec.Responsable == rec.Responsable and newRec.Responsable_adjoint == rec.Responsable_adjoint",
         "permissionsText": "+U"
       },
       {
@@ -347,6 +347,12 @@
       },
       {
         "colId": "Responsable",
+        "type": "Ref:INTERLOCUTEURS",
+        "isFormula": false,
+        "formula": ""
+      },
+      {
+        "colId": "Responsable_adjoint",
         "type": "Ref:INTERLOCUTEURS",
         "isFormula": false,
         "formula": ""

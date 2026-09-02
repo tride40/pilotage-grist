@@ -92,6 +92,36 @@
     "formula": "try:\n  action = rec.Action\n  circuits = list(ACTIONS_CIRCUIT.lookupRecords(Action=action))\n  if not action.id or len(circuits) != 1 or circuits[0].id != rec.id or not rec.ACL_revision_coherente:\n    return []\n  initial = [p.id for p in rec.Audience_initiale]\n  if not initial or len(set(initial)) != len(initial) or rec.Createur.id not in initial:\n    return []\n  if action.Demandee_par.id != rec.Createur.id or action.Attribuee_a.id != rec.Executant.id:\n    return []\n  project = action.Projet\n  if not project.id or not project.Elu_pilote.id or not project.Agent_pilote.id:\n    return []\n  levels = sorted(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=action), key=lambda r: r.Niveau)\n  if not levels or levels[0].Attributaire.id != rec.Createur.id:\n    return []\n  if any(type(level.Niveau) is not int or level.Niveau != i + 1 for i, level in enumerate(levels)):\n    return []\n  recipient = rec.Executant.id or rec.Responsable_destinataire.id\n  people = initial + [rec.Createur.id, recipient, project.Elu_pilote.id, project.Agent_pilote.id]\n  people += [p.id for p in rec.Associes]\n  people += [level.Attributaire.id for level in levels] + [level.Destinataire.id for level in levels]\n  if rec.Superieur_direct.id:\n    people.append(rec.Superieur_direct.id)\n  if any(type(pid) is not int or pid <= 0 for pid in people):\n    return []\n  return sorted(set(people))\nexcept Exception:\n  return []"
   }
 ];
+  // Les responsables principal et adjoint d'un pôle constituent un même niveau d'autorité.
+  const oldPole=`  def pole(p):
+    if not p.id or not p.Actif or person(p.Responsable, "Agent").id == dgs.id:
+      raise ValueError("pole")
+    return p`;
+  const sharedPole=`  def pole(p):
+    if not p.id or not p.Actif:
+      raise ValueError("pole")
+    head = person(p.Responsable, "Agent")
+    deputy = person(p.Responsable_adjoint, "Agent") if p.Responsable_adjoint.id else None
+    if head.id == dgs.id or (deputy and (deputy.id == dgs.id or deputy.id == head.id)):
+      raise ValueError("pole")
+    return p
+  def managers(p):
+    parent = pole(p)
+    return [parent.Responsable.id] + ([parent.Responsable_adjoint.id] if parent.Responsable_adjoint.id else [])`;
+  function coResponsible(formula){return formula
+    .replace(oldPole,sharedPole)
+    .replace('if s.Pole.Responsable.id == p.id:','if p.id in managers(s.Pole):')
+    .replace('return next(pid for pid in [s.Responsable.id, s.Pole.Responsable.id, dgs.id] if pid != p.id)','return next(pid for pid in [s.Responsable.id] + managers(s.Pole) + [dgs.id] if pid != p.id)')
+    .replace('return pole(target_pole).Responsable.id == actor.id','return actor.id in managers(target_pole)')
+    .replace('return actor.id in [target_service.Responsable.id, target_service.Pole.Responsable.id]','return actor.id in [target_service.Responsable.id] + managers(target_service.Pole)')
+    .replace('superior = target_service.Pole.Responsable.id\n    if superior == target.id:\n      superior = dgs.id','superior = dgs.id if target.id in managers(target_service.Pole) else target_service.Pole.Responsable.id');}
+  for(const id of ["ACL_creation_perimetre","ACL_attribution_perimetre"]){
+    const column=expected.find(item=>item.id===id);column.formula=coResponsible(column.formula);
+  }
+  const coherent=expected.find(item=>item.id==="ACL_creation_enregistrement_coherent");
+  coherent.formula=coherent.formula.replace(
+    '  if rec.Superieur_direct.id:\n    expected_audience.add(rec.Superieur_direct.id)\n  audience = [p.id for p in rec.Audience_initiale]',
+    '  if rec.Superieur_direct.id:\n    expected_audience.add(rec.Superieur_direct.id)\n  context_pole = rec.Pole_destinataire if rec.Pole_destinataire.id else (rec.Service_contexte.Pole if rec.Service_contexte.id else None)\n  if context_pole and context_pole.id:\n    expected_audience.add(context_pole.Responsable.id)\n    if context_pole.Responsable_adjoint.id:\n      expected_audience.add(context_pole.Responsable_adjoint.id)\n  audience = [p.id for p in rec.Audience_initiale]');
   function definitions(){return expected.map(column=>({...column}));}
   function exact(actual,target){return actual.type===target.type&&Boolean(actual.isFormula)===target.isFormula&&(actual.formula||"")===(target.formula||"");}
   function inspect(metadata){

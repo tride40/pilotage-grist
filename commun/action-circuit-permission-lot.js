@@ -61,6 +61,11 @@
     "memo": "Aucun autre accès."
   }
 ];
+  const assignRule=expected.find(rule=>rule.key==="assign-U");
+  assignRule.aclFormula=assignRule.aclFormula.replace(
+    "(user.PilotageCompte.Interlocuteur == rec.Createur or user.PilotageCompte.Interlocuteur == rec.Responsable_destinataire)",
+    "(user.PilotageCompte.Interlocuteur == rec.Createur or user.PilotageCompte.Interlocuteur == rec.Responsable_destinataire or (rec.Type_destinataire == 'Service' and user.PilotageCompte.Interlocuteur in [rec.Service_destinataire.Pole.Responsable, rec.Service_destinataire.Pole.Responsable_adjoint]) or (rec.Type_destinataire == 'Pôle' and user.PilotageCompte.Interlocuteur in [rec.Pole_destinataire.Responsable, rec.Pole_destinataire.Responsable_adjoint]))"
+  );
   // Notifications are appended after the circuit update in the same atomic
   // bundle. Their completeness is verified after the write, not while this
   // intermediate row update is being authorized.

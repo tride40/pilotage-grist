@@ -218,12 +218,12 @@
     return Object.freeze({
       async list() {
         if(busy)throw Error("Enregistrement en cours.");
-        await guard();const context=await identity(),current=await snapshot(null,false,context);
+        await guard();const context=await identity(),current=await snapshot(null,true,context);
         return current.data.ACTIONS_CIRCUIT.map(c=>decode(current.data,c.Action).row)
-          .filter(row=>row.visibleTo.includes(context.personId)).map(row=>({ ...row,
-            roles:{creator:row.creatorId===context.personId,executor:row.executorId===context.personId,assigner:row.assignerId===context.personId},
-            operations:[...lifecycle.operations(row,context),...(row.state==="to_assign"&&[row.creatorId,row.assignerId].includes(context.personId)?["assign"]:[])],
-          }));
+          .filter(row=>row.visibleTo.includes(context.personId)).map(row=>{const canAssign=assignment.canAssign(current.data,row,context);return ({ ...row,
+            roles:{creator:row.creatorId===context.personId,executor:row.executorId===context.personId,assigner:canAssign},
+            operations:[...lifecycle.operations(row,context),...(canAssign?["assign"]:[])],
+          });});
       },
       async catalog() {
         if(busy)throw Error("Enregistrement en cours.");
@@ -272,9 +272,10 @@
       async inspect(actionId) {
         if (busy) throw Error("Enregistrement en cours.");
         await guard();
-        const context=await identity(), current=await snapshot(actionId,false,context);
+        const context=await identity(), current=await snapshot(actionId,true,context);
         const row=current.decoded.row;
-        return {row,operations:[...lifecycle.operations(row,context),...(row.visibleTo.includes(context.personId)&&row.state==="to_assign"&&[row.creatorId,row.assignerId].includes(context.personId)?["assign"]:[])],
+        const canAssign=row.visibleTo.includes(context.personId)&&assignment.canAssign(current.data,row,context);
+        return {row,operations:[...lifecycle.operations(row,context),...(canAssign?["assign"]:[])],
           history:current.events.filter(event=>event.Action===actionId).sort((a,b)=>a.Revision-b.Revision).map(event=>({
             revision:event.Revision,authorId:event.Auteur,occurredAt:iso(event.Date_evenement),operation:event.Operation,
             from:event.Etape_avant||null,to:event.Etape_apres||null,note:event.Precision||"",
