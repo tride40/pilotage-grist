@@ -49,7 +49,7 @@
     const rawDetails=diagnosticDetails(error);
     return [diagnostic?`${message} (${diagnostic})`:message,rawDetails&&`Détails techniques : ${rawDetails}`].filter(Boolean).join("\n");
   }
-  function mount({element,service,catalog={projects:[],people:[],services:[],poles:[]},canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente.",title="Circuit des actions",initialFilter="open",showCreate=true,showNotifications=false}){
+  function mount({element,service,catalog={projects:[],people:[],services:[],poles:[]},canWrite=false,allowCreate=canWrite,allowAssignment=canWrite,allowLifecycle=canWrite,confirmWrites=false,banner="Écritures désactivées : activation du circuit en attente.",title="Circuit des actions",initialFilter="open",showCreate=true,showNotifications=false,showHeading=true,showSummary=true,showToolbar=true,showFilter=true,filterOptions=null,rowPredicate=null,onData=null}){
     const doc=element.ownerDocument, win=doc.defaultView;
     let rows=[],notifications=[],notificationButtons=[],busy=false,locked=false,selected=null,opener=null,currentCapability=false,currentOperation=null,smartFilter=initialFilter==="smart";
     const node=(tag,text,cls)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
@@ -73,12 +73,13 @@
     notificationStatus.setAttribute("role","status");notificationPanel.setAttribute("aria-label","Notifications non lues");notificationPanel.append(notificationTitle,notificationStatus);
     const toolbarPanel=node("section",undefined,"circuit-toolbar-panel"),toolbar=node("div",undefined,"circuit-toolbar"), search=node("input"), filter=node("select");
     search.type="search";search.placeholder="Rechercher une action";search.setAttribute("aria-label","Rechercher une action");
-    for(const [key,label] of [["open","Actions ouvertes"],["executor","Mes actions à réaliser"],["creator","Mes demandes en cours"],["review","À valider"],["all","Toutes les actions"],["history","Historique"]])option(filter,key,label);
-    filter.value=["open","executor","creator","review","all","history"].includes(initialFilter)?initialFilter:"open";
+    const availableFilters=filterOptions||[["open","Actions ouvertes"],["assign","À attribuer"],["executor","Mes actions à réaliser"],["creator","Mes demandes en cours"],["review","À valider"],["all","Toutes les actions"],["history","Historique"]];
+    for(const [key,label] of availableFilters)option(filter,key,label);
+    filter.value=availableFilters.some(([key])=>key===initialFilter)?initialFilter:(availableFilters[0]?.[0]||"open");
     filter.setAttribute("aria-label","Afficher les actions");
     const searchWrap=node("label",undefined,"circuit-filter"),filterWrap=node("label",undefined,"circuit-filter");
     searchWrap.append(node("span","Rechercher"),search);filterWrap.append(node("span","Vue"),filter);
-    const refresh=button("Actualiser",()=>load());toolbar.append(searchWrap,filterWrap,refresh);toolbarPanel.append(toolbar);
+    const refresh=button("Actualiser",()=>load());toolbar.append(searchWrap,...(showFilter?[filterWrap]:[]),refresh);toolbar.classList.toggle("circuit-toolbar--compact",!showFilter);toolbarPanel.append(toolbar);
     const list=node("section",undefined,"circuit-list");list.setAttribute("aria-label","Liste des actions");
     const dialog=node("dialog");dialog.setAttribute("aria-labelledby","circuit-form-title");
     const form=node("form"),formTitle=node("h2");formTitle.id="circuit-form-title";
@@ -87,7 +88,7 @@
     const fields=node("div",undefined,"circuit-form-fields"),error=node("p",undefined,"circuit-form-error");error.setAttribute("role","alert");
     const controls=node("div",undefined,"circuit-controls"),back=button("Retour",()=>close()),submit=node("button","Enregistrer","button button--primary");submit.type="submit";
     controls.append(back,submit);form.append(dialogHeader,fields,error,controls);dialog.append(form);
-    element.append(heading,summaryPanel,...(showNotifications?[notificationPanel]:[]),toolbarPanel,status,viewStatus,list,dialog);
+    element.append(...(showHeading?[heading]:[]),...(showSummary?[summaryPanel]:[]),...(showNotifications?[notificationPanel]:[]),...(showToolbar?[toolbarPanel]:[]),status,viewStatus,list,dialog);
     function disabled(){add.disabled=busy||locked||!canWrite||!allowCreate;submit.disabled=busy||locked||!canWrite||!currentCapability;refresh.disabled=busy;back.disabled=busy;dialogClose.disabled=busy;notificationButtons.forEach(item=>{item.button.disabled=busy||(item.requiresWrite&&(locked||!canWrite));});}
     function showSubmit(visible){submit.hidden=!visible;submit.style.display=visible?"":"none";}
     function resetDialogScroll(){dialog.scrollTop=0;form.scrollTop=0;fields.scrollTop=0;}
@@ -177,14 +178,15 @@
         disabled();dialog.showModal();resetDialogScroll();
       }catch(e){status.textContent=e.message;}finally{busy=false;disabled();}
     }
-    function render(){renderSummary();list.replaceChildren();const shown=rows.filter(r=>{
+    function render(){renderSummary();list.replaceChildren();const eligibleRows=typeof rowPredicate==="function"?rows.filter(rowPredicate):rows,shown=eligibleRows.filter(r=>{
       const terminal=["closed","cancelled"].includes(r.state);
       const scope=filter.value==="all"||filter.value==="history"?filter.value==="all"||terminal
+        :filter.value==="assign"?Boolean(r.roles?.assigner&&r.state==="to_assign")
         :filter.value==="review"?Boolean(r.roles?.creator&&r.state==="performed")
         :filter.value==="executor"?Boolean(r.roles?.executor&&!terminal)
         :filter.value==="creator"?Boolean(r.roles?.creator&&!terminal):!terminal;
       return scope&&searchableText(r).includes(normalizeText(search.value));}).sort(compareRows);
-      viewStatus.textContent=`${shown.length} action(s) affichée(s) sur ${rows.length}.`;
+      viewStatus.textContent=`${shown.length} action(s) affichée(s) sur ${eligibleRows.length}.`;
       if(!shown.length)list.append(node("p",search.value.trim()?"Aucune action ne correspond à votre recherche.":"Aucune action dans cette vue.","circuit-empty"));
       shown.forEach(r=>{const late=isOverdue(r),card=node("article",undefined,`card circuit-card circuit-card--${late?"late":r.state}`),top=node("div",undefined,"circuit-card__top"),project=node("span",r.projectTitle||"Sans projet","circuit-chip"),state=node("span",late?"En retard":labels[r.state]||r.state,`circuit-badge circuit-badge--${late?"late":r.state}`),h=node("h2",r.title);
         top.append(project,state);card.append(top,h);
@@ -197,10 +199,11 @@
       unread.forEach(item=>{const card=node("article",undefined,"circuit-notification"),label=({create:"Nouvelle action",assign:"Action attribuée",perform:"Action déclarée réalisée",close:"Action clôturée",request_additional_work:"Complément demandé",cancel:"Action annulée"})[item.type]||"Mise à jour de l’action";
         card.append(node("h3",item.title),node("p",label));detailLine(card,"Date",formatDate(item.occurredAt,true));const controls=node("div",undefined,"circuit-controls"),view=button("Afficher l’action",()=>showAction(item)),read=button("Marquer comme lue",()=>markRead(item.id));notificationButtons.push({button:view,requiresWrite:false},{button:read,requiresWrite:true});controls.append(view,read);card.append(controls);notificationPanel.append(card);});disabled();}
     async function markRead(id){if(busy||locked||!canWrite||typeof service.markNotificationRead!=="function")return;busy=true;disabled();try{await service.markNotificationRead(id);busy=false;await load();status.textContent="Notification marquée comme lue.";}catch(e){locked=true;status.textContent=failureMessage(e);}finally{busy=false;disabled();}}
-    function chooseSmartFilter(){if(!smartFilter)return;const active=row=>!["closed","cancelled"].includes(row.state);filter.value=rows.some(row=>row.roles?.creator&&row.state==="performed")?"review"
+    function chooseSmartFilter(){if(!smartFilter)return;const active=row=>!["closed","cancelled"].includes(row.state);filter.value=rows.some(row=>row.roles?.assigner&&row.state==="to_assign")?"assign"
+        :rows.some(row=>row.roles?.creator&&row.state==="performed")?"review"
         :rows.some(row=>row.roles?.executor&&active(row))?"executor"
         :rows.some(row=>row.roles?.creator&&active(row))?"creator":"open";smartFilter=false;}
-    async function load(){if(busy)return;busy=true;disabled();try{const values=await Promise.all([service.list(),showNotifications&&typeof service.notifications==="function"?service.notifications():[]]);rows=values[0];notifications=values[1];chooseSmartFilter();status.textContent="";}catch(e){rows=[];notifications=[];status.textContent=e.message;}finally{busy=false;renderNotifications();disabled();render();}}
+    async function load(){if(busy)return;busy=true;disabled();try{const values=await Promise.all([service.list(),showNotifications&&typeof service.notifications==="function"?service.notifications():[]]);rows=values[0];notifications=values[1];chooseSmartFilter();status.textContent="";}catch(e){rows=[];notifications=[];status.textContent=e.message;}finally{busy=false;renderNotifications();disabled();render();if(typeof onData==="function")onData({rows:[...rows],notifications:[...notifications]});}}
     form.addEventListener("submit",async event=>{event.preventDefault();if(busy||locked||!canWrite||!currentCapability||!collect||!form.reportValidity())return;
       if(confirmWrites&&!win.confirm(confirmations[currentOperation]||"Enregistrer cette opération réelle ?"))return;
       busy=true;disabled();error.textContent="";
@@ -212,7 +215,7 @@
       }finally{busy=false;disabled();render();}});
     dialog.addEventListener("cancel",e=>{e.preventDefault();close();});search.addEventListener("input",render);filter.addEventListener("change",()=>{smartFilter=false;render();});
     disabled();const ready=load();
-    return {ready,refresh:load,dispose(){locked=true;canWrite=false;rows=[];element.replaceChildren();}};
+    return {ready,refresh:load,create:openCreate,dispose(){locked=true;canWrite=false;rows=[];element.replaceChildren();}};
   }
   root.PilotageActionCircuitUI=Object.freeze({mount,failureMessage,diagnosticDetails});
 })(typeof globalThis==="object"?globalThis:this);
