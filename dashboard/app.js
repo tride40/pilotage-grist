@@ -653,7 +653,7 @@ async function persistProjectOrder() {
     return;
   }
   try {
-    await window.PilotageTestMode.applyUserActions(state.projects.map((project) => ["UpdateRecord", "PROJETS", project.id, { manualSort: project.manualSort }]));
+    await window.PilotageGristWrite.applyUserActions(state.projects.map((project) => ["UpdateRecord", "PROJETS", project.id, { manualSort: project.manualSort }]));
     showFeedback("Nouvel ordre des projets enregistré.");
   } catch (error) {
     showFeedback(`Impossible d’enregistrer l’ordre : ${error.message}`);
@@ -732,7 +732,7 @@ async function createProject(event) {
       createdId = Math.max(0, ...state.tables.PROJETS.map((row) => Number(row.id) || 0)) + 1;
       state.tables.PROJETS.push({ id: createdId, ...fields });
     } else {
-      const result = await window.PilotageTestMode.applyUserActions([["AddRecord", "PROJETS", null, fields]]);
+      const result = await window.PilotageGristWrite.applyUserActions([["AddRecord", "PROJETS", null, fields]]);
       createdId = result?.retValues?.[0] ?? result?.[0]?.rowId ?? null;
       state.tables = await fetchDocumentData(Object.keys(state.tables));
     }

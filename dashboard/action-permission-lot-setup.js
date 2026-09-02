@@ -15,7 +15,7 @@
   function create({grist,mode,audit,lot}){
     if(!audit?.inspect||!lot?.inspect||!lot?.tableId)throw Error("Lot de permissions invalide.");
     let busy=false,preview=null,outcomeUncertain=false;
-    async function guard(){if(!mode||mode.isReadOnly())throw Error("Installation interdite en mode test.");mode.assertWritable();if(await grist.docApi.getDocName()!==documentId)throw Error("Document de base non autorisé.");}
+    async function guard(){if(!mode||mode.isReadOnly())throw Error("Installation indisponible : la passerelle d’écriture Grist n’est pas prête.");mode.assertWritable();if(await grist.docApi.getDocName()!==documentId)throw Error("Document de base non autorisé.");}
     async function snapshot(){await guard();const names=["_grist_Tables","_grist_Tables_column","_grist_ACLResources","_grist_ACLRules"];const values=await Promise.all(names.map(async name=>rows(await grist.docApi.fetchTable(name))));await guard();return {documentId,tables:values[0],columns:values[1],resources:values[2],rules:values[3]};}
     function report(result){return {tableId:lot.tableId,findings:[...result.findings],readyToInstall:result.readyToInstall,alreadyInstalled:result.alreadyInstalled,outcomeUncertain};}
     function outside(value){const ids=new Set(value.resources.filter(resource=>resource.tableId===lot.tableId).map(resource=>resource.id));return JSON.stringify({tables:value.tables,columns:value.columns,resources:value.resources,rules:value.rules.filter(rule=>!ids.has(rule.resource))});}
