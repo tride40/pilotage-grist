@@ -43,7 +43,7 @@ function configureCards() {
     const url = safeUrl(urls[card.dataset.page]);
     const status = card.querySelector(".link-status");
     if (url) {
-      card.href = url;
+      card.href = isDemoMode() ? url : window.PilotageNavigation.applicationUrl(url);
       status.textContent = "";
       card.setAttribute("aria-label", `${card.querySelector("strong").textContent} — ouvrir la page`);
       return;
