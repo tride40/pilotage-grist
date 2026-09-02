@@ -34,7 +34,7 @@
     if(serviceNames.length)identityBody.append(node("small",serviceNames.join(" · ")));
     identityCard.append(avatar,identityBody);
     const heroActions=node("div",undefined,"workspace-hero__actions"),homeLink=node("a","⌂ Accueil","button button--secondary workspace-home-link");
-    homeLink.href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16";homeLink.target="_top";homeLink.setAttribute("aria-label","Retour à l’accueil");
+    homeLink.href=window.PilotageNavigation.pageUrl("home");homeLink.target="_top";homeLink.setAttribute("aria-label","Retour à l’accueil");
     heroActions.append(homeLink,identityCard);heroInner.append(copy,heroActions);hero.append(heroInner);root.append(hero);
 
     const shell=node("div",undefined,"workspace-shell"),tabs=node("nav",undefined,"workspace-tabs");tabs.setAttribute("aria-label","Rubriques de Mon espace");
@@ -105,5 +105,5 @@
     }
 
     await Promise.all([coordinationController.ready,workController.ready]);
-  }catch(error){root.replaceChildren();const status=node("p",error.message);status.setAttribute("role","alert");root.append(status);}
+  }catch(error){root.replaceChildren();const status=node("p",error.message);status.setAttribute("role","alert");const home=node("a","⌂ Accueil","button button--secondary workspace-home-link");home.href=window.PilotageNavigation.pageUrl("home");home.target="_top";root.append(status,home);}
 })();

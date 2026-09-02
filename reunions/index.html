@@ -8,10 +8,10 @@
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
     <link rel="stylesheet" href="styles.css?v=14">
-    <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script><script src="../commun/grist-write.js?v=1" defer></script>
+    <script src="../commun/navigation.js?v=1" defer></script><script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script><script src="../commun/grist-write.js?v=1" defer></script>
     <script src="../commun/current-user.js?v=3" defer></script>
     <script src="demo-data.js?v=11" defer></script>
-    <script src="../commun/context.js?v=2" defer></script>
+    <script src="../commun/context.js?v=3" defer></script>
     <script src="app.js?v=20" defer></script>
   </head>
   <body>
@@ -21,7 +21,7 @@
           <p class="section-kicker">Suivi du projet</p><h1>Réunions</h1>
           <p class="meetings-header__project" id="project-name" hidden></p>
         </div>
-        <div class="header-actions"><a class="button button--secondary project-return-button" id="project-return" target="_top" aria-label="Retour à la fiche du projet sélectionné" hidden>← Fiche projet</a><a class="button button--secondary home-button" href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16" target="_top" aria-label="Revenir à l’accueil"><span class="home-button__icon" aria-hidden="true">⌂</span>Accueil</a><span class="badge badge--info" id="meeting-count">0 réunion</span><button class="button button--primary" id="new-meeting" type="button">+ Nouvelle réunion</button></div>
+        <div class="header-actions"><a class="button button--secondary project-return-button" id="project-return" target="_top" aria-label="Retour à la fiche du projet sélectionné" hidden>← Fiche projet</a><a class="button button--secondary home-button" href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16?style=singlePage" target="_top" aria-label="Revenir à l’accueil"><span class="home-button__icon" aria-hidden="true">⌂</span>Accueil</a><span class="badge badge--info" id="meeting-count">0 réunion</span><button class="button button--primary" id="new-meeting" type="button">+ Nouvelle réunion</button></div>
       </div>
     </header>
     <main class="meetings-shell">
