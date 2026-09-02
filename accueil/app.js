@@ -8,7 +8,7 @@ const PAGE_URLS = Object.freeze({
   dashboard: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/9",
   project: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/10",
   meetings: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/11",
-  actions: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/13",
+  actions: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/37",
   contacts: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/14",
   weekly: "https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/15",
 });
@@ -17,7 +17,7 @@ const DEMO_URLS = Object.freeze({
   dashboard: "../dashboard/",
   project: "../fiche-projet/",
   meetings: "../reunions/",
-  actions: "../actions/",
+  actions: "../actions/actions.html",
   contacts: "../interlocuteurs/",
   weekly: "../point-hebdomadaire/",
 });
