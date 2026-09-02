@@ -218,7 +218,7 @@
   $("check").onclick = () => execute(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
-    service ??= window.PilotageActionGristSetup.create({ grist: window.grist, mode: window.PilotageTestMode });
+    service ??= window.PilotageActionGristSetup.create({ grist: window.grist, mode: window.PilotageGristWrite });
     return service.inspect();
   });
   $("install").onclick = () => {
@@ -229,7 +229,7 @@
   $("source-check").onclick = () => executeSource(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
-    sourceService ??= window.PilotageActionSourceSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode });
+    sourceService ??= window.PilotageActionSourceSchemaSetup.create({ grist: window.grist, mode: window.PilotageGristWrite });
     return sourceService.inspect();
   });
   $("source-install").onclick = () => {
@@ -240,7 +240,7 @@
   $("attribution-check").onclick = () => executeAttribution(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
-    attributionService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionAttributionSchemaLot });
+    attributionService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageGristWrite, lot: window.PilotageActionAttributionSchemaLot });
     return attributionService.inspect();
   });
   $("attribution-install").onclick = () => {
@@ -251,7 +251,7 @@
   $("circuit-check").onclick = () => executeCircuit(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
-    circuitService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionCircuitSchemaLot });
+    circuitService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageGristWrite, lot: window.PilotageActionCircuitSchemaLot });
     return circuitService.inspect();
   });
   $("circuit-install").onclick = () => {
@@ -262,7 +262,7 @@
   $("event-check").onclick = () => executeEvent(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
-    eventService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionEventSchemaLot });
+    eventService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageGristWrite, lot: window.PilotageActionEventSchemaLot });
     return eventService.inspect();
   });
   $("event-install").onclick = () => {
@@ -273,7 +273,7 @@
   $("notification-check").onclick = () => executeNotification(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
-    notificationService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionNotificationSchemaLot });
+    notificationService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageGristWrite, lot: window.PilotageActionNotificationSchemaLot });
     return notificationService.inspect();
   });
   $("notification-install").onclick = () => {
@@ -284,7 +284,7 @@
   $("account-check").onclick = () => executeAccount(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
-    accountService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionAccountSchemaLot });
+    accountService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageGristWrite, lot: window.PilotageActionAccountSchemaLot });
     return accountService.inspect();
   });
   $("account-install").onclick = () => {
@@ -295,7 +295,7 @@
   $("project-check").onclick = () => executeProject(async () => {
     if (!window.grist?.docApi) throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({ requiredAccess: "full" });
-    projectService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageTestMode, lot: window.PilotageActionProjectSchemaLot });
+    projectService ??= window.PilotageActionTableSchemaSetup.create({ grist: window.grist, mode: window.PilotageGristWrite, lot: window.PilotageActionProjectSchemaLot });
     return projectService.inspect();
   });
   $("project-install").onclick = () => {
@@ -338,7 +338,7 @@
     if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({requiredAccess:"full"});
     if(!window.PilotageActionPermissionLotSetup?.create)throw Error("Le moteur sécurisé des permissions manque dans la publication.");
-    circuitPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionCircuitPermissionLot});
+    circuitPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageGristWrite,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionCircuitPermissionLot});
     return circuitPermissionService.inspect();
   });
   $("circuit-permission-install").onclick=()=>{
@@ -364,7 +364,7 @@
     if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({requiredAccess:"full"});
     if(!window.PilotageActionPermissionLotSetup?.create)throw Error("Le moteur sécurisé des permissions manque dans la publication.");
-    attributionPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionAttributionPermissionLot});
+    attributionPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageGristWrite,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionAttributionPermissionLot});
     return attributionPermissionService.inspect();
   });
   $("attribution-permission-install").onclick=()=>{
@@ -390,7 +390,7 @@
     if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({requiredAccess:"full"});
     if(!window.PilotageActionPermissionLotSetup?.create)throw Error("Le moteur sécurisé des permissions manque dans la publication.");
-    eventPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionEventPermissionLot});
+    eventPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageGristWrite,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionEventPermissionLot});
     return eventPermissionService.inspect();
   });
   $("event-permission-install").onclick=()=>{
@@ -416,7 +416,7 @@
     if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({requiredAccess:"full"});
     if(!window.PilotageActionPermissionLotSetup?.create)throw Error("Le moteur sécurisé des permissions manque dans la publication.");
-    notificationPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionNotificationPermissionLot});
+    notificationPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageGristWrite,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionNotificationPermissionLot});
     return notificationPermissionService.inspect();
   });
   $("notification-permission-install").onclick=()=>{
@@ -455,7 +455,7 @@
     await window.grist.ready({requiredAccess:"full"});
     if(!window.PilotageActionPermissionLotSetup?.create||!window.PilotageActionSourcePermissionLot?.inspect)throw Error("Le lot sécurisé ACTIONS manque dans la publication.");
     legacyService??=window.PilotageActionLegacyLiveAudit.create({grist:window.grist});
-    sourcePermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionSourcePermissionLot,liveAudit:legacyService});
+    sourcePermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageGristWrite,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionSourcePermissionLot,liveAudit:legacyService});
     return sourcePermissionService.inspect();
   });
   $("source-permission-install").onclick=()=>{
@@ -483,7 +483,7 @@
     try{const value=await operation();authorityPermissionResult=value;$("authority-permission-findings").replaceChildren(...value.findings.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));$("authority-permission-status").textContent=value.outcomeUncertain?"Résultat incertain : ne relancez pas l’installation.":value.alreadyInstalled?"Projets et organisation 2/3 confirmés : les 41 règles d’autorité sont présentes et conformes.":value.readyToInstall?"Projets et organisation 2/3 prêts : 9 groupes et 41 règles ordonnées, comptes administrateurs confirmés.":"Projets et organisation 2/3 bloqués : examinez les écarts affichés.";}catch(error){authorityPermissionResult=null;$("authority-permission-findings").replaceChildren();$("authority-permission-status").textContent=error.message;}finally{authorityPermissionBusy=false;controls();}
   }
   $("authority-permission-check").onclick=()=>executeAuthorityPermission(async()=>{
-    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");await window.grist.ready({requiredAccess:"full"});if(!window.PilotageActionAuthorityPermissionLot?.inspect||!window.PilotageActionPermissionLotSetup?.create)throw Error("Le lot sécurisé des autorités manque dans la publication.");accountPermissionService??=window.PilotageActionAccountLiveAudit.create({grist:window.grist});authorityPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageTestMode,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionAuthorityPermissionLot,liveAudit:accountPermissionService});return authorityPermissionService.inspect();
+    if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");await window.grist.ready({requiredAccess:"full"});if(!window.PilotageActionAuthorityPermissionLot?.inspect||!window.PilotageActionPermissionLotSetup?.create)throw Error("Le lot sécurisé des autorités manque dans la publication.");accountPermissionService??=window.PilotageActionAccountLiveAudit.create({grist:window.grist});authorityPermissionService??=window.PilotageActionPermissionLotSetup.create({grist:window.grist,mode:window.PilotageGristWrite,audit:window.PilotageActionPermissionAudit,lot:window.PilotageActionAuthorityPermissionLot,liveAudit:accountPermissionService});return authorityPermissionService.inspect();
   });
   $("authority-permission-install").onclick=()=>{if(authorityPermissionBusy||$("authority-permission-install").disabled||!authorityPermissionService)return;if(!window.confirm("Installer en une seule fois les 41 règles d’autorité sur PROJETS, INTERLOCUTEURS, SERVICES et POLES ?"))return;executeAuthorityPermission(()=>authorityPermissionService.install({confirmed:true}));};
   $("final-permission-check").onclick=async()=>{
@@ -496,7 +496,7 @@
       if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
       await window.grist.ready({requiredAccess:"full"});
       if(!window.PilotageActionRealDataPreflight?.create||!window.PilotageCurrentUser?.identify)throw Error("Le contrôle sécurisé des données réelles manque dans la publication.");
-      realDataService??=window.PilotageActionRealDataPreflight.create({grist:window.grist,mode:window.PilotageTestMode,identify:options=>window.PilotageCurrentUser.identify(options)});
+      realDataService??=window.PilotageActionRealDataPreflight.create({grist:window.grist,mode:window.PilotageGristWrite,identify:options=>window.PilotageCurrentUser.identify(options)});
       const value=await realDataService.inspect();
       const list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
       list("real-data-findings",value.findings);list("real-data-confirmed",value.confirmed);
@@ -512,7 +512,7 @@
       if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
       await window.grist.ready({requiredAccess:"full"});
       if(!window.PilotageActionCreationLiveAudit?.create||!window.PilotageCurrentUser?.identify)throw Error("Le prévisualiseur sécurisé de création manque dans la publication.");
-      creationPreviewService??=window.PilotageActionCreationLiveAudit.create({grist:window.grist,mode:window.PilotageTestMode,identify:options=>window.PilotageCurrentUser.identify(options)});
+      creationPreviewService??=window.PilotageActionCreationLiveAudit.create({grist:window.grist,mode:window.PilotageGristWrite,identify:options=>window.PilotageCurrentUser.identify(options)});
       const value=await creationPreviewService.inspect();
       const list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
       list("creation-preview-findings",value.findings);list("creation-preview-confirmed",value.confirmed);
@@ -527,7 +527,7 @@
       if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
       await window.grist.ready({requiredAccess:"full"});
       if(!window.PilotageActionLifecycleLiveAudit?.create||!window.PilotageCurrentUser?.identify)throw Error("Le répétiteur sécurisé du cycle de vie manque dans la publication.");
-      lifecyclePreviewService??=window.PilotageActionLifecycleLiveAudit.create({grist:window.grist,mode:window.PilotageTestMode,identify:options=>window.PilotageCurrentUser.identify(options)});
+      lifecyclePreviewService??=window.PilotageActionLifecycleLiveAudit.create({grist:window.grist,mode:window.PilotageGristWrite,identify:options=>window.PilotageCurrentUser.identify(options)});
       const value=await lifecyclePreviewService.inspect(),list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
       list("lifecycle-preview-findings",value.findings);list("lifecycle-preview-confirmed",value.confirmed);
       list("lifecycle-preview-counts",[`Transitions contrôlées : ${value.counts.transitions}`,`Révision finale simulée : ${value.counts.finalRevision}`,`Notifications calculées : ${value.counts.notifications}`]);
@@ -541,7 +541,7 @@
       if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
       await window.grist.ready({requiredAccess:"full"});
       if(!window.PilotageActionSafetyLiveAudit?.create||!window.PilotageCurrentUser?.identify)throw Error("Le dernier contrôle sécurisé du circuit manque dans la publication.");
-      safetyPreviewService??=window.PilotageActionSafetyLiveAudit.create({grist:window.grist,mode:window.PilotageTestMode,identify:options=>window.PilotageCurrentUser.identify(options)});
+      safetyPreviewService??=window.PilotageActionSafetyLiveAudit.create({grist:window.grist,mode:window.PilotageGristWrite,identify:options=>window.PilotageCurrentUser.identify(options)});
       const value=await safetyPreviewService.inspect(),list=(id,texts)=>$(id).replaceChildren(...texts.map(text=>{const li=document.createElement("li");li.textContent=text;return li;}));
       list("safety-preview-findings",value.findings);list("safety-preview-confirmed",value.confirmed);
       list("safety-preview-counts",[`Niveaux d’échéance contrôlés : ${value.counts.deadlineLevels}`,`Notifications minimales calculées : ${value.counts.notifications}`,`Formules de confidentialité : ${value.counts.helperColumns}`,`Second envoi bloqué après incertitude : ${value.counts.retriesBlocked}`]);
@@ -567,7 +567,7 @@
     if(!window.grist?.docApi)throw Error("Ouvrez cette page comme widget dans le document de base Grist.");
     await window.grist.ready({requiredAccess:"full"});
     if(!window.PilotageActionEditorTransitionMigration?.create)throw Error("Le correctif des transitions manque dans la publication.");
-    editorTransitionService??=window.PilotageActionEditorTransitionMigration.create({grist:window.grist,mode:window.PilotageTestMode});
+    editorTransitionService??=window.PilotageActionEditorTransitionMigration.create({grist:window.grist,mode:window.PilotageGristWrite});
     return editorTransitionService.inspect();
   });
   $("editor-transition-install").onclick=()=>{
