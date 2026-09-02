@@ -44,8 +44,8 @@
     if(column.id==="ACL_creation_enregistrement_coherent")formula=formula.replace(
       '  context_pole = rec.Pole_destinataire if rec.Pole_destinataire.id else (rec.Service_contexte.Pole if rec.Service_contexte.id else None)\n  if context_pole and context_pole.id:\n    expected_audience.add(context_pole.Responsable.id)\n    if context_pole.Responsable_adjoint.id:\n      expected_audience.add(context_pole.Responsable_adjoint.id)\n','');
     if(column.id==="ACL_notifications_coherentes")formula=formula.replace(
-      '  audience = [p.id for p in circuit.Audience_initiale]\n  if not audience or len(set(audience)) != len(audience):\n    return False\n  expected.extend(audience)\n  if rec.Operation == "assign":\n    chain = list(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=rec.Action))',
-      '  if rec.Operation == "assign":\n    audience = [p.id for p in circuit.Audience_initiale]\n    if not audience or len(set(audience)) != len(audience):\n      return False\n    chain = list(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=rec.Action))\n    expected.extend(audience)');
+      '  audience = [p.id for p in circuit.Audience_initiale]\n  if not audience or len(set(audience)) != len(audience):\n    return False\n  expected.extend(audience)\n  if rec.Operation == "assign":\n    chain = list(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=rec.Action))\n    if not chain:\n      return False',
+      '  if rec.Operation == "assign":\n    audience = [p.id for p in circuit.Audience_initiale]\n    if not audience or len(set(audience)) != len(audience):\n      return False\n    chain = list(ACTIONS_ATTRIBUTIONS.lookupRecords(Action=rec.Action))\n    if not chain:\n      return False\n    expected.extend(audience)');
     return {...column,formula};
   }
   const legacyColumns=targetColumns.map(legacyFormula);
