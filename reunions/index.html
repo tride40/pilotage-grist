@@ -7,12 +7,12 @@
     <title>Réunions du projet</title>
     <link rel="stylesheet" href="../commun/theme.css">
     <link rel="stylesheet" href="../commun/components.css?v=12">
-    <link rel="stylesheet" href="styles.css?v=13">
+    <link rel="stylesheet" href="styles.css?v=14">
     <script src="https://docs.getgrist.com/grist-plugin-api.js" defer></script><link rel="stylesheet" href="../commun/test-mode.css?v=1"><script src="../commun/test-mode.js?v=1" defer></script>
     <script src="../commun/current-user.js?v=3" defer></script>
-    <script src="demo-data.js?v=10" defer></script>
+    <script src="demo-data.js?v=11" defer></script>
     <script src="../commun/context.js?v=2" defer></script>
-    <script src="app.js?v=19" defer></script>
+    <script src="app.js?v=20" defer></script>
   </head>
   <body>
     <header class="meetings-header app-header">
@@ -36,17 +36,42 @@
             <button class="button button--secondary filter-button" type="button" data-filter="all" aria-pressed="true">Toutes</button>
             <button class="button button--secondary filter-button" type="button" data-filter="upcoming" aria-pressed="false">À venir</button>
             <button class="button button--secondary filter-button" type="button" data-filter="past" aria-pressed="false">Passées</button>
-            <button class="button button--secondary filter-button" type="button" data-filter="decisions" aria-pressed="false">Décisions</button>
           </div>
-          <label class="form-field search-field"><span class="form-field__label">Rechercher</span><input class="form-field__control" id="meeting-search" type="search" placeholder="Objet, type ou point clé…" autocomplete="off"></label>
+          <label class="form-field search-field"><span class="form-field__label">Rechercher</span><input class="form-field__control" id="meeting-search" type="search" placeholder="Titre, participant, lieu ou ordre du jour…" autocomplete="off"></label>
         </section>
         <div class="section-header meeting-list-header"><div><p class="section-kicker">Historique et agenda</p><h2 class="section-header__title">Réunions du projet</h2></div><p id="results-count" aria-live="polite"></p></div>
         <div class="meeting-list" id="meeting-list"></div>
       </div>
     </main>
     <div class="toast" id="feedback" role="status" aria-live="polite" hidden></div>
-    <dialog id="meeting-dialog" aria-labelledby="meeting-form-title"><form id="meeting-form"><div class="dialog-header"><div><p class="section-kicker">Réunion</p><h2 id="meeting-form-title">Nouvelle réunion</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div><div class="form-grid" id="meeting-fields"></div><p class="form-message" aria-live="polite"></p><div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Enregistrer la réunion</button></div></form></dialog>
-    <dialog id="followup-dialog" aria-labelledby="followup-title"><form id="followup-form"><div class="dialog-header"><div><p class="section-kicker">Conséquence de la réunion</p><h2 id="followup-title">Créer un objet lié</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div><input name="TargetTable" type="hidden"><div class="form-grid" id="followup-fields"></div><p class="form-message" aria-live="polite"></p><div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Créer</button></div></form></dialog>
+    <dialog id="meeting-dialog" class="meeting-form-dialog" aria-labelledby="meeting-form-title">
+      <form id="meeting-form" class="meeting-form-shell">
+        <div class="dialog-header meeting-form-header">
+          <div><p class="section-kicker">Agenda du projet</p><h2 id="meeting-form-title">Nouvelle réunion</h2><p class="meeting-form-intro">Conservez les informations utiles, l’ordre du jour et le compte rendu de la réunion.</p></div>
+          <button class="icon-button" type="button" data-close aria-label="Fermer">×</button>
+        </div>
+        <div class="meeting-form-scroll">
+          <section class="form-step">
+            <div class="form-step__heading"><span class="form-step__number">1</span><div><h3>Informations générales</h3><p>Projet, titre, date, horaire et lieu</p></div></div>
+            <div class="form-grid form-step__fields" id="meeting-general-fields"></div>
+          </section>
+          <section class="form-step">
+            <div class="form-step__heading"><span class="form-step__number">2</span><div><h3>Ordre du jour</h3><p>Les sujets prévus pour la réunion — facultatif</p></div></div>
+            <div class="form-grid form-step__fields" id="meeting-agenda-fields"></div>
+          </section>
+          <section class="form-step">
+            <div class="form-step__heading"><span class="form-step__number">3</span><div><h3>Participants</h3><p>Les personnes présentes ou invitées</p></div></div>
+            <div class="form-grid form-step__fields" id="meeting-participant-fields"></div>
+          </section>
+          <section class="form-step">
+            <div class="form-step__heading"><span class="form-step__number">4</span><div><h3>Compte rendu</h3><p>La mémoire factuelle de la réunion — peut être complétée plus tard</p></div></div>
+            <div class="form-grid form-step__fields" id="meeting-report-fields"></div>
+          </section>
+          <p class="form-message" aria-live="polite"></p>
+        </div>
+        <div class="dialog-actions meeting-form-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" id="meeting-submit" type="submit">Créer la réunion</button></div>
+      </form>
+    </dialog>
     <dialog id="version-dialog" aria-labelledby="version-title"><form id="version-form"><div class="dialog-header"><div><p class="section-kicker">Modification exceptionnelle</p><h2 id="version-title">Nouvelle version du compte rendu</h2></div><button class="icon-button" type="button" data-close aria-label="Fermer">×</button></div><p id="version-context"></p><div class="form-grid" id="version-fields"></div><p class="form-message" aria-live="polite"></p><div class="dialog-actions"><button class="button button--secondary" type="button" data-close>Annuler</button><button class="button button--primary" type="submit">Enregistrer la version approuvée</button></div></form></dialog>
     <template id="meeting-template">
       <article class="card meeting-card">
