@@ -32,7 +32,10 @@
     identityBody.append(node("strong",personName),node("span",[person.Role_interne,person.Fonction].filter(Boolean).join(" · ")||"Utilisateur"));
     const directoryPerson=catalog.people.find(item=>Number(item.id)===Number(identity.personId)),serviceNames=(directoryPerson?.serviceIds||[]).map(id=>catalog.services.find(service=>service.id===id)?.name).filter(Boolean);
     if(serviceNames.length)identityBody.append(node("small",serviceNames.join(" · ")));
-    identityCard.append(avatar,identityBody);heroInner.append(copy,identityCard);hero.append(heroInner);root.append(hero);
+    identityCard.append(avatar,identityBody);
+    const heroActions=node("div",undefined,"workspace-hero__actions"),homeLink=node("a","⌂ Accueil","button button--secondary workspace-home-link");
+    homeLink.href="https://grist.numerique.gouv.fr/o/docs/f8iwcexDATAw/Pilotage-des-projets/p/16";homeLink.target="_top";homeLink.setAttribute("aria-label","Retour à l’accueil");
+    heroActions.append(homeLink,identityCard);heroInner.append(copy,heroActions);hero.append(heroInner);root.append(hero);
 
     const shell=node("div",undefined,"workspace-shell"),tabs=node("nav",undefined,"workspace-tabs");tabs.setAttribute("aria-label","Rubriques de Mon espace");
     const coordinationTab=button("Coordination",()=>selectTab("coordination"),"workspace-tab is-active"),workTab=button("Mon travail",()=>selectTab("work"),"workspace-tab");
