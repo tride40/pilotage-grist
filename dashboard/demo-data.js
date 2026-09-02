@@ -34,9 +34,6 @@ window.DASHBOARD_DEMO_DATA = {
   ACTIONS: [
     { id: 1, Projet: 1, Statut: "En cours", En_retard: false },
   ],
-  CONSIGNES_POLITIQUES: [
-    { id: 1, Projet: 1, Statut: "En cours", A_controler: true },
-  ],
   ARBITRAGES_DECISIONS: [
     { id: 1, Projet: 1, A_decider: true },
   ],

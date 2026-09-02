@@ -7,7 +7,7 @@ function page(){
   const ctx=dom.getInternalVMContext();
   vm.runInContext(fs.readFileSync(path.join(__dirname,"app.js"),"utf8").replace(/initializeDashboard\(\);\s*$/, ""),ctx);
   const run=code=>vm.runInContext(code,ctx);
-  run(`state.tables={PROJETS:[{id:1,Statut:"En cours",Nom_projet:"Actif"},{id:2,Statut:"Terminé"},{id:3,Statut:"Abandonné"},{id:4,Archive:true},{id:5,Statut:"À venir",Nom_projet:"Futur"}],INTERLOCUTEURS:[],ACTIONS:[],CONSIGNES_POLITIQUES:[],ARBITRAGES_DECISIONS:[]};`);
+  run(`state.tables={PROJETS:[{id:1,Statut:"En cours",Nom_projet:"Actif"},{id:2,Statut:"Terminé"},{id:3,Statut:"Abandonné"},{id:4,Archive:true},{id:5,Statut:"À venir",Nom_projet:"Futur"}],INTERLOCUTEURS:[],ACTIONS:[],ARBITRAGES_DECISIONS:[]};`);
   return {dom,doc:dom.window.document,run,load:rows=>{ctx.rows=rows;run("state.tables.ARBITRAGES_DECISIONS=rows;state.projects=prepareDashboardData(state.tables);renderKpis(calculateKpis(state.tables,state.projects));renderProjects();");},close:()=>dom.window.close()};
 }
 domTest("décisions limitées aux projets actifs, cohérence avec le filtre et les cartes",()=>{

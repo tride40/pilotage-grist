@@ -3,7 +3,7 @@
 /* Tables lues par le tableau de bord. */
 const TABLE_NAMES = [
   "PROJETS", "INTERLOCUTEURS", "REUNIONS", "ACTIONS",
-  "CONSIGNES_POLITIQUES", "ARBITRAGES_DECISIONS", "AVANCEMENTS",
+  "ARBITRAGES_DECISIONS", "AVANCEMENTS",
 ];
 const OPTIONAL_TABLE_NAMES = ["BLOCAGES", "VIGILANCES", "JALONS", "ATTENTES_EXTERNES"];
 
@@ -171,7 +171,6 @@ function calculateKpis(tables, projects) {
     { key: "active", label: "Projets actifs", value: projects.length },
     { key: "arbitration", label: "Décisions à prendre", value: tables.ARBITRAGES_DECISIONS.filter(row => isOpenDecision(row) && activeIds.has(String(getProjectReference(row)))).length },
     { key: "late", label: "Actions en retard", value: tables.ACTIONS.filter((row) => isTrue(row.En_retard)).length },
-    { key: "check", label: "Consignes à contrôler", value: tables.CONSIGNES_POLITIQUES.filter((row) => isTrue(row.A_controler)).length },
   ];
 }
 
@@ -186,10 +185,6 @@ function buildProjectMetrics(tables) {
   tables.ARBITRAGES_DECISIONS.forEach((row) => {
     const item = getMetricForLinkedProject(metrics, row);
     if (item && isOpenDecision(row)) item.arbitrations += 1;
-  });
-  tables.CONSIGNES_POLITIQUES.forEach((row) => {
-    const item = getMetricForLinkedProject(metrics, row);
-    if (item && isTrue(row.A_controler)) item.instructions += 1;
   });
   (tables.BLOCAGES || []).filter(isOpenPilotageObject).forEach((row) => {
     const item = getMetricForLinkedProject(metrics, row);
@@ -225,7 +220,7 @@ function renderDecisionNotice() {
 }
 
 function emptyMetrics() {
-  return { openActions: 0, lateActions: 0, arbitrations: 0, instructions: 0, blockages: 0, vigilances: 0, externalWaits: 0 };
+  return { openActions: 0, lateActions: 0, arbitrations: 0, blockages: 0, vigilances: 0, externalWaits: 0 };
 }
 
 function isOpenExternalWait(row) {
@@ -277,7 +272,6 @@ function getFilteredProjects() {
       all: true,
       arbitration: project.metrics.arbitrations > 0,
       late: project.metrics.lateActions > 0,
-      check: project.metrics.instructions > 0,
     }[state.activeFilter];
     return matchesSearch && Boolean(matchesFilter);
   });
@@ -468,7 +462,6 @@ function renderMetrics(container, metrics) {
     [metrics.openActions, "Actions", "info"],
     [metrics.lateActions, "Retards", "danger"],
     [metrics.arbitrations, "Décisions", "arbitration"],
-    [metrics.instructions, "Consignes", "warning"],
     [metrics.blockages, "Blocages", "danger"],
     [metrics.vigilances, "Vigilances", "warning"],
     [metrics.externalWaits, "Attentes", "warning"],
@@ -488,7 +481,7 @@ function renderMetrics(container, metrics) {
 
 function projectAttention(metrics) {
   if (metrics.blockages > 0 || metrics.lateActions > 0) return "danger";
-  if (metrics.vigilances > 0 || metrics.externalWaits > 0 || metrics.instructions > 0) return "warning";
+  if (metrics.vigilances > 0 || metrics.externalWaits > 0) return "warning";
   if (metrics.arbitrations > 0) return "arbitration";
   return "default";
 }
