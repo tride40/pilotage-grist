@@ -271,7 +271,7 @@ window.MunicipalOrganisation = (() => {
       if(state.busy)throw Error("Un enregistrement est déjà en cours.");state.busy=true;disable(true);
       try {
         const actions=Array.isArray(action[0])?action:[action];
-        if(state.demo){actions.forEach(applyDemo);applyTables({INTERLOCUTEURS:state.people,SERVICES:state.services,POLES:org.poles,PROJETS:state.projects,REUNIONS:state.meetings,ACTIONS:state.actions,CONSIGNES_POLITIQUES:state.instructions},state.selected?.id);}
+        if(state.demo){actions.forEach(applyDemo);applyTables({INTERLOCUTEURS:state.people,SERVICES:state.services,POLES:org.poles,PROJETS:state.projects,REUNIONS:state.meetings,ACTIONS:state.actions},state.selected?.id);}
         else {await window.PilotageGristWrite.applyUserActions(actions);await reload(state.selected?.id);}
         feedback(message);
       }catch(error){feedback(`Écriture impossible — ${exactError(error)}`,true);throw error;}

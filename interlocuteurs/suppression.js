@@ -20,14 +20,13 @@
   function demoSnapshot() {
     const tables = {INTERLOCUTEURS:state.people, SERVICES:state.services,
       POLES:window.MunicipalOrganisation.getPoles(), PROJETS:state.projects,
-      REUNIONS:state.meetings, ACTIONS:state.actions, CONSIGNES_POLITIQUES:state.instructions};
+      REUNIONS:state.meetings, ACTIONS:state.actions};
     const fields = {
       SERVICES:["Agents","Responsable","Responsable_designe"],
       POLES:["Responsable","Responsable_adjoint"],
       PROJETS:["Responsable","Agent_pilote","Elu_pilote","Agents_associes","Elus_associes","Interlocuteurs_externes"],
       REUNIONS:["Participants","Interlocuteurs","Organisateur"],
-      ACTIONS:["Responsable","Agent_responsable","Elu_responsable"],
-      CONSIGNES_POLITIQUES:["Responsable","Emetteur","Elu_emetteur","Destinataires"]
+      ACTIONS:["Responsable","Agent_responsable","Elu_responsable"]
     };
     return {tables, columns:Object.entries(fields).flatMap(([tableId, names])=>names.map(colId=>({tableId,colId})))};
   }
